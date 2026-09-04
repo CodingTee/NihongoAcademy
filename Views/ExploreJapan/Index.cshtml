@@ -1,0 +1,83 @@
+@{
+    ViewData["Title"] = "Interactive Japan Map";
+}
+
+<section class="container my-5" id="japan-map">
+    <div class="text-center mb-4">
+        <h2 class="mt-2">Interactive Japan Map</h2>
+        <p class="text-muted">Explore Japan's 9 regions &mdash; each one's capital, cuisine, festivals, dialects, and landmarks in one place.</p>
+    </div>
+
+    @* ===== Featured video: Watch & Learn ===== *@
+    <div class="na-video-embed mb-4">
+        <div class="na-video-embed-header na-video-embed-header--with-cta">
+            <div class="na-video-embed-header-text">
+                <div class="na-video-embed-title">
+                    <i class="bi bi-play-btn-fill"></i>
+                    Watch &amp; Learn
+                    <span class="na-video-embed-title-jp">見て学ぶ</span>
+                </div>
+                <p class="na-video-embed-subtitle mb-0">
+                    Fun Facts About Japan &mdash; a short preview of the culture waiting for you.
+                </p>
+            </div>
+            <a asp-controller="ExploreJapan" asp-action="Regions" class="na-video-embed-cta">
+                <i class="bi bi-globe-asia-australia"></i>
+                <span>Regions</span>
+            </a>
+        </div>
+        <div class="na-video-frame">
+            <iframe
+                id="na-culture-video"
+                src="https://www.youtube.com/embed/f4sLdhS1JAc?autoplay=1&amp;loop=1&amp;playlist=f4sLdhS1JAc&amp;rel=0&amp;enablejsapi=1"
+                title="Japan Culture | Fun Facts About Japan"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowfullscreen
+                referrerpolicy="strict-origin-when-cross-origin">
+            </iframe>
+        </div>
+    </div>
+</section>
+
+@section Scripts {
+    <script>
+        // Attempt to start the culture video with sound on page entry.
+        // YouTube player commands are sent via postMessage (enablejsapi=1).
+        (function () {
+            var iframe = document.getElementById('na-culture-video');
+            if (!iframe) return;
+            var origin = 'https://www.youtube.com';
+
+            function send(func, args) {
+                iframe.contentWindow.postMessage(
+                    JSON.stringify({ event: 'command', func: func, args: args || [] }),
+                    origin
+                );
+            }
+
+            function tryStart() {
+                send('unMute');
+                send('setVolume', [80]);
+                send('playVideo');
+            }
+
+            // Try once the player has loaded, plus a delayed retry.
+            iframe.addEventListener('load', function () {
+                tryStart();
+                setTimeout(tryStart, 800);
+            });
+
+            // Fallback: any first interaction (tap/click/keydown) on the page
+            // unlocks unmuted playback in browsers that blocked autoplay.
+            function onFirstGesture() {
+                tryStart();
+                document.removeEventListener('click', onFirstGesture);
+                document.removeEventListener('touchstart', onFirstGesture);
+                document.removeEventListener('keydown', onFirstGesture);
+            }
+            document.addEventListener('click', onFirstGesture);
+            document.addEventListener('touchstart', onFirstGesture);
+            document.addEventListener('keydown', onFirstGesture);
+        })();
+    </script>
+}

@@ -1,0 +1,49 @@
+@model NihongoAcademy.Models.Lesson
+
+@{
+    ViewData["Title"] = "Lesson Details";
+}
+
+<h2><i class="bi bi-eye"></i> Lesson Details</h2>
+
+<div class="na-card-flat">
+    <dl class="row">
+        <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Title)</dt>
+        <dd class="col-sm-9">@Html.DisplayFor(m => m.Title)</dd>
+
+        <dt class="col-sm-3">@Html.DisplayNameFor(m => m.JapaneseTitle)</dt>
+        <dd class="col-sm-9">@Html.DisplayFor(m => m.JapaneseTitle)</dd>
+
+        <dt class="col-sm-3">Category</dt>
+        <dd class="col-sm-9"><span class="na-badge na-badge-@(Model.Category?.Name?.ToLower())">@Model.Category?.Name</span></dd>
+
+        <dt class="col-sm-3">@Html.DisplayNameFor(m => m.Description)</dt>
+        <dd class="col-sm-9">@Html.DisplayFor(m => m.Description)</dd>
+
+        <dt class="col-sm-3">@Html.DisplayNameFor(m => m.DifficultyLevel)</dt>
+        <dd class="col-sm-9">@for (int i = 0; i < Model.DifficultyLevel; i++) { <i class="bi bi-star-fill text-warning"></i> }</dd>
+
+        <dt class="col-sm-3">@Html.DisplayNameFor(m => m.EstimatedMinutes)</dt>
+        <dd class="col-sm-9">@Model.EstimatedMinutes minutes</dd>
+
+        <dt class="col-sm-3">@Html.DisplayNameFor(m => m.IsPublished)</dt>
+        <dd class="col-sm-9">@(Model.IsPublished ? "Yes" : "No")</dd>
+
+        <dt class="col-sm-3">@Html.DisplayNameFor(m => m.DisplayOrder)</dt>
+        <dd class="col-sm-9">@Model.DisplayOrder</dd>
+
+        <dt class="col-sm-3">@Html.DisplayNameFor(m => m.CreatedDate)</dt>
+        <dd class="col-sm-9">@Model.CreatedDate.ToString("MMM dd, yyyy")</dd>
+    </dl>
+
+    <hr />
+    <h6>Content Preview</h6>
+    <div class="content-html p-3" style="background: var(--na-bg); border-radius: 8px;">
+        @Html.Raw(Model.Content)
+    </div>
+
+    <div class="mt-3">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-na-primary"><i class="bi bi-pencil"></i> Edit</a>
+        <a asp-action="Index" class="btn-na-outline">Back to List</a>
+    </div>
+</div>

@@ -1,0 +1,103 @@
+@model NihongoAcademy.Models.Quiz
+
+@{
+    ViewData["Title"] = Model.Title;
+    var questions = Model.Questions.OrderBy(q => q.DisplayOrder).ToList();
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-controller="Quizzes" asp-action="Index">Quizzes</a></li>
+        <li class="breadcrumb-item active">@Model.Title</li>
+    </ol>
+</nav>
+
+<div class="row mb-3">
+    <div class="col-8">
+        <h2>@Model.Title</h2>
+        @if (!string.IsNullOrEmpty(Model.JapaneseTitle))
+        {
+            <p class="text-na-primary">@Model.JapaneseTitle</p>
+        }
+        <p class="text-muted">@Model.Description</p>
+    </div>
+    <div class="col-4 text-end">
+        <h3 class="quiz-timer" id="quiz-timer">@Model.TimeLimitMinutes:00</h3>
+        <small class="text-muted">Time remaining</small>
+    </div>
+</div>
+
+<div class="quiz-progress-bar mb-3">
+    <div class="quiz-progress-fill" style="width: 0%;"></div>
+</div>
+<p class="text-muted text-center mb-4" id="quiz-progress-text">0 / @questions.Count answered</p>
+
+<form id="quiz-form" asp-action="Submit" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="quizId" value="@Model.Id" />
+    <input type="hidden" name="timeTakenSeconds" id="time-taken" value="0" />
+    <input type="hidden" name="answers" id="answers-data" value="" />
+
+    @for (int i = 0; i < questions.Count; i++)
+    {
+        var q = questions[i];
+        <div class="quiz-question-card" data-index="@i">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="na-badge bg-na-primary text-white">Question @(i + 1) of @questions.Count</span>
+                <span class="text-muted small">@q.DisplayOrder</span>
+            </div>
+            <h4 class="mb-3">@q.QuestionText</h4>
+            @if (!string.IsNullOrEmpty(q.AudioPath))
+            {
+                <audio controls class="mb-3" style="max-width: 100%;">
+                    <source src="@q.AudioPath" type="audio/mpeg" />
+                </audio>
+            }
+            <div class="quiz-option" onclick="selectAnswer(@i, 1)">
+                <strong>A.</strong> @q.OptionA
+            </div>
+            <div class="quiz-option" onclick="selectAnswer(@i, 2)">
+                <strong>B.</strong> @q.OptionB
+            </div>
+            <div class="quiz-option" onclick="selectAnswer(@i, 3)">
+                <strong>C.</strong> @q.OptionC
+            </div>
+            <div class="quiz-option" onclick="selectAnswer(@i, 4)">
+                <strong>D.</strong> @q.OptionD
+            </div>
+        </div>
+    }
+
+    <div class="d-flex justify-content-between mt-4">
+        <button type="button" id="prev-question" class="btn-na-outline" onclick="prevQuestion()">
+            <i class="bi bi-arrow-left"></i> Previous
+        </button>
+        <div>
+            <button type="button" id="next-question" class="btn-na-primary" onclick="nextQuestion()">
+                Next <i class="bi bi-arrow-right"></i>
+            </button>
+            <button type="button" id="submit-quiz" class="btn-na-primary" style="display: none;" onclick="submitQuiz()">
+                <i class="bi bi-check2-circle"></i> Submit Quiz
+            </button>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        var quizQuestions = [
+            @for (int i = 0; i < questions.Count; i++)
+            {
+                var q = questions[i];
+                <text>
+            { questionText: @Html.Raw(Json.Serialize(q.QuestionText)), correctOption: @q.CorrectOption },
+            </text>
+            }
+        ];
+
+        document.addEventListener("DOMContentLoaded", function() {
+            initQuiz(quizQuestions, @Model.TimeLimitMinutes);
+        });
+    </script>
+}

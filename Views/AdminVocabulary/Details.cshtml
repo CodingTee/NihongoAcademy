@@ -1,0 +1,32 @@
+@model NihongoAcademy.Models.Vocabulary
+
+@{
+    ViewData["Title"] = "Vocabulary Details";
+}
+
+<h2><i class="bi bi-eye"></i> Vocabulary Details</h2>
+
+<div class="na-card-flat">
+    <dl class="row">
+        <dt class="col-sm-3">Japanese</dt>
+        <dd class="col-sm-9" style="font-size: 1.5rem;">@Model.Japanese</dd>
+        <dt class="col-sm-3">Romaji</dt>
+        <dd class="col-sm-9"><em>@Model.Romaji</em></dd>
+        <dt class="col-sm-3">English</dt>
+        <dd class="col-sm-9">@Model.English</dd>
+        <dt class="col-sm-3">Part of Speech</dt>
+        <dd class="col-sm-9">@Model.PartOfSpeech</dd>
+        <dt class="col-sm-3">Category</dt>
+        <dd class="col-sm-9"><span class="na-badge na-badge-@(Model.Category?.Name?.ToLower())">@Model.Category?.Name</span></dd>
+        <dt class="col-sm-3">JLPT Level</dt>
+        <dd class="col-sm-9">N@Model.JlptLevel</dd>
+        <dt class="col-sm-3">Example (JP)</dt>
+        <dd class="col-sm-9">@Model.ExampleJapanese</dd>
+        <dt class="col-sm-3">Example (EN)</dt>
+        <dd class="col-sm-9">@Model.ExampleEnglish</dd>
+    </dl>
+    <div class="mt-3">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-na-primary"><i class="bi bi-pencil"></i> Edit</a>
+        <a asp-action="Index" class="btn-na-outline">Back to List</a>
+    </div>
+</div>

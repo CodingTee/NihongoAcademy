@@ -1,0 +1,49 @@
+@model NihongoAcademy.Controllers.SkillViewModel
+
+@{
+    ViewData["Title"] = Model.Title;
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-action="Index">Practice</a></li>
+        <li class="breadcrumb-item active">@Model.Title</li>
+    </ol>
+</nav>
+
+<div class="mb-4">
+    <h2><span class="me-2">@Model.Icon</span> @Model.Title <span class="na-subtitle-jp">@Model.JapaneseTitle</span></h2>
+    <p class="text-muted">@Model.Description</p>
+</div>
+
+@* ===== RECOMMENDED PRACTICE ===== *@
+<div class="na-skill-recommended">
+    <div class="na-skill-recommended__info">
+        <h6>✨ Recommended for You</h6>
+        <small class="text-muted">Beginner · ~8 min</small>
+    </div>
+    <a asp-action="Mode" asp-route-skill="@Model.SkillKey" asp-route-mode="@Model.Modes.FirstOrDefault()?.Key" class="btn-na-primary btn-sm">
+        Start Practice
+    </a>
+</div>
+
+@* ===== CHOOSE A MODE ===== *@
+<div class="na-practice-section">
+    <div class="na-practice-section__title"><i class="bi bi-grid-3x3-gap"></i> Choose a Mode</div>
+    <div class="na-mode-grid">
+        @foreach (var mode in Model.Modes)
+        {
+            <a asp-action="Mode" asp-route-skill="@Model.SkillKey" asp-route-mode="@mode.Key" class="na-mode-card">
+                <div class="na-mode-card__icon">@mode.Icon</div>
+                <div class="na-mode-card__label">@mode.Title</div>
+                <div class="na-mode-card__desc">@mode.Description</div>
+            </a>
+        }
+    </div>
+</div>
+
+@* ===== BACK TO PRACTICE ===== *@
+<div class="mt-4">
+    <a asp-action="Index" class="na-link-soft"><i class="bi bi-arrow-left"></i> Back to Practice</a>
+</div>

@@ -1,0 +1,180 @@
+@model IEnumerable<Microsoft.AspNetCore.Identity.IdentityUser>
+
+@{
+    ViewData["Title"] = "Admin Panel";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <nav aria-label="breadcrumb" class="mb-2">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+                <li class="breadcrumb-item active">Admin Panel</li>
+            </ol>
+        </nav>
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+            <div>
+                <h2><i class="bi bi-shield-lock na-page-icon"></i> Admin Panel <span class="na-subtitle-jp">管理パネル</span></h2>
+                <p class="text-muted">Manage platform content, users, and view statistics.</p>
+            </div>
+            <form asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" class="d-inline align-self-center">
+                @Html.AntiForgeryToken()
+                <button type="submit" class="btn-na-outline btn-sm" title="登出账号">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3 col-6 mb-3">
+        <div class="dashboard-metric">
+            <div class="metric-value">@ViewBag.TotalLessons</div>
+            <div class="metric-label">Total Lessons</div>
+            <small class="text-muted">@ViewBag.PublishedLessons published</small>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="dashboard-metric">
+            <div class="metric-value">@ViewBag.TotalVocab</div>
+            <div class="metric-label">Vocabulary</div>
+            <small class="text-muted">Flashcards</small>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="dashboard-metric">
+            <div class="metric-value">@ViewBag.TotalQuizzes</div>
+            <div class="metric-label">Quizzes</div>
+            <small class="text-muted">@ViewBag.TotalQuizQuestions questions</small>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="dashboard-metric">
+            <div class="metric-value">@ViewBag.TotalUsers</div>
+            <div class="metric-label">Users</div>
+            <small class="text-muted">@ViewBag.TotalAttempts quiz attempts</small>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <div class="na-card-flat admin-sidebar">
+            <h6 class="text-muted mb-3">Content Management</h6>
+            <a asp-controller="AdminLessons" asp-action="Index" class="nav-link">
+                <i class="bi bi-journal-text"></i> Lessons
+            </a>
+            <a asp-controller="AdminVocabulary" asp-action="Index" class="nav-link">
+                <i class="bi bi-card-text"></i> Vocabulary
+            </a>
+            <a asp-controller="AdminQuizzes" asp-action="Index" class="nav-link">
+                <i class="bi bi-patch-question"></i> Quizzes
+            </a>
+            <a asp-controller="AdminCategories" asp-action="Index" class="nav-link">
+                <i class="bi bi-grid-3x3-gap"></i> Categories
+            </a>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <div class="na-card-flat mb-4">
+            <h5><i class="bi bi-people"></i> User Management</h5>
+            <hr />
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Roles</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var user in Model)
+                        {
+                            var roles = ViewBag.UserRoles[user.Id] as IList<string>;
+                            <tr>
+                                <td>
+                                    @user.Email
+                                    @if (user.EmailConfirmed)
+                                    {
+                                        <i class="bi bi-patch-check-fill text-success small"></i>
+                                    }
+                                </td>
+                                <td>
+                                    @if (roles != null)
+                                    {
+                                        foreach (var role in roles)
+                                        {
+                                            <span class="na-badge" style="background: @(role == "Admin" ? "#FFE5E5" : "#E5F0FF"); color: @(role == "Admin" ? "#C84B31" : "#2C5F8A");">
+                                                @role
+                                            </span>
+                                        }
+                                    }
+                                </td>
+                                <td>
+                                    <form asp-action="ToggleAdminRole" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="userId" value="@user.Id" />
+                                        @if (roles != null && roles.Contains("Admin"))
+                                        {
+                                            <button type="submit" class="btn btn-sm btn-na-outline" onclick="return confirm('Remove Admin role from @user.Email?')">
+                                                <i class="bi bi-dash-circle"></i> Demote
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <button type="submit" class="btn btn-sm btn-na-primary">
+                                                <i class="bi bi-shield-check"></i> Promote
+                                            </button>
+                                        }
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        @if (ViewBag.RecentAttempts != null)
+        {
+            var recentAttempts = (List<NihongoAcademy.Models.QuizAttempt>)ViewBag.RecentAttempts;
+            if (recentAttempts.Count > 0)
+            {
+                <div class="na-card-flat">
+                    <h5><i class="bi bi-clock-history"></i> Recent Quiz Attempts</h5>
+                    <hr />
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Quiz</th>
+                                    <th>Score</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var a in recentAttempts)
+                                {
+                                    <tr>
+                                        <td>@a.User?.Email</td>
+                                        <td>@a.Quiz?.Title</td>
+                                        <td>
+                                            <strong style="color: @(a.IsPassed ? "var(--na-secondary)" : "#D44");">
+                                                @a.ScorePercentage%
+                                            </strong>
+                                        </td>
+                                        <td><small>@a.AttemptDate.ToString("MMM dd, HH:mm")</small></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>

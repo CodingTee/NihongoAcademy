@@ -1,0 +1,44 @@
+@model IEnumerable<NihongoAcademy.Models.Vocabulary>
+
+@{
+    ViewData["Title"] = "Manage Vocabulary";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-card-text"></i> Manage Vocabulary</h2>
+    <a asp-action="Create" class="btn-na-primary"><i class="bi bi-plus-circle"></i> New Word</a>
+</div>
+
+<div class="na-card-flat">
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Japanese</th>
+                    <th>Romaji</th>
+                    <th>English</th>
+                    <th>Category</th>
+                    <th>JLPT</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td style="font-size: 1.2rem;">@item.Japanese</td>
+                        <td><em>@item.Romaji</em></td>
+                        <td>@item.English</td>
+                        <td><span class="na-badge na-badge-@(item.Category?.Name?.ToLower())">@item.Category?.Name</span></td>
+                        <td><span class="na-badge" style="background: #F0E5FF; color: #5B3C8A;">N@item.JlptLevel</span></td>
+                        <td>
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-na-outline"><i class="bi bi-eye"></i></a>
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-na-outline"><i class="bi bi-pencil"></i></a>
+                            <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-na-outline" style="color: #D44;"><i class="bi bi-trash"></i></a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

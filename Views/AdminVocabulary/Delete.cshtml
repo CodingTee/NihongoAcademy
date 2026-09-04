@@ -1,0 +1,24 @@
+@model NihongoAcademy.Models.Vocabulary
+
+@{
+    ViewData["Title"] = "Delete Vocabulary";
+}
+
+<h2><i class="bi bi-trash text-danger"></i> Delete Vocabulary</h2>
+
+<div class="na-card-flat" style="border-color: #D44;">
+    <p class="text-danger">Are you sure you want to delete this vocabulary card?</p>
+    <dl class="row">
+        <dt class="col-sm-3">Japanese</dt>
+        <dd class="col-sm-9" style="font-size: 1.3rem;">@Model.Japanese</dd>
+        <dt class="col-sm-3">Romaji</dt>
+        <dd class="col-sm-9">@Model.Romaji</dd>
+        <dt class="col-sm-3">English</dt>
+        <dd class="col-sm-9">@Model.English</dd>
+    </dl>
+    <form asp-action="Delete">
+        <input type="hidden" asp-for="Id" />
+        <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> Delete</button>
+        <a asp-action="Index" class="btn-na-outline">Cancel</a>
+    </form>
+</div>

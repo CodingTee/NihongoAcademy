@@ -1,0 +1,129 @@
+@model CreatePostViewModel
+@using NihongoAcademy.Models
+@using NihongoAcademy.Controllers
+
+@{
+    ViewData["Title"] = "Create a Post";
+    var categories = new[]
+    {
+        new { Value = CommunityCategory.General, Label = "Community", Desc = "Daily chat, study life, music, study buddies" },
+        new { Value = CommunityCategory.Study, Label = "Study", Desc = "Methods, JLPT, grammar, vocabulary, reading" },
+        new { Value = CommunityCategory.Questions, Label = "Questions", Desc = "Stuck on grammar, a sentence, or pronunciation?" },
+        new { Value = CommunityCategory.Japan, Label = "Japan", Desc = "Culture, food, travel, regions, lifestyle" }
+    };
+}
+
+<div class="na-community">
+    <div class="na-community-header">
+        <h1><i class="bi bi-pencil-square na-page-icon"></i> Create a Post <span class="na-subtitle-jp">投稿する</span></h1>
+        <p class="na-community-subtitle">Share your thoughts with the community.</p>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="na-card p-4">
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+                    @* Title *@
+                    <div class="mb-3">
+                        <label asp-for="Title" class="form-label fw-semibold">Title</label>
+                        <input asp-for="Title" class="form-control na-input" placeholder="Give your post a title..." maxlength="200" />
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+
+                    @* Category *@
+                    <div class="mb-3">
+                        <label asp-for="Category" class="form-label fw-semibold">Category</label>
+                        <select asp-for="Category" class="form-select na-input" id="post-category">
+                            @foreach (var cat in categories)
+                            {
+                                <option value="@cat.Value">@cat.Label</option>
+                            }
+                        </select>
+                        <div class="form-text" id="category-hint">Select a category for your post.</div>
+                    </div>
+
+                    @* Content *@
+                    <div class="mb-3">
+                        <label asp-for="Content" class="form-label fw-semibold">Content</label>
+                        <textarea asp-for="Content" class="form-control na-input" rows="8"
+                                  placeholder="Write your post content here...&#10;&#10;For Japanese Diary, try writing in Japanese!" 
+                                  maxlength="5000"></textarea>
+                        <div class="d-flex justify-content-between">
+                            <span asp-validation-for="Content" class="text-danger small"></span>
+                            <span class="text-muted small" id="char-count">0 / 5000</span>
+                        </div>
+                    </div>
+
+                    @* Feedback Wanted (optional — for diary-style Study posts in Japanese) *@
+                    <div class="mb-4 na-feedback-check" id="feedback-section">
+                        <div class="form-check">
+                            <input asp-for="FeedbackWanted" class="form-check-input" id="feedback-check" />
+                            <label asp-for="FeedbackWanted" class="form-check-label" for="feedback-check">
+                                <i class="bi bi-stars"></i> I'd like feedback on my Japanese writing
+                            </label>
+                        </div>
+                        <small class="text-muted ms-4">
+                            Tick this for diary-style posts written in Japanese — others can help correct your writing.
+                        </small>
+                    </div>
+
+                    @* Buttons *@
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn-na-primary">
+                            <i class="bi bi-send"></i> Post
+                        </button>
+                        <a asp-action="Index" class="btn-na-outline">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Show/hide Feedback Wanted based on category
+        var categorySelect = document.getElementById('post-category');
+        var feedbackSection = document.getElementById('feedback-section');
+
+        function updateFeedbackVisibility() {
+            // Show feedback section on Study category (used for Japanese diary posts)
+            if (categorySelect.value === '@((int)CommunityCategory.Study)') {
+                feedbackSection.style.display = 'block';
+            } else {
+                feedbackSection.style.display = 'none';
+                document.getElementById('feedback-check').checked = false;
+            }
+        }
+
+        categorySelect.addEventListener('change', updateFeedbackVisibility);
+        updateFeedbackVisibility();
+
+        // Character counter
+        var contentArea = document.querySelector('#Content');
+        var charCount = document.getElementById('char-count');
+        if (contentArea && charCount) {
+            contentArea.addEventListener('input', function() {
+                charCount.textContent = contentArea.value.length + ' / 5000';
+            });
+        }
+
+        // Category hints
+        var hints = {
+            '@((int)CommunityCategory.General)': 'Daily chat, study progress check-ins, looking for study buddies, song recs — anything goes.',
+            '@((int)CommunityCategory.Study)': 'Share learning methods, JLPT prep, grammar/vocab tips, or write a short Japanese diary.',
+            '@((int)CommunityCategory.Questions)': 'Stuck on a grammar point, a sentence, or how to pronounce something? Ask away.',
+            '@((int)CommunityCategory.Japan)': 'Talk about Japanese food, culture, travel destinations, regional life, and more.'
+        };
+
+        var hintEl = document.getElementById('category-hint');
+        categorySelect.addEventListener('change', function() {
+            hintEl.textContent = hints[categorySelect.value] || 'Select a category for your post.';
+        });
+    </script>
+}

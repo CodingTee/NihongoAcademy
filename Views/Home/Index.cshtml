@@ -1,0 +1,618 @@
+﻿@model NihongoAcademy.Controllers.HomeViewModel
+
+@{
+    ViewData["Title"] = "Home";
+    var isLoggedIn = User.Identity?.IsAuthenticated == true;
+    var hasContinueLearning = isLoggedIn && Model.ContinueLearning.Any();
+    var hasNextLessons = isLoggedIn && !Model.ContinueLearning.Any() && Model.NextLessons.Any();
+}
+
+@* ===== 1. Hero Banner Slider ===== *@
+<section class="na-hero-banner" aria-label="Featured highlights">
+    <div class="na-hero-banner-viewport" id="naHeroBanner">
+        <div class="na-hero-banner-track">
+
+            @* ---- Slide 1: Learn Japanese ---- *@
+            <article class="na-hero-slide na-hero-slide--learn is-active" aria-roledescription="slide" aria-label="1 of 3">
+                <div class="na-hero-slide-bg na-hero-slide-bg--learn">
+                    <div class="na-hero-slide-bg-petal na-hero-slide-bg-petal--1"></div>
+                    <div class="na-hero-slide-bg-petal na-hero-slide-bg-petal--2"></div>
+                    <div class="na-hero-slide-bg-petal na-hero-slide-bg-petal--3"></div>
+                    <div class="na-hero-slide-bg-petal na-hero-slide-bg-petal--4"></div>
+                    <div class="na-hero-slide-bg-petal na-hero-slide-bg-petal--5"></div>
+                    <div class="na-hero-slide-bg-petal na-hero-slide-bg-petal--6"></div>
+                    <div class="na-hero-slide-bg-glyph na-hero-slide-bg-glyph--a">学</div>
+                    <div class="na-hero-slide-bg-glyph na-hero-slide-bg-glyph--b">語</div>
+                    <div class="na-hero-slide-bg-glyph na-hero-slide-bg-glyph--c">あ</div>
+                </div>
+                <div class="na-hero-slide-inner">
+                    <div class="na-hero-slide-text">
+                        <span class="na-hero-slide-eyebrow">
+                            <i class="bi bi-stars"></i> Welcome to Nihongo Academy
+                        </span>
+                        <h1 class="na-hero-slide-title">
+                            Learn Japanese<br />with Confidence
+                        </h1>
+                        <p class="na-hero-slide-title-ja">日本語を楽しく学ぼう</p>
+                        <p class="na-hero-slide-lead">
+                            Master hiragana, katakana, vocabulary, and grammar through interactive lessons.
+                        </p>
+                        <div class="na-hero-slide-cta">
+                            @if (!isLoggedIn)
+                            {
+                                <a asp-area="Identity" asp-page="/Account/Register" class="btn-na-primary btn-lg">
+                                    <i class="bi bi-person-plus"></i> Start Learning
+                                </a>
+                                <a asp-controller="Lessons" asp-action="Index" class="btn-na-outline btn-lg">
+                                    <i class="bi bi-journal-text"></i> Explore Lessons
+                                </a>
+                            }
+                            else
+                            {
+                                <a asp-controller="Lessons" asp-action="Index" class="btn-na-primary btn-lg">
+                                    <i class="bi bi-journal-text"></i> Browse Lessons
+                                </a>
+                                <a asp-controller="Practice" asp-action="Index" class="btn-na-outline btn-lg">
+                                    <i class="bi bi-pencil-square"></i> Practice Now
+                                </a>
+                            }
+                        </div>
+                    </div>
+                    <div class="na-hero-slide-art">
+                        <div class="na-hero-slide-mascot-frame">
+                            <img src="~/images/Pet/Aegithalos caudatus.gif" alt="Long-tailed tit mascot" class="na-hero-slide-mascot" />
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            @* ---- Slide 2: Master the Scripts ---- *@
+            <article class="na-hero-slide na-hero-slide--scripts" aria-roledescription="slide" aria-label="2 of 3">
+                <div class="na-hero-slide-bg na-hero-slide-bg--scripts">
+                    <div class="na-hero-slide-bg-char na-hero-slide-bg-char--a">あ</div>
+                    <div class="na-hero-slide-bg-char na-hero-slide-bg-char--b">ア</div>
+                    <div class="na-hero-slide-bg-char na-hero-slide-bg-char--c">日</div>
+                    <div class="na-hero-slide-bg-char na-hero-slide-bg-char--d">か</div>
+                    <div class="na-hero-slide-bg-char na-hero-slide-bg-char--e">カ</div>
+                    <div class="na-hero-slide-bg-grid"></div>
+                </div>
+                <div class="na-hero-slide-inner">
+                    <div class="na-hero-slide-text">
+                        <span class="na-hero-slide-eyebrow">
+                            <i class="bi bi-pencil"></i> The Three Scripts
+                        </span>
+                        <h1 class="na-hero-slide-title">
+                            Master Hiragana,<br />Katakana &amp; Kanji
+                        </h1>
+                        <p class="na-hero-slide-title-ja">ひらがな・カタカナ・漢字</p>
+                        <p class="na-hero-slide-lead">
+                            Step-by-step lessons, stroke-order diagrams, and smart drills take you from your first あ to fluent reading.
+                        </p>
+                        <div class="na-hero-slide-cta">
+                            <a asp-controller="Lessons" asp-action="Index" class="btn-na-primary btn-lg">
+                                <i class="bi bi-book"></i> Browse Lessons
+                            </a>
+                            <a asp-controller="Practice" asp-action="Index" class="btn-na-outline btn-lg">
+                                <i class="bi bi-controller"></i> Start Drills
+                            </a>
+                        </div>
+                    </div>
+                    <div class="na-hero-slide-art">
+                        <div class="na-hero-script-card">
+                            <div class="na-hero-script-card-row"><span class="na-hero-script-hira">あ</span><span class="na-hero-script-kata">ア</span><span class="na-hero-script-kanji">日</span></div>
+                            <div class="na-hero-script-card-row"><span class="na-hero-script-hira">か</span><span class="na-hero-script-kata">カ</span><span class="na-hero-script-kanji">語</span></div>
+                            <div class="na-hero-script-card-row"><span class="na-hero-script-hira">さ</span><span class="na-hero-script-kata">サ</span><span class="na-hero-script-kanji">学</span></div>
+                            <div class="na-hero-script-card-row"><span class="na-hero-script-hira">な</span><span class="na-hero-script-kata">ナ</span><span class="na-hero-script-kanji">本</span></div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+            @* ---- Slide 3: Discover Japan ---- *@
+            <article class="na-hero-slide na-hero-slide--japan" aria-roledescription="slide" aria-label="3 of 3">
+                <div class="na-hero-slide-bg na-hero-slide-bg--japan"></div>
+                <div class="na-hero-slide-inner">
+                    <div class="na-hero-slide-text">
+                        <span class="na-hero-slide-eyebrow">
+                            <i class="bi bi-geo-alt"></i> Interactive Japan Map
+                        </span>
+                        <h1 class="na-hero-slide-title">
+                            Discover Japan's<br />Nine Regions
+                        </h1>
+                        <p class="na-hero-slide-lead">
+                            From snow-covered Hokkaidō in the north to the subtropical Ryūkyū islands in the south — tap any red dot to dive into a region's story.
+                        </p>
+                        <div class="na-hero-slide-cta">
+                            <a asp-controller="ExploreJapan" asp-action="Regions" class="btn-na-primary btn-lg">
+                                <i class="bi bi-map"></i> Explore All Regions
+                            </a>
+                            <a asp-controller="ExploreJapan" asp-action="Index" class="btn-na-outline btn-lg">
+                                <i class="bi bi-arrow-right-circle"></i> Open Map
+                            </a>
+                        </div>
+                    </div>
+                    <div class="na-hero-slide-art">
+                        <div class="na-hero-japan-card">
+                            <img src="/images/Japan%20Region/Japan.png" alt="Map of Japan" class="na-hero-japan-card-map" />
+                            <div class="na-hero-japan-card-markers">
+                                <a class="na-hero-japan-card-marker" asp-controller="ExploreJapan" asp-action="RegionDetail" asp-route-slug="hokkaido" style="top:17%; left:75%;" title="Hokkaidō"><span class="na-hero-japan-card-marker-dot"></span><span class="na-hero-japan-card-marker-label">北海道</span></a>
+                                <a class="na-hero-japan-card-marker" asp-controller="ExploreJapan" asp-action="RegionDetail" asp-route-slug="tohoku"   style="top:30%; left:67%;" title="Tōhoku"><span class="na-hero-japan-card-marker-dot"></span><span class="na-hero-japan-card-marker-label">東北</span></a>
+                                <a class="na-hero-japan-card-marker" asp-controller="ExploreJapan" asp-action="RegionDetail" asp-route-slug="kanto"    style="top:50%; left:63%;" title="Kantō"><span class="na-hero-japan-card-marker-dot"></span><span class="na-hero-japan-card-marker-label">関東</span></a>
+                                <a class="na-hero-japan-card-marker" asp-controller="ExploreJapan" asp-action="RegionDetail" asp-route-slug="chubu"    style="top:53%; left:52%;" title="Chūbu"><span class="na-hero-japan-card-marker-dot"></span><span class="na-hero-japan-card-marker-label">中部</span></a>
+                                <a class="na-hero-japan-card-marker" asp-controller="ExploreJapan" asp-action="RegionDetail" asp-route-slug="kansai"   style="top:60%; left:43%;" title="Kansai"><span class="na-hero-japan-card-marker-dot"></span><span class="na-hero-japan-card-marker-label">関西</span></a>
+                                <a class="na-hero-japan-card-marker" asp-controller="ExploreJapan" asp-action="RegionDetail" asp-route-slug="chugoku"  style="top:65%; left:30%;" title="Chūgoku"><span class="na-hero-japan-card-marker-dot"></span><span class="na-hero-japan-card-marker-label">中国</span></a>
+                                <a class="na-hero-japan-card-marker" asp-controller="ExploreJapan" asp-action="RegionDetail" asp-route-slug="shikoku"  style="top:73%; left:35%;" title="Shikoku"><span class="na-hero-japan-card-marker-dot"></span><span class="na-hero-japan-card-marker-label">四国</span></a>
+                                <a class="na-hero-japan-card-marker" asp-controller="ExploreJapan" asp-action="RegionDetail" asp-route-slug="kyushu"   style="top:75%; left:22%;" title="Kyūshū"><span class="na-hero-japan-card-marker-dot"></span><span class="na-hero-japan-card-marker-label">九州</span></a>
+                                <a class="na-hero-japan-card-marker" asp-controller="ExploreJapan" asp-action="RegionDetail" asp-route-slug="okinawa"  style="top:87%; left:18%;" title="Okinawa"><span class="na-hero-japan-card-marker-dot"></span><span class="na-hero-japan-card-marker-label">沖縄</span></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </article>
+
+        </div>
+
+        @* Prev / Next controls *@
+        <button type="button" class="na-hero-banner-arrow na-hero-banner-arrow--prev" aria-label="Previous slide">
+            <i class="bi bi-chevron-left"></i>
+        </button>
+        <button type="button" class="na-hero-banner-arrow na-hero-banner-arrow--next" aria-label="Next slide">
+            <i class="bi bi-chevron-right"></i>
+        </button>
+    </div>
+
+    @* Dots indicator *@
+    <div class="na-hero-banner-dots" role="tablist" aria-label="Slide selector">
+        <button type="button" class="na-hero-banner-dot is-active" role="tab" aria-selected="true" aria-label="Slide 1"></button>
+        <button type="button" class="na-hero-banner-dot" role="tab" aria-selected="false" aria-label="Slide 2"></button>
+        <button type="button" class="na-hero-banner-dot" role="tab" aria-selected="false" aria-label="Slide 3"></button>
+    </div>
+</section>
+
+@* ===== 2. Mini Motivation Strip (logged in only) ===== *@
+@if (isLoggedIn)
+{
+    <section class="na-section na-section--tight mt-3">
+        <div class="na-motivation-strip">
+            <a asp-controller="Dashboard" asp-action="Index" class="na-motivation-item na-motivation-item--streak text-decoration-none">
+                <i class="bi bi-fire"></i>
+                <span><strong>@Model.UserStreak</strong> Day Streak</span>
+            </a>
+            <div class="na-motivation-item na-motivation-item--goal">
+                <i class="bi bi-bullseye"></i>
+                <span>Today's Goal: <strong>@Model.DailyProgress/@Model.DailyGoal</strong></span>
+            </div>
+            @if (hasContinueLearning && Model.ContinueLearning.First().Lesson != null)
+            {
+                <div class="na-motivation-item na-motivation-item--next">
+                    <i class="bi bi-arrow-right-circle"></i>
+                    <span>Next: @Model.ContinueLearning.First().Lesson?.Title</span>
+                </div>
+            }
+        </div>
+    </section>
+}
+
+@* ===== 3. Continue Learning / Start Next Lesson ===== *@
+@if (hasContinueLearning)
+{
+    <section id="continue-learning-section" class="na-section na-section--tight mt-3">
+        <h3 class="na-section-title">
+            <i class="bi bi-play-circle na-page-icon"></i> Continue Learning
+            <span class="na-subtitle-jp">学習を続ける</span>
+        </h3>
+        <div id="continue-learning-cards">
+        @foreach (var progress in Model.ContinueLearning)
+        {
+            var actionLabel = progress.CompletionPercentage == 0 ? "Start Lesson" : "Continue";
+            var actionIcon = progress.CompletionPercentage == 0 ? "bi-play-fill" : "bi-arrow-right";
+            <a asp-controller="Lessons" asp-action="Details" asp-route-id="@progress.LessonId" class="text-decoration-none mb-2 d-block" data-lesson-card="@progress.LessonId">
+                <div class="na-continue-card-h">
+                    <div class="na-continue-card-h-body">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="na-badge na-badge-@(progress.Lesson?.Category?.Name?.ToLower())">
+                                @progress.Lesson?.Category?.Name
+                            </span>
+                            <span class="na-continue-percent" data-pct-label="@progress.LessonId">@progress.CompletionPercentage%</span>
+                        </div>
+                        <h5 class="text-dark mb-1">@progress.Lesson?.Title</h5>
+                        @if (!string.IsNullOrEmpty(progress.Lesson?.JapaneseTitle))
+                        {
+                            <p class="text-na-primary small mb-1">@progress.Lesson.JapaneseTitle</p>
+                        }
+                        <div class="d-flex align-items-center gap-3 text-muted small">
+                            <span data-pct-text="@progress.LessonId"><i class="bi bi-bar-chart"></i> @progress.CompletionPercentage% complete</span>
+                            @if (progress.Lesson?.EstimatedMinutes > 0)
+                            {
+                                var remaining = Math.Max(1, (int)Math.Ceiling(progress.Lesson.EstimatedMinutes * (100 - progress.CompletionPercentage) / 100.0));
+                                <span data-remaining="@progress.LessonId"><i class="bi bi-clock"></i> ~@remaining min left</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="na-continue-card-h-action" data-action="@progress.LessonId">
+                        <span class="btn-na-primary btn-sm"><i class="@actionIcon"></i> @actionLabel</span>
+                    </div>
+                    <div class="na-continue-card-h-progress">
+                        <div class="na-progress na-progress--inline">
+                            <div class="na-progress-fill" data-progress-bar="@progress.LessonId" style="width: @progress.CompletionPercentage%"></div>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        }
+        </div>
+    </section>
+}
+else if (hasNextLessons)
+{
+    <section id="continue-learning-section" class="na-section na-section--tight mt-3">
+        <h3 class="na-section-title">
+            <i class="bi bi-lightbulb na-page-icon"></i> Start Your Next Lesson
+            <span class="na-subtitle-jp">次のレッスン</span>
+        </h3>
+        <div id="continue-learning-cards">
+        @foreach (var lesson in Model.NextLessons)
+        {
+            <a asp-controller="Lessons" asp-action="Details" asp-route-id="@lesson.Id" class="text-decoration-none mb-2 d-block" data-lesson-card="@lesson.Id">
+                <div class="na-continue-card-h">
+                    <div class="na-continue-card-h-body">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="na-badge na-badge-@(lesson.Category?.Name?.ToLower())">
+                                @lesson.Category?.Name
+                            </span>
+                        </div>
+                        <h5 class="text-dark mb-1">@lesson.Title</h5>
+                        @if (!string.IsNullOrEmpty(lesson.JapaneseTitle))
+                        {
+                            <p class="text-na-primary small mb-1">@lesson.JapaneseTitle</p>
+                        }
+                        <div class="d-flex align-items-center gap-3 text-muted small">
+                            <span><i class="bi bi-clock"></i> @lesson.EstimatedMinutes min</span>
+                        </div>
+                    </div>
+                    <div class="na-continue-card-h-action">
+                        <span class="btn-na-primary btn-sm"><i class="bi bi-play-fill"></i> Start Lesson</span>
+                    </div>
+                </div>
+            </a>
+        }
+        </div>
+    </section>
+}
+
+@* ===== 4. Quick Action Shortcuts ===== *@
+@if (isLoggedIn)
+{
+    <section class="na-section na-section--tight mt-3">
+        <h3 class="na-section-title">
+            <i class="bi bi-grid na-page-icon"></i> What would you like to do?
+            <span class="na-subtitle-jp">何をする？</span>
+        </h3>
+        <div class="na-quick-actions">
+            <a asp-controller="Lessons" asp-action="Index" class="na-quick-action">
+                <i class="bi bi-book"></i>
+                <span>Continue Learning</span>
+            </a>
+            <a asp-controller="Practice" asp-action="Index" class="na-quick-action">
+                <i class="bi bi-headphones"></i>
+                <span>Practice Listening</span>
+            </a>
+            <a asp-controller="Community" asp-action="Index" class="na-quick-action">
+                <i class="bi bi-chat-dots"></i>
+                <span>Join a Discussion</span>
+            </a>
+            <a asp-controller="ExploreJapan" asp-action="Index" class="na-quick-action">
+                <i class="bi bi-geo-alt"></i>
+                <span>Explore Japan</span>
+            </a>
+        </div>
+    </section>
+}
+
+@* ===== CTA for non-logged-in ===== *@
+@if (!isLoggedIn)
+{
+    <div class="na-card text-center mt-3" style="background: var(--na-sakura-light);">
+        <h4>Ready to start your journey?</h4>
+        <p class="text-muted mb-2">Sign up for free to track your progress, save flashcards, and join the community.</p>
+        <a asp-area="Identity" asp-page="/Account/Register" class="btn-na-primary">
+            <i class="bi bi-person-plus"></i> Create Free Account
+        </a>
+    </div>
+}
+
+@section Scripts {
+    <script>
+    (function() {
+        var onboarding = document.getElementById('naOnboarding');
+        if (!onboarding) return;
+
+        var panels = onboarding.querySelectorAll('.na-onboarding-panel');
+        var steps = onboarding.querySelectorAll('.na-onboarding-step');
+        var actions = onboarding.querySelectorAll('[data-action]');
+        if (!panels.length) return;
+
+        var current = 1;
+        var answers = { goal: null, level: null, age: null };
+
+        function goTo(step) {
+            current = Math.max(1, Math.min(panels.length, step));
+            panels.forEach(function(p) {
+                p.classList.toggle('is-active', parseInt(p.dataset.panel, 10) === current);
+            });
+            steps.forEach(function(s) {
+                var sn = parseInt(s.dataset.step, 10);
+                s.classList.toggle('is-active', sn === current);
+                s.classList.toggle('is-done', sn < current);
+            });
+
+            if (current === panels.length) {
+                fillResult();
+            }
+        }
+
+        function fillResult() {
+            Object.keys(answers).forEach(function(key) {
+                var el = onboarding.querySelector('[data-result="' + key + '"]');
+                if (el) el.textContent = answers[key] || '—';
+            });
+        }
+
+        function nextButtonFor(panel) {
+            var next = null;
+            panel.querySelectorAll('[data-action]').forEach(function(b) {
+                if (b.dataset.action === 'next') next = b;
+            });
+            return next;
+        }
+
+        function syncNextState() {
+            var panel = onboarding.querySelector('.na-onboarding-panel.is-active');
+            if (!panel) return;
+            var input = panel.querySelector('input[type="radio"]:checked');
+            var nextBtn = nextButtonFor(panel);
+            if (nextBtn && nextBtn.disabled) {
+                nextBtn.disabled = !input;
+            }
+        }
+
+        actions.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var act = btn.dataset.action;
+                if (act === 'next') {
+                    var panel = btn.closest('.na-onboarding-panel');
+                    if (panel) {
+                        var checked = panel.querySelector('input[type="radio"]:checked');
+                        if (checked) {
+                            var name = checked.name;
+                            answers[name] = checked.value;
+                        }
+                    }
+                    goTo(current + 1);
+                } else if (act === 'prev') {
+                    goTo(current - 1);
+                } else if (act === 'restart') {
+                    answers = { goal: null, level: null, age: null };
+                    onboarding.querySelectorAll('input[type="radio"]').forEach(function(r) { r.checked = false; });
+                    goTo(1);
+                }
+            });
+        });
+
+        onboarding.querySelectorAll('.na-onboarding-option').forEach(function(label) {
+            label.addEventListener('click', function(e) {
+                var input = label.querySelector('input[type="radio"]');
+                if (input) {
+                    input.checked = true;
+                    label.classList.add('is-selected');
+                    // De-select siblings
+                    var group = input.name;
+                    onboarding.querySelectorAll('input[name="' + group + '"]').forEach(function(other) {
+                        if (other !== input) {
+                            other.parentElement.classList.remove('is-selected');
+                        }
+                    });
+                    setTimeout(syncNextState, 0);
+                }
+            });
+        });
+
+        goTo(1);
+    })();
+    </script>
+    <script>
+    (function() {
+        var banner = document.getElementById('naHeroBanner');
+        if (!banner) return;
+        var track = banner.querySelector('.na-hero-banner-track');
+        var slides = banner.querySelectorAll('.na-hero-slide');
+        var dots = document.querySelectorAll('.na-hero-banner-dot');
+        var prev = banner.querySelector('.na-hero-banner-arrow--prev');
+        var next = banner.querySelector('.na-hero-banner-arrow--next');
+
+        if (!track || slides.length === 0) return;
+
+        var current = 0;
+        var total = slides.length;
+        var autoTimer = null;
+        var INTERVAL = 6000;
+
+        function goTo(idx) {
+            current = (idx + total) % total;
+            track.style.transform = 'translateX(-' + (current * 100) + '%)';
+            slides.forEach(function(s, i) {
+                s.classList.toggle('is-active', i === current);
+            });
+            dots.forEach(function(d, i) {
+                d.classList.toggle('is-active', i === current);
+                d.setAttribute('aria-selected', i === current ? 'true' : 'false');
+            });
+        }
+
+        function startAuto() {
+            stopAuto();
+            autoTimer = setInterval(function() { goTo(current + 1); }, INTERVAL);
+        }
+
+        function stopAuto() {
+            if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+        }
+
+        if (prev) prev.addEventListener('click', function() { goTo(current - 1); startAuto(); });
+        if (next) next.addEventListener('click', function() { goTo(current + 1); startAuto(); });
+
+        dots.forEach(function(d, i) {
+            d.addEventListener('click', function() { goTo(i); startAuto(); });
+        });
+
+        // Pause on hover
+        banner.addEventListener('mouseenter', stopAuto);
+        banner.addEventListener('mouseleave', startAuto);
+
+        // Touch swipe support
+        var startX = 0, startY = 0, dx = 0, isTouch = false;
+        banner.addEventListener('touchstart', function(e) {
+            if (!e.touches.length) return;
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            dx = 0;
+            isTouch = true;
+            stopAuto();
+        }, { passive: true });
+
+        banner.addEventListener('touchmove', function(e) {
+            if (!isTouch || !e.touches.length) return;
+            dx = e.touches[0].clientX - startX;
+        }, { passive: true });
+
+        banner.addEventListener('touchend', function() {
+            if (!isTouch) return;
+            isTouch = false;
+            if (Math.abs(dx) > 50) {
+                goTo(dx < 0 ? current + 1 : current - 1);
+            }
+            startAuto();
+        });
+
+        // Keyboard navigation
+        banner.setAttribute('tabindex', '0');
+        banner.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowLeft')  { goTo(current - 1); startAuto(); }
+            if (e.key === 'ArrowRight') { goTo(current + 1); startAuto(); }
+        });
+
+        startAuto();
+    })();
+    </script>
+    @if (isLoggedIn)
+    {
+    <script>
+    (function() {
+        var POLL_INTERVAL = 30000;
+        var lastData = null;
+
+        function pollProgress() {
+            fetch('/Home/GetProgressData', {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                credentials: 'same-origin'
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (!data.success) return;
+                lastData = data;
+                updateProgressUI(data);
+            })
+            .catch(function() { /* silent */ });
+        }
+
+        function updateProgressUI(data) {
+            // Update Continue Learning cards
+            var section = document.getElementById('continue-learning-section');
+            if (!section) return;
+            var cardsContainer = document.getElementById('continue-learning-cards');
+            if (!cardsContainer) return;
+
+            if (data.continueLearning && data.continueLearning.length > 0) {
+                var titleEl = section.querySelector('.na-section-title');
+                if (titleEl) {
+                    titleEl.innerHTML = '<i class="bi bi-play-circle na-page-icon"></i> Continue Learning <span class="na-subtitle-jp">学習を続ける</span>';
+                }
+                var html = '';
+                for (var i = 0; i < data.continueLearning.length; i++) {
+                    var cl = data.continueLearning[i];
+                    var pct = cl.completionPercentage;
+                    var actionLabel = pct === 0 ? 'Start Lesson' : 'Continue';
+                    var actionIcon = pct === 0 ? 'bi-play-fill' : 'bi-arrow-right';
+                    var remaining = cl.estimatedMinutes > 0 ? Math.max(1, Math.ceil(cl.estimatedMinutes * (100 - pct) / 100)) : 0;
+                    html += '<a href="/Lessons/Details/' + cl.lessonId + '" class="text-decoration-none mb-2 d-block" data-lesson-card="' + cl.lessonId + '">';
+                    html += '<div class="na-continue-card-h">';
+                    html += '  <div class="na-continue-card-h-body">';
+                    html += '    <div class="d-flex align-items-center gap-2 mb-1">';
+                    html += '      <span class="na-badge">' + escHtml(cl.category) + '</span>';
+                    html += '      <span class="na-continue-percent">' + pct + '%</span>';
+                    html += '    </div>';
+                    html += '    <h5 class="text-dark mb-1">' + escHtml(cl.title) + '</h5>';
+                    if (cl.japaneseTitle) html += '    <p class="text-na-primary small mb-1">' + escHtml(cl.japaneseTitle) + '</p>';
+                    html += '    <div class="d-flex align-items-center gap-3 text-muted small">';
+                    html += '      <span><i class="bi bi-bar-chart"></i> ' + pct + '% complete</span>';
+                    if (remaining > 0) html += '      <span><i class="bi bi-clock"></i> ~' + remaining + ' min left</span>';
+                    html += '    </div>';
+                    html += '  </div>';
+                    html += '  <div class="na-continue-card-h-action">';
+                    html += '    <span class="btn-na-primary btn-sm"><i class="' + actionIcon + '"></i> ' + actionLabel + '</span>';
+                    html += '  </div>';
+                    html += '  <div class="na-continue-card-h-progress">';
+                    html += '    <div class="na-progress na-progress--inline">';
+                    html += '      <div class="na-progress-fill" style="width: ' + pct + '%"></div>';
+                    html += '    </div>';
+                    html += '  </div>';
+                    html += '</div>';
+                    html += '</a>';
+                }
+                cardsContainer.innerHTML = html;
+            }
+            else if (data.nextLessons && data.nextLessons.length > 0) {
+                var titleEl = section.querySelector('.na-section-title');
+                if (titleEl) {
+                    titleEl.innerHTML = '<i class="bi bi-lightbulb na-page-icon"></i> Start Your Next Lesson <span class="na-subtitle-jp">次のレッスン</span>';
+                }
+                var html = '';
+                for (var i = 0; i < data.nextLessons.length; i++) {
+                    var nl = data.nextLessons[i];
+                    html += '<a href="/Lessons/Details/' + nl.lessonId + '" class="text-decoration-none mb-2 d-block" data-lesson-card="' + nl.lessonId + '">';
+                    html += '<div class="na-continue-card-h">';
+                    html += '  <div class="na-continue-card-h-body">';
+                    html += '    <div class="d-flex align-items-center gap-2 mb-1">';
+                    html += '      <span class="na-badge">' + escHtml(nl.category) + '</span>';
+                    html += '    </div>';
+                    html += '    <h5 class="text-dark mb-1">' + escHtml(nl.title) + '</h5>';
+                    if (nl.japaneseTitle) html += '    <p class="text-na-primary small mb-1">' + escHtml(nl.japaneseTitle) + '</p>';
+                    html += '    <div class="d-flex align-items-center gap-3 text-muted small">';
+                    html += '      <span><i class="bi bi-clock"></i> ' + nl.estimatedMinutes + ' min</span>';
+                    html += '    </div>';
+                    html += '  </div>';
+                    html += '  <div class="na-continue-card-h-action">';
+                    html += '    <span class="btn-na-primary btn-sm"><i class="bi bi-play-fill"></i> Start Lesson</span>';
+                    html += '  </div>';
+                    html += '</div>';
+                    html += '</a>';
+                }
+                cardsContainer.innerHTML = html;
+            }
+        }
+
+        function escHtml(str) {
+            var div = document.createElement('div');
+            div.textContent = str || '';
+            return div.innerHTML;
+        }
+
+        setInterval(pollProgress, POLL_INTERVAL);
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) pollProgress();
+        });
+    })();
+    </script>
+    }
+}

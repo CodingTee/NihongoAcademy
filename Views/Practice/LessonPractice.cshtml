@@ -1,0 +1,319 @@
+@{
+    ViewData["Title"] = "Practice This Lesson";
+    var lesson = ViewBag.Lesson as NihongoAcademy.Models.Lesson;
+    var vocabulary = ViewBag.Vocabulary as IEnumerable<NihongoAcademy.Models.Vocabulary>;
+    var quizzes = ViewBag.Quizzes as IEnumerable<NihongoAcademy.Models.Quiz>;
+    var requiresProduction = ViewBag.RequiresProduction == true;
+    var isMastered = ViewBag.IsMastered == true;
+    var masteryReviewDueDate = ViewBag.MasteryReviewDueDate as DateTime?;
+    var masteryReviewDueText = masteryReviewDueDate?.ToString("g");
+    var itemCount = vocabulary?.Count() ?? 0;
+    var activities = ViewBag.Activities as List<NihongoAcademy.Models.LessonActivity> ?? new();
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-controller="Lessons" asp-action="Index">Lessons</a></li>
+        <li class="breadcrumb-item"><a asp-controller="Lessons" asp-action="Details" asp-route-id="@lesson?.Id">@lesson?.Title</a></li>
+        <li class="breadcrumb-item active">Practice</li>
+    </ol>
+</nav>
+
+<div class="mb-4">
+    <h2><i class="bi bi-lightning-charge na-page-icon"></i> Practice This Lesson</h2>
+    @if (lesson != null)
+    {
+        <h5 class="text-na-primary">@lesson.Title</h5>
+        <p class="text-muted">5–10 min reinforcement · No setup needed</p>
+    }
+</div>
+@Html.AntiForgeryToken()
+<input type="hidden" id="lesson-practice-id" value="@lesson?.Id" />
+<div class="na-card-flat p-3 mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <strong>Mastery check</strong>
+            <div class="small text-muted">Cover all @itemCount learning items and get at least 80% in recognition, listening and recall@(requiresProduction ? ", then complete the output task" : ""). Stable mastery requires a shorter review on a later day.</div>
+            @if (!isMastered && masteryReviewDueText != null)
+            {
+                <div class="small text-na-primary mt-1">First pass complete · delayed review available @masteryReviewDueText</div>
+            }
+        </div>
+        <span id="mastery-status" class="na-chip @(isMastered ? "text-success" : masteryReviewDueDate.HasValue ? "text-na-primary" : "")">@(isMastered ? "Mastered" : masteryReviewDueDate.HasValue ? "Review pending" : "In progress")</span>
+    </div>
+</div>
+
+@* ===== EXERCISE TABS ===== *@
+<div class="na-tabs-scroll mb-4">
+    @if (activities.Any(a => a.ActivityType == "dialogue"))
+    {
+        <button class="na-tab na-tab--active" data-tab="dialogue"><i class="bi bi-chat-dots"></i> Scene Dialogue</button>
+    }
+    @if (activities.Any(a => a.ActivityType == "comprehension"))
+    {
+        <button class="na-tab" data-tab="comprehension"><i class="bi bi-headphones"></i> Listening Check</button>
+    }
+    @if (activities.Any(a => a.ActivityType == "sentence-building"))
+    {
+        <button class="na-tab" data-tab="sentence-building"><i class="bi bi-bricks"></i> Sentence Builder</button>
+    }
+    <button class="na-tab @(!activities.Any(a => a.ActivityType == "dialogue") ? "na-tab--active" : "")" data-tab="flashcards"><i class="bi bi-card-text"></i> Flashcards</button>
+    <button class="na-tab" data-tab="recognition"><i class="bi bi-eye"></i> Recognition</button>
+    <button class="na-tab" data-tab="listening"><i class="bi bi-ear"></i> Listening</button>
+    <button class="na-tab" data-tab="recall"><i class="bi bi-pencil"></i> Recall</button>
+    @if (requiresProduction)
+    {
+        <button class="na-tab" data-tab="production"><i class="bi bi-chat-square-text"></i> Output Task</button>
+    }
+    @if (quizzes != null && quizzes.Any())
+    {
+        <button class="na-tab" data-tab="quiz"><i class="bi bi-patch-question"></i> Mini Quiz</button>
+    }
+</div>
+
+@if (activities.Any(a => a.ActivityType == "dialogue"))
+{
+    <div id="tab-dialogue" class="na-practice-tab">
+        @foreach (var activity in activities.Where(a => a.ActivityType == "dialogue"))
+        {
+            <div class="na-card-flat p-4 mb-3">
+                <h5>Real-life scene</h5>
+                <p class="text-muted">@activity.Prompt</p>
+                <button type="button" class="na-speak-btn mb-3" data-speak="@activity.JapaneseText" title="Play dialogue"><i class="bi bi-volume-up-fill"></i></button>
+                <div class="p-3 bg-light rounded" style="white-space:pre-line" lang="ja">@activity.JapaneseText</div>
+                <details class="mt-3"><summary>Show meaning</summary><div class="mt-2" style="white-space:pre-line">@activity.EnglishText</div></details>
+            </div>
+        }
+    </div>
+}
+
+@if (activities.Any(a => a.ActivityType == "comprehension"))
+{
+    <div id="tab-comprehension" class="na-practice-tab" style="display:none;">
+        @foreach (var activity in activities.Where(a => a.ActivityType == "comprehension"))
+        {
+            var options = System.Text.Json.JsonSerializer.Deserialize<string[]>(activity.OptionsJson ?? "[]") ?? Array.Empty<string>();
+            <div class="na-card-flat p-4 mb-3 activity-card" data-activity-id="@activity.Id" data-activity-type="comprehension">
+                @if (!string.IsNullOrWhiteSpace(activity.JapaneseText))
+                {
+                    <button type="button" class="na-speak-btn mb-3" data-speak="@activity.JapaneseText" title="Play audio"><i class="bi bi-volume-up-fill"></i></button>
+                }
+                <h5>@activity.Prompt</h5>
+                <div class="d-grid gap-2 mt-3">
+                    @foreach (var option in options)
+                    {
+                        <button type="button" class="btn-na-outline activity-answer" data-answer="@option">@option</button>
+                    }
+                </div>
+                <div class="activity-feedback mt-3"></div>
+            </div>
+        }
+    </div>
+}
+
+@if (activities.Any(a => a.ActivityType == "sentence-building"))
+{
+    <div id="tab-sentence-building" class="na-practice-tab" style="display:none;">
+        @foreach (var activity in activities.Where(a => a.ActivityType == "sentence-building"))
+        {
+            var tokens = System.Text.Json.JsonSerializer.Deserialize<string[]>(activity.OptionsJson ?? "[]") ?? Array.Empty<string>();
+            <div class="na-card-flat p-4 mb-3 activity-card" data-activity-id="@activity.Id" data-activity-type="sentence-building">
+                <h5>@activity.Prompt</h5>
+                <input class="form-control activity-input mt-3" lang="ja" placeholder="Type the complete Japanese sentence" />
+                <div class="small text-muted mt-2">Word bank: @string.Join("　", tokens)</div>
+                <button type="button" class="btn-na-primary activity-submit mt-3">Check sentence</button>
+                <div class="activity-feedback mt-3"></div>
+            </div>
+        }
+    </div>
+}
+
+@if (requiresProduction)
+{
+    <div id="tab-production" class="na-practice-tab" style="display:none;">
+        <div class="na-card-flat p-4">
+            <h5>Use Japanese for the situation</h5>
+            @if (lesson?.Title.Contains("Introduce yourself") == true)
+            {
+                <p>Write or say a first-meeting introduction containing a greeting, your name, where you are from, your role, and a suitable closing.</p>
+                <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="はじめまして。…"></textarea>
+            }
+            else if (lesson?.Title.Contains("family") == true)
+            {
+                <p>Introduce at least three people from a real or imaginary family, then describe one person's relationship or role.</p>
+                <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="これは わたしの ははです。…"></textarea>
+            }
+            else if (lesson?.Title.Contains("Describe people") == true)
+            {
+                <p>Introduce one family member or friend. Include the relationship or name, a role, and one quality.</p>
+                <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="これは わたしの ともだちです。…"></textarea>
+            }
+            else
+            {
+                <p>@lesson?.Description</p>
+                <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="Write or role-play your response in Japanese…"></textarea>
+            }
+            <div class="form-check mt-3"><input class="form-check-input production-check" type="checkbox" id="pc1"><label class="form-check-label" for="pc1">My message fits the situation.</label></div>
+            <div class="form-check"><input class="form-check-input production-check" type="checkbox" id="pc2"><label class="form-check-label" for="pc2">I used the core expressions without copying the model.</label></div>
+            <div class="form-check"><input class="form-check-input production-check" type="checkbox" id="pc3"><label class="form-check-label" for="pc3">I read it aloud once and it was understandable.</label></div>
+            <button id="production-complete" class="btn-na-primary mt-3">Complete output task</button>
+            <div id="production-feedback" class="mt-3"></div>
+        </div>
+    </div>
+}
+
+@* ===== ACTIVE RECALL ===== *@
+<div id="tab-recall" class="na-practice-tab" style="display:none;">
+    <div class="na-card-flat p-4">
+        <div class="text-center mb-3">
+            <h5>Type the kana for “<span id="recall-target"></span>”</h5>
+            <p class="small text-muted">This tests recall without showing answer choices.</p>
+        </div>
+        <div class="row justify-content-center"><div class="col-sm-6 col-md-4">
+            <input id="recall-input" class="form-control form-control-lg text-center" lang="ja" autocomplete="off" />
+            <button id="recall-check" class="btn-na-primary w-100 mt-3">Check</button>
+            <div id="recall-feedback" class="text-center mt-3"></div>
+        </div></div>
+    </div>
+</div>
+
+@* ===== FLASHCARDS ===== *@
+<div id="tab-flashcards" class="na-practice-tab" style="@(activities.Any(a => a.ActivityType == "dialogue") ? "display:none;" : "")">
+    @if (vocabulary != null && vocabulary.Any())
+    {
+        <div class="text-center mb-3">
+            <small class="text-muted">Click a card to flip · Use arrow keys to navigate</small>
+        </div>
+        <div class="flashcard-container" id="lesson-flashcard">
+            <div class="flashcard" id="lesson-flashcard-inner">
+                <div class="flashcard-face flashcard-front">
+                    <div class="flashcard-jp" id="fc-jp">@vocabulary.First().Japanese</div>
+                    <div class="flashcard-romaji" id="fc-romaji">@vocabulary.First().Romaji</div>
+                </div>
+                <div class="flashcard-face flashcard-back">
+                    <div class="flashcard-english" id="fc-en">@vocabulary.First().English</div>
+                    <div class="flashcard-type" id="fc-pos">@vocabulary.First().PartOfSpeech</div>
+                    @if (!string.IsNullOrEmpty(vocabulary.First().ExampleJapanese))
+                    {
+                        <div class="flashcard-example" id="fc-ex">
+                            @vocabulary.First().ExampleJapanese<br />
+                            <small>@vocabulary.First().ExampleEnglish</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-center align-items-center gap-3 mt-3">
+            <button class="btn-na-outline btn-sm" id="fc-prev"><i class="bi bi-arrow-left"></i></button>
+            <small class="text-muted" id="fc-counter">1 / @vocabulary.Count()</small>
+            <button class="btn-na-outline btn-sm" id="fc-next"><i class="bi bi-arrow-right"></i></button>
+        </div>
+
+        <div class="d-flex justify-content-center gap-2 mt-3">
+            <button class="btn-na-outline btn-sm fc-rate" data-quality="1">Again</button>
+            <button class="btn-na-outline btn-sm fc-rate" data-quality="2">Hard</button>
+            <button class="btn-na-primary btn-sm fc-rate" data-quality="3">Good</button>
+            <button class="btn-na-outline btn-sm fc-rate" data-quality="4">Easy</button>
+        </div>
+
+        @* Hidden data for JS *@
+        <script id="lesson-vocab-data" type="application/json">
+            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(vocabulary.Select(v => new {
+                v.Id, v.Japanese, v.Romaji, v.English, v.PartOfSpeech,
+                v.ExampleJapanese, v.ExampleEnglish
+            })))
+        </script>
+    }
+    else
+    {
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-inbox" style="font-size:2rem;"></i>
+            <p class="mt-2">No vocabulary available for this lesson yet.</p>
+        </div>
+    }
+</div>
+
+@* ===== RECOGNITION ===== *@
+<div id="tab-recognition" class="na-practice-tab" style="display:none;">
+    <div id="recognition-exercise" class="na-card-flat p-4">
+        @if (vocabulary != null && vocabulary.Any())
+        {
+            <div class="text-center mb-3">
+                <h5 id="rec-question">Which character is "<span id="rec-target"></span>"?</h5>
+            </div>
+            <div class="row g-2 justify-content-center" id="rec-options">
+                @* Populated by JS *@
+            </div>
+            <div class="text-center mt-3">
+                <button class="btn-na-primary btn-sm" id="rec-next-btn">Next Question</button>
+            </div>
+        }
+        else
+        {
+            <div class="text-center text-muted py-5">
+                <p>No vocabulary available for recognition.</p>
+            </div>
+        }
+    </div>
+</div>
+
+@* ===== LISTENING ===== *@
+<div id="tab-listening" class="na-practice-tab" style="display:none;">
+    <div id="listening-exercise" class="na-card-flat p-4">
+        @if (vocabulary != null && vocabulary.Any())
+        {
+            <div class="text-center mb-3">
+                <button class="na-speak-btn" id="listen-play-btn" style="width:64px;height:64px;font-size:1.5rem;">
+                    <i class="bi bi-volume-up-fill"></i>
+                </button>
+                <p class="mt-2 text-muted">Which character did you hear?</p>
+            </div>
+            <div class="row g-2 justify-content-center" id="listen-options">
+                @* Populated by JS *@
+            </div>
+            <div class="text-center mt-3">
+                <button class="btn-na-primary btn-sm" id="listen-next-btn">Next Question</button>
+            </div>
+        }
+        else
+        {
+            <div class="text-center text-muted py-5">
+                <p>No vocabulary available for listening.</p>
+            </div>
+        }
+    </div>
+</div>
+
+@* ===== MINI QUIZ ===== *@
+<div id="tab-quiz" class="na-practice-tab" style="display:none;">
+    @if (quizzes != null && quizzes.Any())
+    {
+        <div class="text-center py-4">
+            <i class="bi bi-patch-question" style="font-size:2rem; color:var(--na-primary);"></i>
+            <h5 class="mt-2">Mini Quiz</h5>
+            <p class="text-muted">5 questions to test your understanding</p>
+            <a asp-controller="Quizzes" asp-action="Take" asp-route-id="@quizzes.First().Id" class="btn-na-primary">
+                <i class="bi bi-play-fill"></i> Start Mini Quiz
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="text-center text-muted py-5">
+            <i class="bi bi-inbox" style="font-size:2rem;"></i>
+            <p class="mt-2">No quiz available for this lesson yet.</p>
+        </div>
+    }
+</div>
+
+<div class="mt-4">
+    <a asp-controller="Lessons" asp-action="Details" asp-route-id="@lesson?.Id" class="na-link-soft">
+        <i class="bi bi-arrow-left"></i> Back to Lesson
+    </a>
+</div>
+
+@section Scripts {
+    <script src="~/js/lesson-practice.js" asp-append-version="true"></script>
+}

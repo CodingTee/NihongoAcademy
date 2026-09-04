@@ -1,0 +1,270 @@
+@model NihongoAcademy.Controllers.DashboardViewModel
+
+@{
+    ViewData["Title"] = "Progress";
+    var completionPct = Model.TotalLessons > 0 ? (Model.CompletedLessons * 100 / Model.TotalLessons) : 0;
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="bi bi-graph-up na-page-icon"></i> My Progress <span class="na-subtitle-jp">進捗</span></h2>
+        <p class="text-muted">Track your learning progress and quiz performance.</p>
+    </div>
+</div>
+
+@* ===== Streak & Achievements ===== *@
+<div class="row mb-4">
+    <div class="col-md-6 mb-3">
+        <div class="na-card-flat">
+            <h5><i class="bi bi-fire"></i> Streak</h5>
+            <hr />
+            <div class="na-progress-streak">
+                <div class="na-progress-streak-icon">
+                    <i class="bi bi-fire"></i>
+                </div>
+                <div class="na-progress-streak-info">
+                    <div class="na-progress-streak-val">@Model.CurrentStreak days</div>
+                    <div class="na-progress-streak-label">Current Streak</div>
+                </div>
+                <div class="text-center" style="min-width: 60px;">
+                    <div style="font-size: 1.2rem; font-weight: 700; color: var(--na-gold, #DAA520);">@Model.LongestStreak</div>
+                    <div class="small text-muted">Best</div>
+                </div>
+            </div>
+            <div class="na-progress-rewards">
+                <span class="na-reward-badge @(Model.CurrentStreak >= 7 ? "na-reward-badge--unlocked" : "na-reward-badge--locked")">
+                    <i class="bi bi-flower1"></i> 7d Sakura BG
+                </span>
+                <span class="na-reward-badge @(Model.CurrentStreak >= 14 ? "na-reward-badge--unlocked" : "na-reward-badge--locked")">
+                    <i class="bi bi-award"></i> 14d Study Badge
+                </span>
+                <span class="na-reward-badge @(Model.CurrentStreak >= 30 ? "na-reward-badge--unlocked" : "na-reward-badge--locked")">
+                    <i class="bi bi-trophy"></i> 30d Torii BG
+                </span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-3">
+        <div class="na-card-flat">
+            <h5><i class="bi bi-calendar-check"></i> Study Calendar</h5>
+            <hr />
+            <p class="text-muted small text-center py-3">
+                <i class="bi bi-calendar3" style="font-size: 2rem; opacity: 0.3; display: block; margin-bottom: 8px;"></i>
+                Study calendar coming soon. Track your daily study activity here.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-3 col-6 mb-3">
+        <div class="dashboard-metric">
+            <div class="metric-value">@completionPct%</div>
+            <div class="metric-label">Lessons Completed</div>
+            <small class="text-muted">@Model.CompletedLessons / @Model.TotalLessons</small>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="dashboard-metric">
+            <div class="metric-value">@Model.TotalQuizAttempts</div>
+            <div class="metric-label">Quiz Attempts</div>
+            <small class="text-success">@Model.PassedQuizzes passed</small>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="dashboard-metric">
+            <div class="metric-value">@Model.AverageScore%</div>
+            <div class="metric-label">Average Score</div>
+            <small class="text-muted">All attempts</small>
+        </div>
+    </div>
+    <div class="col-md-3 col-6 mb-3">
+        <div class="dashboard-metric">
+            <div class="metric-value">@(Model.TotalLessons - Model.CompletedLessons)</div>
+            <div class="metric-label">Lessons Remaining</div>
+            <small class="text-muted">Keep going!</small>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="na-card-flat">
+            <h5><i class="bi bi-graph-up"></i> Quiz Score Trend</h5>
+            <hr />
+            <div style="position: relative; height: 250px;">
+                <canvas id="scoreChart" role="img" aria-label="Chart showing quiz score trend over time">
+                    Quiz score trend chart.
+                </canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="na-card-flat">
+            <h5><i class="bi bi-bar-chart"></i> Category Progress</h5>
+            <hr />
+            @if (Model.CategoryProgress.Any())
+            {
+                foreach (var cat in Model.CategoryProgress)
+                {
+                    var pct = cat.TotalLessons > 0 ? (cat.CompletedLessons * 100 / cat.TotalLessons) : 0;
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>@cat.CategoryName</span>
+                            <small class="text-muted">@cat.CompletedLessons / @cat.TotalLessons (@pct%)</small>
+                        </div>
+                        <div class="na-progress">
+                            <div class="na-progress-fill" style="width: @pct%;"></div>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="text-muted text-center">No progress data yet.</p>
+            }
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6">
+        <div class="na-card-flat">
+            <h5><i class="bi bi-journal-check"></i> Recent Lesson Progress</h5>
+            <hr />
+            @if (Model.LessonProgress.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Lesson</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var p in Model.LessonProgress.Take(8))
+                            {
+                                <tr>
+                                    <td>
+                                        <a asp-controller="Lessons" asp-action="Details" asp-route-id="@p.LessonId" class="text-decoration-none">
+                                            @p.Lesson?.Title
+                                        </a>
+                                        <br />
+                                        <small class="text-muted">@p.Lesson?.Category?.Name</small>
+                                    </td>
+                                    <td>
+                                        @if (p.IsCompleted)
+                                        {
+                                            <span class="na-badge" style="background: #E5F8E5; color: #2C5F2D;">
+                                                <i class="bi bi-check-circle"></i> Done
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="na-badge" style="background: #FFF5E5; color: #B8860B;">
+                                                <i class="bi bi-hourglass"></i> In Progress
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="na-progress" style="min-width: 80px;">
+                                            <div class="na-progress-fill" style="width: @p.CompletionPercentage%;"></div>
+                                        </div>
+                                        <small>@p.CompletionPercentage%</small>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted text-center">No lessons started yet. <a asp-controller="Lessons" asp-action="Index">Browse lessons</a></p>
+            }
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="na-card-flat">
+            <h5><i class="bi bi-patch-question"></i> Recent Quiz Attempts</h5>
+            <hr />
+            @if (Model.QuizAttempts.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Quiz</th>
+                                <th>Score</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var a in Model.QuizAttempts)
+                            {
+                                <tr>
+                                    <td>@a.Quiz?.Title</td>
+                                    <td>
+                                        <strong style="color: @(a.IsPassed ? "var(--na-secondary)" : "#D44");">
+                                            @a.ScorePercentage%
+                                        </strong>
+                                    </td>
+                                    <td><small>@a.AttemptDate.ToString("MMM dd")</small></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted text-center">No quiz attempts yet. <a asp-controller="Quizzes" asp-action="Index">Take a quiz</a></p>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/chart.js/chart.umd.js"></script>
+    <script>
+        var ctx = document.getElementById('scoreChart');
+        if (ctx) {
+            var labels = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RecentQuizLabels));
+            var scores = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.RecentQuizScores));
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels.length > 0 ? labels : ['No data'],
+                    datasets: [{
+                        label: 'Score (%)',
+                        data: scores.length > 0 ? scores : [0],
+                        borderColor: '#C84B31',
+                        backgroundColor: 'rgba(200, 75, 49, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointBackgroundColor: '#C84B31',
+                        pointRadius: 5,
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { callback: function(v) { return v + '%'; } }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+    </script>
+}

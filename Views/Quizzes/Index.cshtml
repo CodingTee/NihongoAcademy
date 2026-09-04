@@ -1,0 +1,79 @@
+@model IEnumerable<NihongoAcademy.Models.Quiz>
+
+@{
+    ViewData["Title"] = "Quizzes";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="bi bi-patch-question na-page-icon"></i> Quizzes <span class="na-subtitle-jp">テスト</span></h2>
+        <p class="text-muted">Test your Japanese knowledge with our interactive quizzes.</p>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <partial name="_EmptyState" model='new EmptyStateViewModel { Icon = "bi-inbox", Title = "No quizzes available", Message = "Please check back later." }' />
+}
+else
+{
+    <div class="row">
+        @foreach (var quiz in Model)
+        {
+            var userAttempts = ViewBag.UserAttempts as List<NihongoAcademy.Models.QuizAttempt>;
+            var bestAttempt = userAttempts?.Where(a => a.QuizId == quiz.Id).OrderByDescending(a => a.ScorePercentage).FirstOrDefault();
+            var lastAttempt = userAttempts?.Where(a => a.QuizId == quiz.Id).OrderByDescending(a => a.AttemptDate).FirstOrDefault();
+
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="na-card h-100">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="na-badge na-badge-@(quiz.Category?.Name?.ToLower())">@quiz.Category?.Name</span>
+                        @if (bestAttempt != null)
+                        {
+                            <span class="na-badge" style="background: @(bestAttempt.IsPassed ? "#E5F8E5" : "#FFE5E5"); color: @(bestAttempt.IsPassed ? "#2C5F2D" : "#D44");">
+                                Best: @bestAttempt.ScorePercentage%
+                            </span>
+                        }
+                    </div>
+                    <h5>@quiz.Title</h5>
+                    @if (!string.IsNullOrEmpty(quiz.JapaneseTitle))
+                    {
+                        <p class="text-na-primary small">@quiz.JapaneseTitle</p>
+                    }
+                    <p class="text-muted small">@(quiz.Description ?? "Test your knowledge!")</p>
+                    <div class="row text-center mb-3">
+                        <div class="col-4">
+                            <small class="text-muted d-block">Questions</small>
+                            <strong>@quiz.Questions.Count</strong>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted d-block">Time</small>
+                            <strong>@quiz.TimeLimitMinutes min</strong>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted d-block">Pass</small>
+                            <strong>@quiz.PassingScore%</strong>
+                        </div>
+                    </div>
+                    @if (lastAttempt != null)
+                    {
+                        <p class="small text-muted mb-2">
+                            Last attempt: @lastAttempt.AttemptDate.ToString("MMM dd") —
+                            <span style="color: @(lastAttempt.IsPassed ? "var(--na-secondary)" : "#D44");">
+                                @(lastAttempt.IsPassed ? "Passed" : "Failed") (@lastAttempt.ScorePercentage%)
+                            </span>
+                        </p>
+                    }
+                    <div class="d-flex gap-2">
+                        <a asp-action="Take" asp-route-id="@quiz.Id" class="btn-na-primary btn-sm flex-grow-1">
+                            <i class="bi bi-pencil"></i> @(bestAttempt != null ? "Retake" : "Start Quiz")
+                        </a>
+                        <a asp-action="History" class="btn-na-outline btn-sm">
+                            <i class="bi bi-clock-history"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

@@ -1,0 +1,61 @@
+@model NihongoAcademy.Models.Quiz
+
+@{
+    ViewData["Title"] = "Quiz Details";
+    var questions = Model.Questions.OrderBy(q => q.DisplayOrder).ToList();
+}
+
+<h2><i class="bi bi-eye"></i> Quiz Details</h2>
+
+<div class="na-card-flat">
+    <dl class="row">
+        <dt class="col-sm-3">Title</dt>
+        <dd class="col-sm-9">@Model.Title</dd>
+        <dt class="col-sm-3">Japanese Title</dt>
+        <dd class="col-sm-9">@Model.JapaneseTitle</dd>
+        <dt class="col-sm-3">Category</dt>
+        <dd class="col-sm-9"><span class="na-badge na-badge-@(Model.Category?.Name?.ToLower())">@Model.Category?.Name</span></dd>
+        <dt class="col-sm-3">Description</dt>
+        <dd class="col-sm-9">@Model.Description</dd>
+        <dt class="col-sm-3">Time Limit</dt>
+        <dd class="col-sm-9">@Model.TimeLimitMinutes minutes</dd>
+        <dt class="col-sm-3">Passing Score</dt>
+        <dd class="col-sm-9">@Model.PassingScore%</dd>
+        <dt class="col-sm-3">Published</dt>
+        <dd class="col-sm-9">@(Model.IsPublished ? "Yes" : "No")</dd>
+        <dt class="col-sm-3">Questions</dt>
+        <dd class="col-sm-9">@questions.Count</dd>
+    </dl>
+
+    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-na-primary"><i class="bi bi-pencil"></i> Edit</a>
+    <a asp-action="Index" class="btn-na-outline">Back to List</a>
+</div>
+
+@if (questions.Any())
+{
+    <h4 class="mt-4">Questions</h4>
+    @for (int i = 0; i < questions.Count; i++)
+    {
+        var q = questions[i];
+        var options = new[] { q.OptionA, q.OptionB, q.OptionC, q.OptionD };
+        <div class="na-card-flat mb-3">
+            <strong>@(i + 1). @q.QuestionText</strong>
+            <div class="mt-2">
+                @for (int j = 0; j < 4; j++)
+                {
+                    <div class="quiz-option" style="cursor: default; pointer-events: none; @(j + 1 == q.CorrectOption ? "border-color: var(--na-secondary); background: #E5F8E5;" : "")">
+                        <strong>@((char)('A' + j)).</strong> @options[j]
+                        @if (j + 1 == q.CorrectOption)
+                        {
+                            <i class="bi bi-check-circle-fill text-success float-end"></i>
+                        }
+                    </div>
+                }
+            </div>
+            @if (!string.IsNullOrEmpty(q.Explanation))
+            {
+                <small class="text-muted mt-1 d-block"><i class="bi bi-info-circle"></i> @q.Explanation</small>
+            }
+        </div>
+    }
+}

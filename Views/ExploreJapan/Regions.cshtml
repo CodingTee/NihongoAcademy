@@ -1,0 +1,124 @@
+@using NihongoAcademy.Models.ExploreJapan
+@using NihongoAcademy.Services
+@model IReadOnlyList<Region>
+@{
+    ViewData["Title"] = "Regions of Japan";
+    var heroImage = "/images/Japan%20Region/Japan.png";
+    var regions = Model ?? JapanRegions.AllOrdered;
+
+    // Default "featured" region on the listing map. When users land on /ExploreJapan/Regions
+    // there's no current region, so we highlight Kantō (Japan's largest population centre)
+    // as a visual focal point on the map.
+    var featuredSlug = "kanto";
+}
+<nav class="na-explore-backbar mb-3">
+    <a asp-controller="ExploreJapan" asp-action="Index" class="na-explore-back-link">
+        <i class="bi bi-arrow-left"></i> Back to Interactive Japan Map
+    </a>
+</nav>
+
+<!-- ===== LISTING HERO: text left, map-with-markers card right ===== -->
+<section class="na-region-hero na-region-listing-hero">
+    <div class="na-region-listing-hero-bg" style="background-image: url('@heroImage');"></div>
+    <div class="na-region-listing-hero-overlay"></div>
+
+    <div class="na-region-listing-hero-text">
+        <div class="na-region-hero-eyebrow">
+            <i class="bi bi-globe-asia-australia"></i>
+            <span>Explore Japan</span>
+        </div>
+        <h1 class="na-region-hero-title">
+            Regions of Japan
+        </h1>
+        <p class="na-region-hero-title-ja">9つの地方</p>
+        <p class="na-region-hero-lead">
+            From snow-covered Hokkaido in the north to the subtropical Ryukyu islands in the south —
+            nine regions, each with its own capital, cuisine, festivals, and pace of life.
+            Tap any region below to dive into its story.
+        </p>
+        <div class="na-region-hero-count">
+            <div class="na-region-hero-count-num">9</div>
+            <div class="na-region-hero-count-text">
+                regions<br />
+                <small>北から南まで</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="na-region-map-card" aria-label="Map of Japan with nine regions">
+        <img src="@heroImage" alt="Map of Japan" class="na-region-map-img" />
+        <div class="na-region-map-markers">
+            @foreach (var r in regions)
+            {
+                var isFeatured = string.Equals(r.Slug, featuredSlug, StringComparison.OrdinalIgnoreCase);
+                <a class="na-region-map-marker @(isFeatured ? "is-featured" : "")"
+                   asp-controller="ExploreJapan" asp-action="RegionDetail" asp-route-slug="@r.Slug"
+                   style="left:@r.MapX.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)%; top:@r.MapY.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)%;"
+                   title="@r.Name">
+                    <span class="na-region-map-marker-dot"></span>
+                    <span class="na-region-map-marker-label">@r.NameJa</span>
+                </a>
+            }
+        </div>
+    </div>
+</section>
+
+<!-- ===== 9 REGION CARDS (geographic north → south order) ===== -->
+<section class="na-region-grid-section">
+    <div class="row g-4">
+        @{
+            var idx = 0;
+            foreach (var r in regions)
+            {
+                idx++;
+                <div class="col-12 col-sm-6 col-lg-4">
+                    <a class="na-region-tile na-accent-@r.Accent"
+                       asp-controller="ExploreJapan" asp-action="RegionDetail" asp-route-slug="@r.Slug"
+                       data-idx="@idx">
+                        <div class="na-region-tile-num">@idx</div>
+
+                        <!-- Region silhouette image (per-region PNG) -->
+                        <div class="na-region-tile-img">
+                            <img src="@(string.IsNullOrEmpty(r.HeroImage) ? "/images/Japan%20Region/Japan.png" : r.HeroImage)"
+                                 alt="@r.Name region map"
+                                 loading="lazy" />
+                        </div>
+
+                        <div class="na-region-tile-body">
+                            <h3 class="na-region-tile-title">
+                                @r.Name
+                                <span class="na-region-tile-title-ja">@r.NameJa</span>
+                            </h3>
+                            <div class="na-region-tile-subtitle">@r.Subtitle</div>
+                            <p class="na-region-tile-tagline">@r.Tagline</p>
+                            <div class="na-region-tile-stats">
+                                <span class="na-region-tile-stat">
+                                    <i class="bi bi-geo-alt"></i> @r.Capital
+                                    <small>(@r.CapitalJa)</small>
+                                </span>
+                                <span class="na-region-tile-stat">
+                                    <i class="bi bi-aspect-ratio"></i> @r.Area
+                                </span>
+                            </div>
+                        </div>
+                        <div class="na-region-tile-arrow">
+                            Explore <i class="bi bi-arrow-right"></i>
+                        </div>
+                    </a>
+                </div>
+            }
+        }
+    </div>
+</section>
+
+<!-- ===== OTHER CATEGORIES ===== -->
+<div class="na-explore-other-cats mt-4">
+    <h6 class="text-muted small mb-2">Explore other categories</h6>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-action="Food" class="na-chip na-chip-sm"><i class="bi bi-cup-hot"></i> Food</a>
+        <a asp-action="Festivals" class="na-chip na-chip-sm"><i class="bi bi-music-note-beamed"></i> Festivals</a>
+        <a asp-action="Dialects" class="na-chip na-chip-sm"><i class="bi bi-chat-quote"></i> Dialects</a>
+        <a asp-action="Landmarks" class="na-chip na-chip-sm"><i class="bi bi-building"></i> Landmarks</a>
+        <a asp-action="Culture" class="na-chip na-chip-sm"><i class="bi bi-heart"></i> Culture</a>
+    </div>
+</div>

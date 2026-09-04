@@ -1,0 +1,89 @@
+@model NihongoAcademy.Models.Vocabulary
+
+@{
+    ViewData["Title"] = "Create Vocabulary";
+}
+
+<h2><i class="bi bi-plus-circle"></i> Create Vocabulary Card</h2>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="na-card-flat">
+            <form asp-action="Create">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+                <div class="mb-3">
+                    <label asp-for="CategoryId" class="form-label"></label>
+                    <select asp-for="CategoryId" class="form-select" asp-items="@(ViewBag.Categories != null ? new SelectList(ViewBag.Categories, "Id", "Name") : null)">
+                        <option value="">-- Select Category --</option>
+                    </select>
+                    <span asp-validation-for="CategoryId" class="text-danger"></span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Japanese" class="form-label"></label>
+                        <input asp-for="Japanese" class="form-control" placeholder="日本語" />
+                        <span asp-validation-for="Japanese" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="Romaji" class="form-label"></label>
+                        <input asp-for="Romaji" class="form-control" placeholder="romaji" />
+                        <span asp-validation-for="Romaji" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="English" class="form-label"></label>
+                        <input asp-for="English" class="form-control" />
+                        <span asp-validation-for="English" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="PartOfSpeech" class="form-label"></label>
+                        <input asp-for="PartOfSpeech" class="form-control" placeholder="Noun, Verb, etc." />
+                        <span asp-validation-for="PartOfSpeech" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ExampleJapanese" class="form-label"></label>
+                    <input asp-for="ExampleJapanese" class="form-control" placeholder="例文（日本語）" />
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="ExampleEnglish" class="form-label"></label>
+                    <input asp-for="ExampleEnglish" class="form-control" placeholder="Example sentence (English)" />
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="JlptLevel" class="form-label"></label>
+                        <select asp-for="JlptLevel" class="form-select">
+                            <option value="5">N5 (Beginner)</option>
+                            <option value="4">N4</option>
+                            <option value="3">N3</option>
+                            <option value="2">N2</option>
+                            <option value="1">N1 (Advanced)</option>
+                        </select>
+                        <span asp-validation-for="JlptLevel" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="DisplayOrder" class="form-label"></label>
+                        <input asp-for="DisplayOrder" class="form-control" type="number" min="0" value="0" />
+                        <span asp-validation-for="DisplayOrder" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn-na-primary"><i class="bi bi-check-circle"></i> Create</button>
+                    <a asp-action="Index" class="btn-na-outline">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

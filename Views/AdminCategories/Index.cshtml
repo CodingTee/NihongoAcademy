@@ -1,0 +1,51 @@
+@model IEnumerable<NihongoAcademy.Models.Category>
+
+@{
+    ViewData["Title"] = "Manage Categories";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-grid-3x3-gap"></i> Manage Categories</h2>
+    <a asp-action="Create" class="btn-na-primary"><i class="bi bi-plus-circle"></i> New Category</a>
+</div>
+
+<div class="na-card-flat">
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Lessons</th>
+                    <th>Vocabulary</th>
+                    <th>Quizzes</th>
+                    <th>Order</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>
+                            @if (!string.IsNullOrEmpty(item.IconClass))
+                            {
+                                <i class="@item.IconClass"></i>
+                            }
+                            <span class="na-badge na-badge-@(item.Name.ToLower())">@item.Name</span>
+                        </td>
+                        <td><small class="text-muted">@(item.Description?.Length > 60 ? item.Description.Substring(0, 60) + "..." : item.Description)</small></td>
+                        <td>@item.Lessons.Count</td>
+                        <td>@item.Vocabulary.Count</td>
+                        <td>@item.Quizzes.Count</td>
+                        <td>@item.DisplayOrder</td>
+                        <td>
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-na-outline"><i class="bi bi-pencil"></i></a>
+                            <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-na-outline" style="color: #D44;"><i class="bi bi-trash"></i></a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

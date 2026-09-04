@@ -1,0 +1,24 @@
+@using NihongoAcademy.Models.ExploreJapan
+@model ExploreItem
+@{
+    var accent = string.IsNullOrWhiteSpace(Model.Accent) ? "na-primary" : Model.Accent;
+}
+
+<div class="na-explore-card na-card h-100">
+    <div class="na-explore-card-head">
+        <span class="na-explore-card-icon na-accent-@accent">
+            <i class="bi @Model.Icon"></i>
+        </span>
+        <div class="na-explore-card-titles">
+            <h3 class="na-explore-card-title">@Model.Title</h3>
+            <div class="na-explore-card-title-ja">@Model.TitleJa</div>
+        </div>
+    </div>
+    <p class="na-explore-card-desc">@Model.Description</p>
+    @if (!string.IsNullOrWhiteSpace(Model.LearnMoreUrl))
+    {
+        <a class="na-explore-card-link" href="@Model.LearnMoreUrl" target="_blank" rel="noopener noreferrer">
+            Learn more <i class="bi bi-arrow-up-right"></i>
+        </a>
+    }
+</div>

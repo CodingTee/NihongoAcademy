@@ -1,0 +1,78 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Profile";
+    ViewData["ActivePage"] = ManageNavPages.Index;
+}
+
+<partial name="_StatusMessage" for="StatusMessage" />
+
+<div>
+    <h4 class="mb-4">Profile</h4>
+
+    <form id="profile-form" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+
+        <!-- Avatar builder: grid 2-column layout -->
+        <div class="na-avatar-builder mb-4">
+            <div class="avatar-customizer-layout">
+                <!-- Left: preview + randomize -->
+                <div class="avatar-preview-column">
+                    <div class="avatar-preview-card">
+                        <div class="avatar-preview-title">Avatar Preview</div>
+                        <div class="avatar-preview-stage">
+                            <div id="avatar-preview" data-size="220"></div>
+                        </div>
+                    </div>
+                    <button type="button" id="avatar-random" class="btn-na-outline btn-sm avatar-randomize-button">
+                        <i class="bi bi-shuffle"></i> Randomize
+                    </button>
+                </div>
+                <!-- Right: controls -->
+                <div class="avatar-controls-column">
+                    <div id="avatar-controls"></div>
+                </div>
+            </div>
+        </div>
+        <input type="hidden" asp-for="Input.AvatarJson" id="avatar-json" value="@Model.Input.AvatarJson" />
+
+        <!-- Account info -->
+        <div class="mb-3">
+            <label asp-for="Username" class="form-label na-form-label">Username</label>
+            <input asp-for="Username" class="form-control" disabled />
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Email" class="form-label na-form-label">Email</label>
+            <div class="input-group">
+                <input asp-for="Email" class="form-control" disabled />
+                @if (!Model.IsEmailConfirmed)
+                {
+                    <a id="email-verification" asp-page="./Email" class="btn-na-outline">Send verification</a>
+                }
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <label asp-for="Input.PhoneNumber" class="form-label na-form-label"></label>
+            <input asp-for="Input.PhoneNumber" class="form-control" placeholder="Please enter your phone number." />
+            <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
+        </div>
+
+        <button id="update-profile-button" type="submit" class="btn-na-primary">
+            <i class="bi bi-check-lg"></i> Save profile
+        </button>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="~/js/avatar-builder.js" asp-append-version="true"></script>
+    <script>
+        AvatarBuilder.init({
+            preview: "#avatar-preview",
+            controls: "#avatar-controls",
+            input: "#avatar-json",
+            randomButton: "#avatar-random"
+        });
+    </script>
+}

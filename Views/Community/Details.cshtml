@@ -1,0 +1,335 @@
+@model CommunityPost
+@using NihongoAcademy.Models
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> SignInManager
+
+@{
+    ViewData["Title"] = Model.Title;
+    var topLevelComments = (List<CommunityComment>)ViewBag.TopLevelComments;
+    var isLiked = (bool)ViewBag.IsLiked;
+    var currentUserId = (string?)ViewBag.CurrentUserId;
+    var isOwner = (bool)ViewBag.IsOwner;
+    var avatarMap = (Dictionary<string, string?>)ViewBag.AvatarMap;
+}
+
+@functions {
+    public string TimeAgo(DateTime date)
+    {
+        var diff = DateTime.UtcNow - date;
+        if (diff.TotalMinutes < 1) return "just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
+        return date.ToLocalTime().ToString("MMM d");
+    }
+
+    public string GetUserInitial(string? userName)
+    {
+        if (string.IsNullOrEmpty(userName)) return "?";
+        return userName.Substring(0, 1).ToUpper();
+    }
+
+    public string CategoryTagClass(CommunityCategory cat)
+    {
+        return cat switch
+        {
+            CommunityCategory.General => "na-cat--community",
+            CommunityCategory.Study => "na-cat--study",
+            CommunityCategory.Questions => "na-cat--questions",
+            CommunityCategory.Japan => "na-cat--japan",
+            _ => "na-cat--default"
+        };
+    }
+
+    public string CategoryIcon(CommunityCategory cat)
+    {
+        return cat switch
+        {
+            CommunityCategory.General => "bi-people",
+            CommunityCategory.Study => "bi-lightbulb",
+            CommunityCategory.Questions => "bi-question-circle",
+            CommunityCategory.Japan => "bi-globe-asia-australia",
+            _ => "bi-grid"
+        };
+    }
+
+    public string CategoryLabel(CommunityCategory cat)
+    {
+        return cat switch
+        {
+            CommunityCategory.General => "Community",
+            CommunityCategory.Study => "Study",
+            CommunityCategory.Questions => "Questions",
+            CommunityCategory.Japan => "Japan",
+            _ => cat.ToString()
+        };
+    }
+}
+
+<div class="na-community">
+    @* Back link *@
+    <a asp-action="Index" class="na-link-soft mb-3 d-inline-block">
+        <i class="bi bi-arrow-left"></i> Back to Community
+    </a>
+
+    @* ===== Post Detail ===== *@
+    <div class="na-card na-post-detail" data-post-id="@Model.Id">
+        @* Header *@
+        <div class="na-post-header">
+            <div class="na-post-avatar">
+                <div class="na-avatar-sm na-avatar-sm--lg na-avatar-inline" data-size="48"
+                     data-avatar-json="@(avatarMap != null && avatarMap.ContainsKey(Model.UserId) ? avatarMap[Model.UserId] : "{}")">@GetUserInitial(Model.User?.UserName)</div>
+            </div>
+            <div class="na-post-meta">
+                <span class="na-post-username">@@@(Model.User?.UserName ?? "learner")</span>
+                <span class="na-post-time">&middot; @TimeAgo(Model.CreatedDate)</span>
+                @if (Model.ModifiedDate.HasValue)
+                {
+                    <span class="text-muted small">&middot; edited</span>
+                }
+            </div>
+        </div>
+
+        @* Category + Feedback tags *@
+        <div class="na-post-category">
+            <span class="na-cat-tag @CategoryTagClass(Model.Category)">
+                <i class="bi @CategoryIcon(Model.Category)"></i> @CategoryLabel(Model.Category)
+            </span>
+            @if (Model.FeedbackWanted)
+            {
+                <span class="na-cat-tag na-cat--feedback">
+                    <i class="bi bi-stars"></i> Feedback Wanted
+                </span>
+            }
+        </div>
+
+        @* Title *@
+        <h3 class="na-post-detail-title">@Model.Title</h3>
+
+        @* Content *@
+        <div class="na-post-detail-content">
+            @Html.Raw(Model.Content.Replace("\n", "<br/>"))
+        </div>
+
+        @* Action bar *@
+        <div class="na-post-actions na-post-actions--detail">
+            <button class="na-post-action na-like-btn @(isLiked ? "na-like-btn--active" : "")"
+                    data-post-id="@Model.Id"
+                    onclick="toggleCommunityLike(this, @Model.Id)">
+                <i class="bi @(isLiked ? "bi-heart-fill" : "bi-heart")"></i>
+                <span class="na-like-count">@Model.Likes.Count</span>
+            </button>
+            <span class="na-post-action">
+                <i class="bi bi-chat"></i>
+                <span>@Model.Comments.Count comments</span>
+            </span>
+            <button class="na-post-action na-save-btn" onclick="savePost(this)" title="Save">
+                <i class="bi bi-bookmark"></i>
+            </button>
+            @if (isOwner)
+            {
+                <form asp-action="Delete" asp-route-id="@Model.Id" method="post" class="ms-auto"
+                      onsubmit="return confirm('Delete this post?');">
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="na-post-action na-delete-btn text-danger">
+                        <i class="bi bi-trash3"></i> Delete
+                    </button>
+                </form>
+            }
+        </div>
+    </div>
+
+    @* ===== Comments Section ===== *@
+    <div class="na-comments-section mt-3">
+        <h5><i class="bi bi-chat-dots"></i> Comments @Model.Comments.Count</h5>
+
+        @* Add comment form *@
+        @if (SignInManager.IsSignedIn(User))
+        {
+            <div class="na-card na-comment-form-card">
+                <form asp-action="AddComment" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="postId" value="@Model.Id" />
+                    <input type="hidden" name="parentCommentId" id="reply-to-id" value="" />
+
+                    <div class="d-flex gap-2 align-items-start">
+                        <div class="na-avatar-sm na-avatar-inline" data-size="36"
+                             data-avatar-json="@(avatarMap != null && currentUserId != null && avatarMap.ContainsKey(currentUserId) ? avatarMap[currentUserId] : "{}")">@GetUserInitial(User.Identity?.Name)</div>
+                        <div class="flex-grow-1">
+                            <textarea name="content" class="form-control na-input" rows="3"
+                                      placeholder="Write a comment..." id="comment-input" required maxlength="2000"></textarea>
+                            <div id="reply-indicator" class="d-none mt-1">
+                                <span class="text-muted small" id="reply-indicator-text"></span>
+                                <button type="button" class="btn btn-link btn-sm p-0 text-danger" onclick="cancelReply()">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-end mt-2">
+                        <button type="submit" class="btn-na-primary btn-sm">
+                            <i class="bi bi-send"></i> Comment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        }
+        else
+        {
+            <div class="na-card text-center py-3">
+                <a asp-area="Identity" asp-page="/Account/Login" class="na-link-soft">Sign in</a> to leave a comment.
+            </div>
+        }
+
+        @* Comments list *@
+        @if (topLevelComments.Any())
+        {
+            <div class="na-comments-list">
+                @foreach (var comment in topLevelComments)
+                {
+                    <div class="na-comment na-card" data-comment-id="@comment.Id">
+                        <div class="na-comment-header">
+                            <div class="na-avatar-sm na-avatar-inline" data-size="36"
+                                 data-avatar-json="@(avatarMap != null && avatarMap.ContainsKey(comment.UserId) ? avatarMap[comment.UserId] : "{}")">@GetUserInitial(comment.User?.UserName)</div>
+                            <div class="na-comment-meta">
+                                <span class="na-comment-username">@@@(comment.User?.UserName ?? "learner")</span>
+                                <span class="na-comment-time">&middot; @TimeAgo(comment.CreatedDate)</span>
+                            </div>
+                        </div>
+                        <div class="na-comment-body">
+                            @Html.Raw(comment.Content.Replace("\n", "<br/>"))
+                        </div>
+                        <div class="na-comment-actions">
+                            @if (SignInManager.IsSignedIn(User))
+                            {
+                                <button class="na-post-action na-reply-btn" onclick="replyTo(@comment.Id, '@comment.User?.UserName')">
+                                    <i class="bi bi-reply"></i> Reply
+                                </button>
+                            }
+                            @if (comment.UserId == currentUserId)
+                            {
+                                <span class="text-muted small">(your comment)</span>
+                            }
+                        </div>
+
+                        @* Replies (1 level) *@
+                        @if (comment.Replies.Any())
+                        {
+                            <div class="na-replies">
+                                @foreach (var reply in comment.Replies.OrderBy(r => r.CreatedDate))
+                                {
+                                    <div class="na-reply">
+                                        <div class="na-comment-header">
+                                            <div class="na-avatar-sm na-avatar-sm--sm na-avatar-inline" data-size="28"
+                                                 data-avatar-json="@(avatarMap != null && avatarMap.ContainsKey(reply.UserId) ? avatarMap[reply.UserId] : "{}")">@GetUserInitial(reply.User?.UserName)</div>
+                                            <div class="na-comment-meta">
+                                                <span class="na-comment-username">@@@(reply.User?.UserName ?? "learner")</span>
+                                                <span class="na-comment-time">&middot; @TimeAgo(reply.CreatedDate)</span>
+                                            </div>
+                                        </div>
+                                        <div class="na-comment-body na-reply-body">
+                                            @Html.Raw(reply.Content.Replace("\n", "<br/>"))
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+        else if (SignInManager.IsSignedIn(User))
+        {
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-chat" style="font-size: 2rem; opacity: 0.3;"></i>
+                <p class="mt-2 small">No comments yet. Be the first!</p>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/avatar-builder.js"></script>
+    <script>
+        // Render all inline avatars from data-avatar-json
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!window.AvatarBuilder) return;
+            document.querySelectorAll('.na-avatar-inline').forEach(function (el) {
+                try {
+                    var json = el.dataset.avatarJson || '{}';
+                    var config = JSON.parse(json);
+                    var size = parseInt(el.dataset.size, 10) || 36;
+                    var merged = Object.assign({}, AvatarBuilder.defaults, config);
+                    AvatarBuilder.renderAvatar(merged, el);
+                    el.style.width = size + 'px';
+                    el.style.height = size + 'px';
+                    el.style.overflow = 'hidden';
+                    el.style.borderRadius = '50%';
+                    el.style.flexShrink = '0';
+                } catch (e) {}
+            });
+        });
+
+        function toggleCommunityLike(btn, postId) {
+            var token = getAntiForgeryToken();
+            if (!token) return;
+
+            fetch('/Community/ToggleLike', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': token
+                },
+                body: 'postId=' + postId
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    var icon = btn.querySelector('i');
+                    var count = btn.querySelector('.na-like-count');
+                    if (data.isLiked) {
+                        btn.classList.add('na-like-btn--active');
+                        icon.className = 'bi bi-heart-fill';
+                    } else {
+                        btn.classList.remove('na-like-btn--active');
+                        icon.className = 'bi bi-heart';
+                    }
+                    if (count) count.textContent = data.likeCount;
+                }
+            })
+            .catch(function() {});
+        }
+
+        function savePost(btn) {
+            var icon = btn.querySelector('i');
+            if (icon.classList.contains('bi-bookmark-fill')) {
+                icon.className = 'bi bi-bookmark';
+                btn.classList.remove('na-save-btn--active');
+            } else {
+                icon.className = 'bi bi-bookmark-fill';
+                btn.classList.add('na-save-btn--active');
+            }
+        }
+
+        function replyTo(commentId, userName) {
+            var replyInput = document.getElementById('reply-to-id');
+            var replyIndicator = document.getElementById('reply-indicator');
+            var replyText = document.getElementById('reply-indicator-text');
+            var commentInput = document.getElementById('comment-input');
+
+            replyInput.value = commentId;
+            replyIndicator.classList.remove('d-none');
+            replyText.textContent = 'Replying to @@' + userName;
+            commentInput.placeholder = 'Reply to @@' + userName + '...';
+            commentInput.focus();
+        }
+
+        function cancelReply() {
+            var replyInput = document.getElementById('reply-to-id');
+            var replyIndicator = document.getElementById('reply-indicator');
+            var commentInput = document.getElementById('comment-input');
+
+            replyInput.value = '';
+            replyIndicator.classList.add('d-none');
+            commentInput.placeholder = 'Write a comment...';
+        }
+    </script>
+}

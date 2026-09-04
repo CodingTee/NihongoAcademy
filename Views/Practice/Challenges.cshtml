@@ -1,0 +1,63 @@
+@{
+    ViewData["Title"] = "Challenges";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-action="Index">Practice</a></li>
+        <li class="breadcrumb-item active">Challenges</li>
+    </ol>
+</nav>
+
+<div class="mb-4">
+    <h2><i class="bi bi-trophy na-page-icon"></i> Challenge Yourself</h2>
+    <p class="text-muted">Push your limits with fun, timed challenges.</p>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <a asp-action="SpeedRound" class="na-challenge-card-lg text-decoration-none">
+            <div class="na-challenge-lg-icon">⚡</div>
+            <h5>Speed Round</h5>
+            <p class="text-muted mb-0">60 seconds — answer as many as you can!</p>
+            <span class="btn-na-primary btn-sm mt-3">Start</span>
+        </a>
+    </div>
+    <div class="col-md-6">
+        <a asp-action="DictationChallenge" class="na-challenge-card-lg text-decoration-none">
+            <div class="na-challenge-lg-icon">🎧</div>
+            <h5>Dictation</h5>
+            <p class="text-muted mb-0">Listen carefully and type what you hear.</p>
+            <span class="btn-na-primary btn-sm mt-3">Start</span>
+        </a>
+    </div>
+    <div class="col-md-6">
+        <a asp-action="SentenceBuilder" class="na-challenge-card-lg text-decoration-none">
+            <div class="na-challenge-lg-icon">🧩</div>
+            <h5>Sentence Builder</h5>
+            <p class="text-muted mb-0">Arrange words into correct sentences.</p>
+            <span class="btn-na-primary btn-sm mt-3">Start</span>
+        </a>
+    </div>
+    <div class="col-md-6">
+        <a asp-action="Mode" asp-route-skill="speaking" asp-route-mode="shadowing" class="na-challenge-card-lg text-decoration-none">
+            <div class="na-challenge-lg-icon">🗣</div>
+            <h5>Shadowing</h5>
+            <p class="text-muted mb-0">Listen and repeat naturally.</p>
+            <span class="btn-na-primary btn-sm mt-3">Start</span>
+        </a>
+    </div>
+    <div class="col-md-6">
+        <a asp-action="MixedChallenge" class="na-challenge-card-lg text-decoration-none">
+            <div class="na-challenge-lg-icon">🎯</div>
+            <h5>Mixed Challenge</h5>
+            <p class="text-muted mb-0">Vocabulary, grammar, listening, and reading — all mixed.</p>
+            <span class="btn-na-primary btn-sm mt-3">Start</span>
+        </a>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a asp-action="Index" class="na-link-soft"><i class="bi bi-arrow-left"></i> Back to Practice</a>
+</div>

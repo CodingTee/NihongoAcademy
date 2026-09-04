@@ -1,0 +1,128 @@
+@model IEnumerable<NihongoAcademy.Models.Vocabulary>
+
+@{
+    ViewData["Title"] = "Flashcard Practice";
+}
+
+<div class="row mb-3">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+                <li class="breadcrumb-item"><a asp-controller="Flashcards" asp-action="Index">Flashcards</a></li>
+                <li class="breadcrumb-item active">Practice</li>
+            </ol>
+        </nav>
+        <h2><i class="bi bi-card-text"></i> Flashcard Practice <span class="na-subtitle-jp">フラッシュカード</span></h2>
+        @if (ViewBag.CategoryName != null)
+        {
+            <p class="text-muted">Category: <span class="na-badge na-badge-@(ViewBag.CategoryName.ToLower())">@ViewBag.CategoryName</span></p>
+        }
+        else
+        {
+            <p class="text-muted">All categories</p>
+        }
+    </div>
+</div>
+
+<div id="flashcard-study">
+    <div class="row mb-3">
+        <div class="col-3">
+            <div class="dashboard-metric">
+                <div class="metric-value text-success" id="known-count">0</div>
+                <div class="metric-label">Known</div>
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="dashboard-metric">
+                <div class="metric-value" id="card-counter">0 / 0</div>
+                <div class="metric-label">Progress</div>
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="dashboard-metric">
+                <div class="metric-value text-danger" id="unknown-count">0</div>
+                <div class="metric-label">Review</div>
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="dashboard-metric">
+                <div class="metric-value text-na-primary" id="srs-interval">—</div>
+                <div class="metric-label">Next Review</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="flashcard-container">
+        <div class="flashcard" onclick="flipCard()">
+            <div class="flashcard-face flashcard-front">
+                <div class="flashcard-jp"></div>
+                <div class="flashcard-romaji"></div>
+                <button type="button" class="na-speak-btn mt-2" onclick="event.stopPropagation(); speakFlashcardFront();" title="Hear pronunciation">
+                    <i class="bi bi-volume-up-fill"></i>
+                </button>
+                <div class="flashcard-type"></div>
+                <small class="text-muted mt-3"><i class="bi bi-hand-index"></i> Click card to flip</small>
+            </div>
+            <div class="flashcard-face flashcard-back">
+                <div class="flashcard-english"></div>
+                <div class="flashcard-type"></div>
+                <div class="flashcard-example"></div>
+                <button type="button" class="na-speak-btn na-speak-btn-sm mt-2" onclick="event.stopPropagation(); speakFlashcardExample();" title="Hear example sentence">
+                    <i class="bi bi-volume-up-fill"></i>
+                </button>
+                <small class="text-muted mt-3"><i class="bi bi-hand-index"></i> Click card to flip back</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between mt-3">
+        <button id="prev-card" class="btn-na-outline" onclick="prevCard()">
+            <i class="bi bi-arrow-left"></i> Previous
+        </button>
+        <div class="d-flex gap-2">
+            <button class="btn-na-outline" style="border-color: #D44; color: #D44;" onclick="markSRS(1)" title="I didn't know this — review again in 10 min">
+                <i class="bi bi-x-circle"></i> Again
+            </button>
+            <button class="btn-na-outline" style="border-color: #e6a817; color: #e6a817;" onclick="markSRS(2)" title="Difficult — short interval">
+                <i class="bi bi-emoji-frown"></i> Hard
+            </button>
+            <button class="btn-na-outline" style="border-color: var(--na-secondary); color: var(--na-secondary);" onclick="markSRS(3)" title="Good — standard SM-2 interval">
+                <i class="bi bi-check-circle"></i> Good
+            </button>
+            <button class="btn-na-outline" style="border-color: var(--na-indigo); color: var(--na-indigo);" onclick="markSRS(4)" title="Easy — longer interval">
+                <i class="bi bi-lightning-charge"></i> Easy
+            </button>
+        </div>
+        <button id="next-card" class="btn-na-outline" onclick="nextCard()">
+            Next <i class="bi bi-arrow-right"></i>
+        </button>
+    </div>
+</div>
+
+<div id="flashcard-results" style="display: none;"></div>
+
+@section Scripts {
+    <script>
+        var flashcardData = [
+            @foreach (var card in Model)
+            {
+                <text>
+            {
+                id: @card.Id,
+                japanese: @Html.Raw(Json.Serialize(card.Japanese)),
+                romaji: @Html.Raw(Json.Serialize(card.Romaji)),
+                english: @Html.Raw(Json.Serialize(card.English)),
+                partOfSpeech: @Html.Raw(Json.Serialize(card.PartOfSpeech ?? "")),
+                exampleJapanese: @Html.Raw(Json.Serialize(card.ExampleJapanese ?? "")),
+                exampleEnglish: @Html.Raw(Json.Serialize(card.ExampleEnglish ?? ""))
+            },
+            </text>
+            }
+        ];
+
+        document.addEventListener("DOMContentLoaded", function() {
+            initFlashcards(flashcardData);
+        });
+    </script>
+}

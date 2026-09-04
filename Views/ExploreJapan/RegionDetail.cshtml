@@ -1,0 +1,236 @@
+@using NihongoAcademy.Models.ExploreJapan
+@model Region
+@{
+    ViewData["Title"] = $"{Model.Name} — Regions";
+
+    // Background map of all 9 regions (acts as the "where am I" map with the 9 dots).
+    var mapImage = "/images/Japan%20Region/Japan.png";
+    // Isolated silhouette of THIS region, shown as a hero illustration below the map.
+    var heroImage = string.IsNullOrEmpty(Model.HeroImage)
+        ? "/images/Japan%20Region/Japan.png"
+        : Model.HeroImage;
+
+    var prevRegion = ViewData["PrevRegion"] as Region;
+    var nextRegion = ViewData["NextRegion"] as Region;
+
+    string Fmt(double v) => v.ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+}
+
+<nav class="na-explore-backbar mb-3">
+    <a asp-controller="ExploreJapan" asp-action="Regions" class="na-explore-back-link">
+        <i class="bi bi-arrow-left"></i> Back to Regions
+    </a>
+</nav>
+
+<!-- ===== HERO WITH MAP (3-col grid: 文字 | 印章(中央) | 地图) ===== -->
+<section class="na-region-hero na-region-detail-hero na-accent-@Model.Accent">
+    <!-- Text on the left -->
+    <div class="na-region-hero-inner">
+        <div class="na-region-hero-eyebrow">
+            <i class="bi bi-globe-asia-australia"></i>
+            <span>Regions / 地方</span>
+        </div>
+        <h1 class="na-region-hero-title">
+            @Model.Name
+            <span class="na-region-hero-title-ja">@Model.NameJa</span>
+        </h1>
+        <p class="na-region-hero-subtitle">@Model.Subtitle</p>
+        <p class="na-region-hero-tagline">@Model.Tagline</p>
+    </div>
+
+    <!-- Centerpiece "region seal" card — middle grid column (240×240 silhouette) -->
+    <div class="na-region-hero-seal" style="background-image: url('@heroImage');">
+        <span class="na-region-hero-seal-label">@Model.NameJa</span>
+    </div>
+
+    <!-- Map card on the right (owns its own aspect ratio so the
+         9 marker dots can be positioned with percentages relative to the image). -->
+    <div class="na-region-map-area" aria-hidden="true">
+        <img src="@mapImage" alt="Map of Japan" class="na-region-map-img" />
+        <div class="na-region-map-markers">
+            @{
+                var mapRegions = JapanRegions.AllOrdered;
+                foreach (var r in mapRegions)
+                {
+                    var isCurrent = string.Equals(r.Slug, Model.Slug, StringComparison.OrdinalIgnoreCase);
+                    <a class="na-region-map-marker @(isCurrent ? "is-current" : "")"
+                       asp-action="RegionDetail" asp-route-slug="@r.Slug"
+                       style="left:@Fmt(r.MapX)%; top:@Fmt(r.MapY)%;"
+                       title="@r.Name">
+                        <span class="na-region-map-marker-dot"></span>
+                        <span class="na-region-map-marker-label">@r.NameJa</span>
+                    </a>
+                }
+            }
+        </div>
+    </div>
+</section>
+
+<!-- ===== STAT GRID ===== -->
+<section class="na-region-stat-grid">
+    <div class="na-region-stat">
+        <div class="na-region-stat-icon"><i class="bi bi-geo-alt-fill"></i></div>
+        <div class="na-region-stat-body">
+            <div class="na-region-stat-label">Capital</div>
+            <div class="na-region-stat-value">@Model.Capital <small>@Model.CapitalJa</small></div>
+        </div>
+    </div>
+    <div class="na-region-stat">
+        <div class="na-region-stat-icon"><i class="bi bi-aspect-ratio"></i></div>
+        <div class="na-region-stat-body">
+            <div class="na-region-stat-label">Area</div>
+            <div class="na-region-stat-value">@Model.Area</div>
+        </div>
+    </div>
+    <div class="na-region-stat">
+        <div class="na-region-stat-icon"><i class="bi bi-cloud-sun"></i></div>
+        <div class="na-region-stat-body">
+            <div class="na-region-stat-label">Climate</div>
+            <div class="na-region-stat-value">@Model.Climate</div>
+        </div>
+    </div>
+    <div class="na-region-stat">
+        <div class="na-region-stat-icon"><i class="bi bi-calendar-heart"></i></div>
+        <div class="na-region-stat-body">
+            <div class="na-region-stat-label">Best season</div>
+            <div class="na-region-stat-value">@Model.BestSeason</div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== DESCRIPTION ===== -->
+<section class="na-region-section">
+    <div class="na-region-section-head">
+        <i class="bi bi-bookmark-star"></i>
+        <h2>Overview <span class="na-subtitle-jp">概要</span></h2>
+    </div>
+    <p class="na-region-prose">@Model.Description</p>
+</section>
+
+<!-- ===== HIGHLIGHTS ===== -->
+<section class="na-region-section">
+    <div class="na-region-section-head">
+        <i class="bi bi-stars"></i>
+        <h2>Must-see highlights <span class="na-subtitle-jp">見どころ</span></h2>
+    </div>
+    <div class="row g-3">
+        @foreach (var h in Model.Highlights)
+        {
+            <div class="col-12 col-md-6">
+                <div class="na-region-point">
+                    <div class="na-region-point-bullet"><i class="bi bi-bookmark-heart-fill"></i></div>
+                    <div class="na-region-point-body">
+                        <div class="na-region-point-title">@h.Title</div>
+                        <div class="na-region-point-title-ja">@h.TitleJa</div>
+                        @if (!string.IsNullOrWhiteSpace(h.Note))
+                        {
+                            <div class="na-region-point-note">@h.Note</div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
+<!-- ===== CUISINE ===== -->
+<section class="na-region-section">
+    <div class="na-region-section-head">
+        <i class="bi bi-cup-hot-fill"></i>
+        <h2>Regional cuisine <span class="na-subtitle-jp">郷土料理</span></h2>
+    </div>
+    <div class="row g-3">
+        @foreach (var f in Model.Foods)
+        {
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="na-region-food-card">
+                    <div class="na-region-food-icon"><i class="bi bi-egg-fried"></i></div>
+                    <div class="na-region-food-title">@f.Title</div>
+                    <div class="na-region-food-title-ja">@f.TitleJa</div>
+                    @if (!string.IsNullOrWhiteSpace(f.Note))
+                    {
+                        <div class="na-region-food-note">@f.Note</div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
+<!-- ===== FESTIVALS ===== -->
+<section class="na-region-section">
+    <div class="na-region-section-head">
+        <i class="bi bi-music-note-beamed"></i>
+        <h2>Festivals &amp; events <span class="na-subtitle-jp">祭り</span></h2>
+    </div>
+    <div class="na-region-festival-row">
+        @foreach (var fe in Model.Festivals)
+        {
+            <div class="na-region-festival-card">
+                <div class="na-region-festival-icon"><i class="bi bi-flag-fill"></i></div>
+                <div>
+                    <div class="na-region-festival-title">@fe.Title</div>
+                    <div class="na-region-festival-title-ja">@fe.TitleJa</div>
+                    @if (!string.IsNullOrWhiteSpace(fe.Note))
+                    {
+                        <div class="na-region-festival-note">@fe.Note</div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
+<!-- ===== ACCESS ===== -->
+<section class="na-region-section">
+    <div class="na-region-section-head">
+        <i class="bi bi-airplane-engines"></i>
+        <h2>Getting there <span class="na-subtitle-jp">アクセス</span></h2>
+    </div>
+    <p class="na-region-prose">@Model.Access</p>
+</section>
+
+<!-- ===== LEARN MORE ===== -->
+<section class="na-region-section na-region-learn-more">
+    <a class="na-region-learn-more-btn" href="@Model.LearnMoreUrl" target="_blank" rel="noopener noreferrer">
+        <i class="bi bi-wikipedia"></i> Read more about @Model.Name on Wikipedia
+        <i class="bi bi-arrow-up-right"></i>
+    </a>
+</section>
+
+<!-- ===== PREV / NEXT NAV ===== -->
+<nav class="na-region-prevnext">
+    @if (prevRegion != null)
+    {
+        <a class="na-region-prevnext-item na-region-prevnext-prev"
+           asp-action="RegionDetail" asp-route-slug="@prevRegion.Slug">
+            <i class="bi bi-arrow-left"></i>
+            <div>
+                <div class="na-region-prevnext-label">Previous region</div>
+                <div class="na-region-prevnext-name">@prevRegion.Name <small>@prevRegion.NameJa</small></div>
+            </div>
+        </a>
+    }
+    else
+    {
+        <span></span>
+    }
+    <a asp-action="Regions" class="na-region-prevnext-back">
+        <i class="bi bi-grid-3x3-gap"></i> All 9 regions
+    </a>
+    @if (nextRegion != null)
+    {
+        <a class="na-region-prevnext-item na-region-prevnext-next"
+           asp-action="RegionDetail" asp-route-slug="@nextRegion.Slug">
+            <div>
+                <div class="na-region-prevnext-label">Next region</div>
+                <div class="na-region-prevnext-name">@nextRegion.Name <small>@nextRegion.NameJa</small></div>
+            </div>
+            <i class="bi bi-arrow-right"></i>
+        </a>
+    }
+    else
+    {
+        <span></span>
+    }
+</nav>

@@ -1,0 +1,105 @@
+@model NihongoAcademy.Controllers.QuizResultViewModel
+
+@{
+    ViewData["Title"] = "Quiz Results";
+    var questions = Model.Quiz.Questions.OrderBy(q => q.DisplayOrder).ToList();
+    var passed = Model.Attempt.IsPassed;
+    var passColor = passed ? "var(--na-secondary)" : "#D44";
+    var passBg = passed ? "#E5F8E5" : "#FFE5E5";
+    var passIcon = passed ? "bi-check-circle-fill" : "bi-x-circle-fill";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="na-card text-center" style="background: @passBg; border-color: @passColor;">
+            <i class="bi @passIcon" style="font-size: 4rem; color: @passColor;"></i>
+            <h2 class="mt-3" style="color: @passColor;">
+                @(passed ? "Congratulations!" : "Keep Practicing!")
+            </h2>
+            <p class="text-muted">@(passed ? "合格 — You passed!" : "不合格 — You'll get it next time!")</p>
+
+            <div class="row mt-4">
+                <div class="col-4">
+                    <div class="na-stat">
+                        <div class="stat-number" style="color: @passColor;">@Model.Attempt.ScorePercentage%</div>
+                        <div class="stat-label">Your Score</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="na-stat">
+                        <div class="stat-number">@Model.Attempt.CorrectAnswers/@Model.Attempt.TotalQuestions</div>
+                        <div class="stat-label">Correct</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="na-stat">
+                        <div class="stat-number">@TimeSpan.FromSeconds(Model.Attempt.TimeTakenSeconds).ToString(@"m\:ss")</div>
+                        <div class="stat-label">Time Taken</div>
+                    </div>
+                </div>
+            </div>
+
+            <p class="mt-3 text-muted">Passing score: @Model.Quiz.PassingScore%</p>
+        </div>
+    </div>
+</div>
+
+<h4 class="mt-4 mb-3"><i class="bi bi-list-check"></i> Answer Review</h4>
+
+@for (int i = 0; i < questions.Count; i++)
+{
+    var q = questions[i];
+    var userAnswer = i < Model.UserAnswers.Count ? Model.UserAnswers[i] : 0;
+    var isCorrect = userAnswer == q.CorrectOption;
+
+    <div class="na-card-flat mb-3" style="border-left: 4px solid @(isCorrect ? "var(--na-secondary)" : "#D44");">
+        <div class="d-flex justify-content-between align-items-start">
+            <h6 class="mb-2">@(i + 1). @q.QuestionText</h6>
+            <span class="na-badge" style="background: @(isCorrect ? "#E5F8E5" : "#FFE5E5"); color: @(isCorrect ? "#2C5F2D" : "#D44");">
+                <i class="bi @(isCorrect ? "bi-check-circle" : "bi-x-circle")"></i>
+            </span>
+        </div>
+
+        @{
+            var options = new[] { q.OptionA, q.OptionB, q.OptionC, q.OptionD };
+        }
+        @for (int j = 0; j < 4; j++)
+        {
+            var optionNum = j + 1;
+            var isThisCorrect = optionNum == q.CorrectOption;
+            var isThisUser = optionNum == userAnswer;
+            var bgColor = isThisCorrect ? "#E5F8E5" : (isThisUser ? "#FFE5E5" : "transparent");
+            var borderColor = isThisCorrect ? "var(--na-secondary)" : (isThisUser ? "#D44" : "var(--na-border)");
+            <div class="quiz-option" style="background: @bgColor; border-color: @borderColor; cursor: default; pointer-events: none;">
+                <strong>@((char)('A' + j)).</strong> @options[j]
+                @if (isThisCorrect)
+                {
+                    <i class="bi bi-check-circle-fill text-success float-end"></i>
+                }
+                @if (isThisUser && !isThisCorrect)
+                {
+                    <i class="bi bi-x-circle-fill text-danger float-end"></i>
+                }
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(q.Explanation))
+        {
+            <div class="alert alert-info mt-2 mb-0 small">
+                <i class="bi bi-info-circle"></i> <strong>Explanation:</strong> @q.Explanation
+            </div>
+        }
+    </div>
+}
+
+<div class="d-flex gap-3 mt-4">
+    <a asp-action="Take" asp-route-id="@Model.Quiz.Id" class="btn-na-primary">
+        <i class="bi bi-arrow-clockwise"></i> Retake Quiz
+    </a>
+    <a asp-action="Index" class="btn-na-outline">
+        <i class="bi bi-list"></i> All Quizzes
+    </a>
+    <a asp-controller="Dashboard" asp-action="Index" class="btn-na-outline">
+        <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+</div>

@@ -1,0 +1,132 @@
+@{
+    ViewData["Title"] = "Mixed Challenge";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-action="Index">Practice</a></li>
+        <li class="breadcrumb-item"><a asp-action="Challenges">Challenges</a></li>
+        <li class="breadcrumb-item active">Mixed Challenge</li>
+    </ol>
+</nav>
+
+<div class="mb-4">
+    <h2><span class="me-2">🎯</span> Mixed Challenge</h2>
+    <p class="text-muted">Vocabulary, grammar, listening, and reading — all mixed.</p>
+</div>
+
+<div class="na-card-flat p-4 text-center" id="mixed-area">
+    <div id="mixed-start-area">
+        <div style="font-size:3rem;">🎯</div>
+        <h5 class="mt-2">Mixed Challenge</h5>
+        <p class="text-muted">10 questions across different skills</p>
+        <button class="btn-na-primary" id="mixed-start-btn"><i class="bi bi-play-fill"></i> Start Challenge</button>
+    </div>
+
+    <div id="mixed-play-area" style="display:none;">
+        <div class="d-flex justify-content-between mb-3">
+            <small class="text-muted">Question <span id="mixed-q-num">1</span>/10</small>
+            <small class="text-na-primary fw-bold"><span id="mixed-score">0</span> correct</small>
+        </div>
+        <div class="na-progress mb-3">
+            <div class="na-progress-fill" id="mixed-progress" style="width:10%"></div>
+        </div>
+        <div id="mixed-question-area"></div>
+    </div>
+
+    <div id="mixed-result-area" style="display:none;">
+        <div style="font-size:3rem;">🎉</div>
+        <h4 class="mt-2">Challenge Complete!</h4>
+        <p>You scored <strong id="mixed-final-score">0</strong>/10</p>
+        <button class="btn-na-primary" id="mixed-retry-btn">Try Again</button>
+        <a asp-action="Challenges" class="btn-na-outline ms-2">Back to Challenges</a>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a asp-action="Challenges" class="na-link-soft"><i class="bi bi-arrow-left"></i> Back to Challenges</a>
+</div>
+
+@section Scripts {
+    <script>
+    (function() {
+        const questions = [
+            {type:"vocab",q:"What does '猫' mean?",opts:["Dog","Cat","Bird","Fish"],ans:1},
+            {type:"kana",q:"Which character is 'shi'?",opts:["す","し","ち","つ"],ans:1},
+            {type:"grammar",q:"___ は学生です (I am a student)",opts:["わたし","あなた","ともだち","せんせい"],ans:0},
+            {type:"vocab",q:"What is 'ありがとう' in English?",opts:["Hello","Goodbye","Thank you","Sorry"],ans:2},
+            {type:"kana",q:"Which is the katakana 'ア'?",opts:["あ","ア","い","イ"],ans:1},
+            {type:"grammar",q:"今日 ___ いい天気です (is)",opts:["を","に","は","が"],ans:2},
+            {type:"vocab",q:"What does '食べる' mean?",opts:["To drink","To eat","To sleep","To run"],ans:1},
+            {type:"listening",q:"🔊 'おはようございます' means?",opts:["Good evening","Good morning","Good night","Thank you"],ans:1},
+            {type:"grammar",q:"日本語 ___ 勉強しています (studying)",opts:["を","は","に","で"],ans:0},
+            {type:"vocab",q:"What is '学校' in English?",opts:["Hospital","Store","School","Home"],ans:2},
+        ];
+
+        let current = 0, score = 0;
+
+        function renderQ() {
+            if (current >= questions.length) {
+                document.getElementById('mixed-play-area').style.display = 'none';
+                document.getElementById('mixed-result-area').style.display = 'block';
+                document.getElementById('mixed-final-score').textContent = score;
+                return;
+            }
+            const q = questions[current];
+            document.getElementById('mixed-q-num').textContent = current + 1;
+            document.getElementById('mixed-progress').style.width = ((current + 1) / questions.length * 100) + '%';
+
+            let html = `<h5 class="mb-3">${q.type === 'listening' ? '<i class="bi bi-volume-up"></i> ' : ''}${q.q}</h5>`;
+            html += '<div class="row g-2 justify-content-center">';
+            q.opts.forEach((opt, i) => {
+                html += `<div class="col-6 col-md-3"><button class="quiz-option w-100 mixed-opt" data-idx="${i}">${opt}</button></div>`;
+            });
+            html += '</div>';
+
+            const area = document.getElementById('mixed-question-area');
+            area.innerHTML = html;
+
+            area.querySelectorAll('.mixed-opt').forEach(btn => {
+                btn.onclick = function() {
+                    const idx = parseInt(this.dataset.idx);
+                    if (idx === q.ans) {
+                        this.classList.add('correct');
+                        score++;
+                        document.getElementById('mixed-score').textContent = score;
+                    } else {
+                        this.classList.add('incorrect');
+                        area.querySelectorAll('.mixed-opt')[q.ans].classList.add('correct');
+                    }
+                    // Disable all buttons
+                    area.querySelectorAll('.mixed-opt').forEach(b => b.style.pointerEvents = 'none');
+                    setTimeout(() => { current++; renderQ(); }, 800);
+                };
+            });
+
+            if (q.type === 'listening') {
+                // Auto-play for listening questions
+                const match = q.q.match(/🔊\s*'(.+?)'/);
+                if (match && 'speechSynthesis' in window) {
+                    const u = new SpeechSynthesisUtterance(match[1]);
+                    u.lang = 'ja-JP';
+                    speechSynthesis.speak(u);
+                }
+            }
+        }
+
+        function start() {
+            current = 0;
+            score = 0;
+            document.getElementById('mixed-score').textContent = '0';
+            document.getElementById('mixed-start-area').style.display = 'none';
+            document.getElementById('mixed-play-area').style.display = 'block';
+            document.getElementById('mixed-result-area').style.display = 'none';
+            renderQ();
+        }
+
+        document.getElementById('mixed-start-btn').onclick = start;
+        document.getElementById('mixed-retry-btn').onclick = start;
+    })();
+    </script>
+}

@@ -1,0 +1,339 @@
+@model NihongoAcademy.Controllers.LessonDetailsViewModel
+
+@{
+    ViewData["Title"] = Model.Lesson.Title;
+    var diffLabel = Model.Lesson.DifficultyLevel <= 1 ? "Beginner" :
+                    Model.Lesson.DifficultyLevel == 2 ? "Elementary" :
+                    Model.Lesson.DifficultyLevel == 3 ? "Intermediate" :
+                    Model.Lesson.DifficultyLevel == 4 ? "Upper Intermediate" : "Advanced";
+    var pct = Model.Progress?.CompletionPercentage ?? 0;
+    var isCompleted = Model.Progress?.IsCompleted == true;
+    var isInProgress = !isCompleted && pct > 0;
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-controller="Lessons" asp-action="Index">Lessons</a></li>
+        <li class="breadcrumb-item active">@Model.Lesson.Title</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="na-card">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <span class="na-badge na-badge-@(Model.Lesson.Category?.Name?.ToLower())">@Model.Lesson.Category?.Name</span>
+                    @if (!string.IsNullOrEmpty(Model.Lesson.JapaneseTitle))
+                    {
+                        <h3 class="mt-2 mb-0">@Model.Lesson.Title</h3>
+                        <p class="text-na-primary d-flex align-items-center gap-2">
+                            @Model.Lesson.JapaneseTitle
+                            <button type="button" class="na-speak-btn na-speak-btn-sm" data-speak="@Model.Lesson.JapaneseTitle" title="Hear pronunciation">
+                                <i class="bi bi-volume-up-fill"></i>
+                            </button>
+                        </p>
+                    }
+                    else if (Model.RequiresMastery)
+                    {
+                        <a asp-controller="Practice" asp-action="LessonPractice" asp-route-lessonId="@Model.Lesson.Id" class="btn-na-primary">
+                            <i class="bi bi-bullseye"></i> Complete Mastery Check
+                        </a>
+                    }
+                    else
+                    {
+                        <h3 class="mt-2 mb-0">@Model.Lesson.Title</h3>
+                    }
+                </div>
+                <div class="text-end">
+                    <span class="na-difficulty-label na-diff-@Model.Lesson.DifficultyLevel">@diffLabel</span>
+                    <br />
+                    <small class="text-muted"><i class="bi bi-clock"></i> ~@Model.Lesson.EstimatedMinutes min</small>
+                </div>
+            </div>
+
+            <p class="text-muted">@Model.Lesson.Description</p>
+
+            @if (!string.IsNullOrEmpty(Model.Lesson.VideoUrl))
+            {
+                <div class="ratio ratio-16x9 mb-4">
+                    <iframe src="@Model.Lesson.VideoUrl" allowfullscreen></iframe>
+                </div>
+            }
+
+            <div class="content-html">
+                @Html.Raw(Model.Lesson.Content)
+            </div>
+
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <hr />
+                <div class="d-flex align-items-center gap-3">
+                    @if (isCompleted)
+                    {
+                        <button class="btn-na-outline" disabled>
+                            <i class="bi bi-check-circle-fill text-success"></i> Completed
+                        </button>
+                    }
+                    else
+                    {
+                        @if (Model.RequiresMastery)
+                        {
+                            <a asp-controller="Practice" asp-action="LessonPractice" asp-route-lessonId="@Model.Lesson.Id" class="btn-na-primary">
+                                <i class="bi bi-bullseye"></i> Complete Mastery Check
+                            </a>
+                        }
+                        else
+                        {
+                            <button id="complete-btn" class="btn-na-primary" onclick="markLessonComplete(@Model.Lesson.Id)">
+                                <i class="bi bi-check2-circle"></i> Mark as Complete
+                            </button>
+                        }
+                    }
+                    <div class="flex-grow-1">
+                        <div class="na-progress">
+                            <div id="progress-bar-fill" class="na-progress-fill" style="width: @pct%"></div>
+                        </div>
+                    </div>
+                    <small class="text-muted">@pct%</small>
+                </div>
+
+                <div class="na-card-flat mt-3 p-3">
+                    <h6 class="mb-1"><i class="bi bi-lightning-charge-fill text-na-primary"></i> Practice This Lesson</h6>
+                    <small class="text-muted d-block mb-2">Reinforce what you just learned — no setup needed.</small>
+                    <div class="d-flex gap-2">
+                        <a asp-controller="Practice" asp-action="LessonPractice" asp-route-lessonId="@Model.Lesson.Id" class="btn-na-primary btn-sm">
+                            <i class="bi bi-lightning-charge"></i> Practice This Lesson
+                        </a>
+                        <a asp-controller="Practice" asp-action="LessonQuiz" asp-route-lessonId="@Model.Lesson.Id" class="btn-na-outline btn-sm">
+                            <i class="bi bi-patch-question"></i> Take Mini Quiz
+                        </a>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info mt-3">
+                    <i class="bi bi-info-circle"></i> <a asp-area="Identity" asp-page="/Account/Login">Log in</a> to track your progress and mark lessons as complete.
+                </div>
+            }
+        </div>
+
+        @* ===== UP NEXT ===== *@
+        @if (User.Identity?.IsAuthenticated == true && Model.NextLesson != null && Model.Progress?.StableMasteryDate.HasValue == true)
+        {
+            <a asp-action="Details" asp-route-id="@Model.NextLesson.Id" class="text-decoration-none">
+                <div class="na-card-flat na-next-lesson-card mt-4">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="na-next-icon">
+                            <i class="bi bi-arrow-right-circle-fill"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <small class="text-na-primary fw-semibold">Up Next</small>
+                            <h5 class="mb-1 text-dark">@Model.NextLesson.Title</h5>
+                            @if (!string.IsNullOrEmpty(Model.NextLesson.JapaneseTitle))
+                            {
+                                <small class="text-muted">@Model.NextLesson.JapaneseTitle</small>
+                            }
+                            <p class="text-muted small mb-0 mt-1">@TextHelper.TruncateHtml(Model.NextLesson.Description, 120)</p>
+                        </div>
+                        <div class="text-end flex-shrink-0">
+                            <small class="text-muted d-block mb-1"><i class="bi bi-clock"></i> ~@Model.NextLesson.EstimatedMinutes min</small>
+                            <span class="text-na-primary small">Start Next Lesson <i class="bi bi-arrow-right"></i></span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        }
+    </div>
+
+    <div class="col-lg-4">
+        <div class="na-sidebar-sticky">
+            @* ===== LESSON INFO (compact) ===== *@
+            <div class="na-card-flat mb-3" style="padding:0.75rem 1rem;">
+                <h6 class="mb-2"><i class="bi bi-info-circle"></i> Lesson Info</h6>
+                <div class="d-flex justify-content-between small mb-1">
+                    <span class="text-muted">Category</span>
+                    <span>@Model.Lesson.Category?.Name</span>
+                </div>
+                <div class="d-flex justify-content-between small mb-1">
+                    <span class="text-muted">Level</span>
+                    <span class="na-difficulty-label na-diff-@Model.Lesson.DifficultyLevel">@diffLabel</span>
+                </div>
+                <div class="d-flex justify-content-between small mb-1">
+                    <span class="text-muted">Time</span>
+                    <span>~@Model.Lesson.EstimatedMinutes min</span>
+                </div>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <div class="d-flex justify-content-between small">
+                        <span class="text-muted">Status</span>
+                        @if (isCompleted)
+                        {
+                            <span class="text-success"><i class="bi bi-check-circle-fill"></i> Completed</span>
+                        }
+                        else if (isInProgress)
+                        {
+                            <span class="text-na-primary">@pct%</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Not Started</span>
+                        }
+                    </div>
+                }
+            </div>
+
+            @* ===== HOW TO SPEND ===== *@
+            @if (User.Identity?.IsAuthenticated == true)
+            {
+                <div class="na-card-flat mb-3">
+                    <h5><i class="bi bi-signpost-2"></i> How to Spend ~@Model.Lesson.EstimatedMinutes Min</h5>
+                    <hr />
+                    <ol class="mb-3 ps-3 small">
+                        <li class="mb-1"><strong>Read</strong> this lesson to learn the basics <span class="text-muted">(~3 min)</span></li>
+                        <li class="mb-1"><strong>Practice This Lesson</strong> to reinforce <span class="text-muted">(~5 min)</span></li>
+                        <li><strong>Mini Quiz</strong> yourself to verify understanding <span class="text-muted">(~3 min)</span></li>
+                    </ol>
+                    <a asp-controller="Practice" asp-action="LessonPractice" asp-route-lessonId="@Model.Lesson.Id" class="btn-na-outline btn-sm d-block mb-2">
+                        <i class="bi bi-lightning-charge"></i> Practice This Lesson
+                    </a>
+                    <a asp-controller="Practice" asp-action="LessonQuiz" asp-route-lessonId="@Model.Lesson.Id" class="btn-na-outline btn-sm d-block">
+                        <i class="bi bi-patch-question"></i> Take Mini Quiz
+                    </a>
+                </div>
+            }
+
+            @* ===== LESSON CONTENTS (TOC) ===== *@
+            <div class="na-card-flat" id="lesson-toc">
+                <h5><i class="bi bi-list-nested"></i> Lesson Contents</h5>
+                <hr />
+                <ul class="na-toc-list" id="toc-list">
+                    @* Populated by JS from h2/h3 headings in .content-html *@
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+    <script src="~/js/lesson-progress.js" asp-append-version="true"></script>
+    <script>
+        initLessonProgress(@Model.Lesson.Id, @(Model.Progress?.CompletionPercentage ?? 0), @(Model.Progress?.IsCompleted == true ? "true" : "false"));
+    </script>
+    }
+    <script>
+    // Lesson context for AI Tutor
+    window.__naLessonContext = {
+        lessonId: @Model.Lesson.Id,
+        title: @Json.Serialize(Model.Lesson.Title),
+        japaneseTitle: @Json.Serialize(Model.Lesson.JapaneseTitle),
+        category: @Json.Serialize(Model.Lesson.Category?.Name)
+    };
+    </script>
+    <script src="~/js/ai-tutor.js" asp-append-version="true"></script>
+    <script>
+    (function() {
+        // Build TOC from headings
+        var content = document.querySelector('.content-html');
+        var tocList = document.getElementById('toc-list');
+        if (!content || !tocList) return;
+
+        var headings = content.querySelectorAll('h2, h3');
+        if (headings.length === 0) {
+            document.getElementById('lesson-toc').style.display = 'none';
+            return;
+        }
+
+        headings.forEach(function(h, i) {
+            var id = 'section-' + i;
+            if (!h.id) h.id = id;
+            else id = h.id;
+
+            var li = document.createElement('li');
+            li.className = 'na-toc-item';
+            li.setAttribute('data-target', id);
+
+            var a = document.createElement('a');
+            a.href = '#' + id;
+            a.textContent = h.textContent.trim();
+            a.className = 'na-toc-link';
+            a.addEventListener('click', function(e) {
+                e.preventDefault();
+                var target = document.getElementById(id);
+                if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+
+            li.appendChild(a);
+            tocList.appendChild(li);
+        });
+
+        // Scroll spy
+        var tocItems = tocList.querySelectorAll('.na-toc-item');
+        var navbarHeight = 80;
+
+        function updateActiveToc() {
+            var scrollY = window.scrollY;
+            var activeId = '';
+
+            headings.forEach(function(h) {
+                var rect = h.getBoundingClientRect();
+                if (rect.top <= navbarHeight + 20) {
+                    activeId = h.id;
+                }
+            });
+
+            tocItems.forEach(function(item) {
+                var link = item.querySelector('.na-toc-link');
+                if (item.getAttribute('data-target') === activeId) {
+                    item.classList.add('na-toc-active');
+                    if (link) link.classList.add('na-toc-active');
+                } else {
+                    item.classList.remove('na-toc-active');
+                    if (link) link.classList.remove('na-toc-active');
+                }
+            });
+        }
+
+        var scrollTimeout;
+        window.addEventListener('scroll', function() {
+            clearTimeout(scrollTimeout);
+            scrollTimeout = setTimeout(updateActiveToc, 100);
+        });
+        updateActiveToc();
+
+        // Make hiragana chart cells interactive
+        var chartCells = content.querySelectorAll('.na-kana-cell, .kana-cell, td');
+        chartCells.forEach(function(cell) {
+            var kanaEl = cell.querySelector('.na-kana-char, .kana-char');
+            if (!kanaEl) {
+                // Try first strong/b element as kana
+                kanaEl = cell.querySelector('strong, b');
+            }
+            if (!kanaEl) return;
+
+            var kana = kanaEl.textContent.trim();
+            if (!kana || kana.length > 2) return;
+
+            cell.classList.add('na-interactive-cell');
+            cell.style.cursor = 'pointer';
+
+            cell.addEventListener('click', function() {
+                if (typeof speakJapanese === 'function') {
+                    speakJapanese(kana);
+                } else if ('speechSynthesis' in window) {
+                    var u = new SpeechSynthesisUtterance(kana);
+                    u.lang = 'ja-JP';
+                    u.rate = 0.8;
+                    speechSynthesis.speak(u);
+                }
+                cell.classList.add('na-cell-speaking');
+                setTimeout(function() { cell.classList.remove('na-cell-speaking'); }, 600);
+            });
+        });
+    })();
+    </script>
+}

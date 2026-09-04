@@ -1,0 +1,63 @@
+@model IEnumerable<NihongoAcademy.Models.Vocabulary>
+
+@{
+    ViewData["Title"] = "Flashcards";
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="bi bi-card-text na-page-icon"></i> Flashcards <span class="na-subtitle-jp">フラッシュカード</span></h2>
+        <p class="text-muted">Choose a category and start practicing with interactive flashcards.</p>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="d-flex gap-2 flex-wrap">
+            <a asp-action="Index" class="btn btn-sm @(ViewBag.SelectedCategory == null ? "btn-na-primary" : "btn-na-outline")">All</a>
+            @if (ViewBag.Categories != null)
+            {
+                foreach (var cat in ViewBag.Categories)
+                {
+                    <a asp-action="Index" asp-route-categoryId="@cat.Id" class="btn btn-sm @(ViewBag.SelectedCategory != null && ViewBag.SelectedCategory == cat.Id ? "btn-na-primary" : "btn-na-outline")">
+                        @cat.Name
+                    </a>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <partial name="_EmptyState" model='new EmptyStateViewModel { Icon = "bi-inbox", Title = "No flashcards available", Message = "Please check back later or try another category." }' />
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <p class="text-muted mb-0">@Model.Count() flashcards available</p>
+        <a asp-action="Practice" asp-route-categoryId="@ViewBag.SelectedCategory" class="btn-na-primary">
+            <i class="bi bi-play-fill"></i> Start Practice
+        </a>
+    </div>
+
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3 na-card-grid">
+        @foreach (var card in Model)
+        {
+            <div class="col mb-3">
+                <div class="na-card text-center na-flashcard-tile h-100">
+                    <div class="na-flashcard-jp">@card.Japanese</div>
+                    <button type="button" class="na-speak-btn na-speak-btn-sm na-flashcard-speak" data-speak="@card.Japanese" title="Hear pronunciation">
+                        <i class="bi bi-volume-up-fill"></i>
+                    </button>
+                    <p class="text-na-primary mb-1 na-flashcard-romaji">@card.Romaji</p>
+                    <p class="text-dark small mb-0 na-flashcard-meaning">@card.English</p>
+                    @if (!string.IsNullOrEmpty(card.PartOfSpeech))
+                    {
+                        <small class="text-muted na-flashcard-type">@card.PartOfSpeech</small>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}

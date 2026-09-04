@@ -1,0 +1,213 @@
+@model IEnumerable<NihongoAcademy.Models.Lesson>
+@using NihongoAcademy.Models
+
+@{
+    ViewData["Title"] = "Lessons";
+    var userProgress = ViewBag.UserProgress as List<LessonProgress> ?? new List<LessonProgress>();
+    var pathCategories = ViewBag.LearningPathCategories as List<Category> ?? new List<Category>();
+    var pathProgress = ViewBag.LearningPathProgress as Dictionary<string, string> ?? new Dictionary<string, string>();
+    var continueLesson = ViewBag.ContinueLesson as Lesson;
+    var continuePct = ViewBag.ContinueProgress as int? ?? 0;
+    var lockedPrerequisites = ViewBag.LockedPrerequisites as Dictionary<int, List<string>> ?? new Dictionary<int, List<string>>();
+}
+
+@if (TempData["Message"] is string message)
+{
+    <div class="alert alert-warning"><i class="bi bi-lock-fill"></i> @message</div>
+}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <h2><i class="bi bi-journal-text na-page-icon"></i> Lessons <span class="na-subtitle-jp">レッスン</span></h2>
+        <p class="text-muted">Follow your Japanese learning journey step by step.</p>
+    </div>
+</div>
+
+@* ===== LEARNING PATH (compact inline) ===== *@
+@if (pathCategories.Any())
+{
+    <div class="na-card-flat mb-3" style="padding:0.75rem 1rem;">
+        <h6 class="mb-2"><i class="bi bi-signpost-2 text-na-primary"></i> Your Learning Path <span class="na-subtitle-jp">学習パス</span></h6>
+        <div class="na-learning-path-compact">
+            @for (int i = 0; i < pathCategories.Count; i++)
+            {
+                var cat = pathCategories[i];
+                var status = pathProgress.ContainsKey(cat.Name) ? pathProgress[cat.Name] : "not-started";
+
+                if (i > 0)
+                {
+                    <span class="na-path-dash">───</span>
+                }
+
+                <span class="na-path-inline na-path-@status">
+                    @if (status == "completed")
+                    {
+                        <i class="bi bi-check-circle-fill"></i>
+                    }
+                    else if (status == "in-progress")
+                    {
+                        <i class="bi bi-circle-fill" style="font-size:0.45rem;"></i>
+                    }
+                    else
+                    {
+                        <i class="bi bi-circle" style="font-size:0.5rem;"></i>
+                    }
+                    @cat.Name
+                </span>
+            }
+        </div>
+    </div>
+}
+
+@* ===== CONTINUE LEARNING (compact) ===== *@
+@if (User.Identity?.IsAuthenticated == true && continueLesson != null)
+{
+    <a asp-action="Details" asp-route-id="@continueLesson.Id" class="text-decoration-none">
+        <div class="na-card-flat na-continue-card mb-3" style="padding:0.6rem 1rem;">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-play-circle-fill text-na-primary fs-5 flex-shrink-0"></i>
+                <div class="flex-grow-1">
+                    <small class="text-na-primary fw-semibold">Continue Learning</small>
+                    <span class="mx-1 text-muted" style="font-size:0.75rem;">|</span>
+                    <span class="small text-dark">@continueLesson.Title</span>
+                    @if (!string.IsNullOrEmpty(continueLesson.JapaneseTitle))
+                    {
+                        <span class="text-muted" style="font-size:0.75rem;"> @continueLesson.JapaneseTitle</span>
+                    }
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-shrink-0" style="min-width:100px;">
+                    <div class="na-progress na-progress-sm flex-grow-1">
+                        <div class="na-progress-fill" style="width:@continuePct%"></div>
+                    </div>
+                    <small class="text-muted" style="font-size:0.75rem;">@continuePct%</small>
+                    <i class="bi bi-chevron-right text-na-primary"></i>
+                </div>
+            </div>
+        </div>
+    </a>
+}
+else if (User.Identity?.IsAuthenticated == true && continueLesson == null && pathCategories.Any())
+{
+    var firstCat = pathCategories.First();
+    var firstLesson = Model.FirstOrDefault(l => l.CategoryId == firstCat.Id);
+    if (firstLesson != null)
+    {
+        <a asp-action="Details" asp-route-id="@firstLesson.Id" class="text-decoration-none">
+            <div class="na-card-flat na-continue-card mb-3" style="padding:0.6rem 1rem;">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-play-circle-fill text-na-primary fs-5 flex-shrink-0"></i>
+                    <div class="flex-grow-1">
+                        <small class="text-na-primary fw-semibold">Start Learning</small>
+                        <span class="mx-1 text-muted" style="font-size:0.75rem;">|</span>
+                        <span class="small text-dark">@firstLesson.Title</span>
+                        @if (!string.IsNullOrEmpty(firstLesson.JapaneseTitle))
+                        {
+                            <span class="text-muted" style="font-size:0.75rem;"> @firstLesson.JapaneseTitle</span>
+                        }
+                    </div>
+                    <i class="bi bi-chevron-right text-na-primary"></i>
+                </div>
+            </div>
+        </a>
+    }
+}
+
+@* ===== SEARCH + FILTER CHIPS ===== *@
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+    <form method="get" asp-action="Index" class="me-2" style="flex:1;min-width:200px;max-width:320px;">
+        <div class="input-group input-group-sm">
+            <input type="text" name="searchString" value="@(Html.Encode(ViewBag.SearchString))" class="form-control" placeholder="Search lessons..." />
+            <button class="btn-na-outline btn-sm" type="submit"><i class="bi bi-search"></i></button>
+        </div>
+    </form>
+    <div class="d-flex gap-1 flex-wrap">
+        <a asp-action="Index" class="na-chip @(ViewBag.SelectedCategory == null ? "na-chip-active" : "")">All</a>
+        @if (ViewBag.Categories != null)
+        {
+            foreach (var cat in ViewBag.Categories)
+            {
+                <a asp-action="Index" asp-route-categoryId="@cat.Id" class="na-chip @(ViewBag.SelectedCategory != null && ViewBag.SelectedCategory == cat.Id ? "na-chip-active" : "")">
+                    @cat.Name
+                </a>
+            }
+        }
+    </div>
+</div>
+
+@* ===== LESSON CARDS ===== *@
+@if (!Model.Any())
+{
+    <partial name="_EmptyState" model='new EmptyStateViewModel { Icon = "bi-inbox", Title = "No lessons found", Message = "Try a different search or category filter." }' />
+}
+else
+{
+    <div class="row">
+        @foreach (var lesson in Model)
+        {
+            var lp = userProgress.FirstOrDefault(p => p.LessonId == lesson.Id);
+            var isCompleted = lp?.IsCompleted == true;
+            var isInProgress = lp != null && !lp.IsCompleted && lp.CompletionPercentage > 0;
+            var pct = lp?.CompletionPercentage ?? 0;
+            var isLocked = User.Identity?.IsAuthenticated == true && lockedPrerequisites.ContainsKey(lesson.Id);
+            var isReviewPending = !isCompleted && lp?.MasteryReviewDueDate.HasValue == true;
+
+            <div class="col-lg-4 col-md-6 mb-4">
+                <a href="@(isLocked ? "#" : Url.Action("Details", new { id = lesson.Id }))" class="text-decoration-none @(isLocked ? "pe-none" : "")" aria-disabled="@isLocked.ToString().ToLowerInvariant()">
+                    <div class="na-card h-100 @(isLocked ? "opacity-50" : "")">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="na-badge na-badge-@(lesson.Category?.Name?.ToLower())">
+                                @lesson.Category?.Name
+                            </span>
+                            <span class="na-difficulty-label na-diff-@lesson.DifficultyLevel">
+                                @(lesson.DifficultyLevel <= 1 ? "Beginner" :
+                                  lesson.DifficultyLevel == 2 ? "Elementary" :
+                                  lesson.DifficultyLevel == 3 ? "Intermediate" :
+                                  lesson.DifficultyLevel == 4 ? "Upper Int." : "Advanced")
+                            </span>
+                        </div>
+                        <h5 class="text-dark">@lesson.Title</h5>
+                        @if (isLocked)
+                        {
+                            <div class="small text-muted mb-2" title="Requires: @string.Join(", ", lockedPrerequisites[lesson.Id])">
+                                <i class="bi bi-lock-fill"></i> Complete the previous lesson to unlock
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(lesson.JapaneseTitle))
+                        {
+                            <p class="text-na-primary small mb-2">@lesson.JapaneseTitle</p>
+                        }
+                        <p class="text-muted small mb-2">@TextHelper.TruncateHtml(lesson.Description, 100)</p>
+
+                        @if (isInProgress)
+                        {
+                            <div class="mb-2">
+                                <div class="na-progress na-progress-sm">
+                                    <div class="na-progress-fill" style="width:@pct%"></div>
+                                </div>
+                                <small class="text-muted">@pct% complete</small>
+                            </div>
+                        }
+
+                        <div class="d-flex justify-content-between align-items-center mt-auto">
+                            <small class="text-muted"><i class="bi bi-clock"></i> @lesson.EstimatedMinutes min</small>
+                            <span class="text-na-primary small">
+                                @(isLocked ? "Locked" : isCompleted ? "Review" : isReviewPending ? "Review pending" : isInProgress ? "Continue" : "Start Lesson")
+                                <i class="bi @(isLocked ? "bi-lock-fill" : "bi-arrow-right")"></i>
+                            </span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+    <script>
+        window.__naLessonContext = { lessonId: null, title: "Lessons", japaneseTitle: "レッスン", category: null };
+    </script>
+    <script src="~/js/ai-tutor.js" asp-append-version="true"></script>
+    }
+}

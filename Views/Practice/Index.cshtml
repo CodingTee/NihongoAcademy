@@ -1,0 +1,156 @@
+@{
+    ViewData["Title"] = "Practice";
+    var dueCount = ViewBag.DueCount ?? 0;
+    var weakAreas = ViewBag.WeakAreas as List<string> ?? new List<string>();
+    var topics = ViewBag.Topics as IEnumerable<NihongoAcademy.Models.Category>;
+    var topicVocabCounts = ViewBag.TopicVocabCounts as Dictionary<int, int>;
+    var topicIcons = new Dictionary<string, string>
+    {
+        ["Hiragana"] = "あ", ["Katakana"] = "ア", ["Vocabulary"] = "語",
+        ["Grammar"] = "文", ["Kanji"] = "漢", ["Animals"] = "🐶",
+        ["Food"] = "🍎", ["Colors"] = "🎨", ["Clothing"] = "👕",
+        ["Family"] = "👨‍👩‍👧", ["School"] = "🏫", ["Weather"] = "🌦",
+        ["Time & Numbers"] = "🕐", ["Travel"] = "🚉", ["Daily Life"] = "🏠"
+    };
+}
+
+<div class="mb-4">
+    <h2><i class="bi bi-pencil-square na-page-icon"></i> Practice <span class="na-subtitle-jp">練習</span></h2>
+    <p class="text-muted">Train your Japanese your way.</p>
+</div>
+
+@* ===== TODAY'S PRACTICE ===== *@
+<div class="na-today-stats">
+    <div class="na-today-stat">
+        <div class="na-today-stat__number">@dueCount</div>
+        <div class="na-today-stat__label">Cards Due</div>
+    </div>
+    <div class="na-today-stat">
+        <div class="na-today-stat__number">@weakAreas.Count</div>
+        <div class="na-today-stat__label">Weak Areas</div>
+    </div>
+    <div class="na-today-stat">
+        <div class="na-today-stat__icon">🔥</div>
+        <div class="na-today-stat__label">Daily Challenge</div>
+    </div>
+</div>
+@if (dueCount > 0 || weakAreas.Count > 0)
+{
+    <div class="na-today-start">
+        <a asp-action="AdaptiveReview" class="btn-na-primary">
+            <i class="bi bi-stars"></i> Start Recommended Practice
+        </a>
+    </div>
+}
+
+@* ===== PRACTICE BY SKILL ===== *@
+<div class="na-practice-section">
+    <div class="na-practice-section__title"><i class="bi bi-stars"></i> Practice by Skill</div>
+    <div class="na-skill-grid">
+        <a asp-action="Listening" class="na-skill-tile">
+            <div class="na-skill-tile__icon">🎧</div>
+            <div class="na-skill-tile__info">
+                <h6>Listening</h6>
+                <small>リスニング</small>
+            </div>
+        </a>
+        <a asp-action="Reading" class="na-skill-tile">
+            <div class="na-skill-tile__icon">📖</div>
+            <div class="na-skill-tile__info">
+                <h6>Reading</h6>
+                <small>リーディング</small>
+            </div>
+        </a>
+        <a asp-action="Speaking" class="na-skill-tile">
+            <div class="na-skill-tile__icon">🎤</div>
+            <div class="na-skill-tile__info">
+                <h6>Speaking</h6>
+                <small>スピーキング</small>
+            </div>
+        </a>
+        <a asp-action="Writing" class="na-skill-tile">
+            <div class="na-skill-tile__icon">✍️</div>
+            <div class="na-skill-tile__info">
+                <h6>Writing</h6>
+                <small>ライティング</small>
+            </div>
+        </a>
+    </div>
+</div>
+
+@* ===== PRACTICE BY TOPIC ===== *@
+<div class="na-practice-section">
+    <div class="na-practice-section__title"><i class="bi bi-collection"></i> Practice by Topic</div>
+    <div class="na-topic-grid">
+        @if (topics != null)
+        {
+            foreach (var topic in topics.Take(10))
+            {
+                var icon = topicIcons.ContainsKey(topic.Name) ? topicIcons[topic.Name] : "📚";
+                var count = topicVocabCounts?.GetValueOrDefault(topic.Id, 0) ?? 0;
+                <a asp-action="Topic" asp-route-id="@topic.Id" class="na-topic-chip">
+                    <span class="na-topic-chip__emoji">@icon</span>
+                    @topic.Name
+                    @if (count > 0)
+                    {
+                        <span class="badge bg-light text-muted" style="font-size:0.7rem;">@count</span>
+                    }
+                </a>
+            }
+        }
+    </div>
+</div>
+
+@* ===== REVIEW ===== *@
+<div class="na-practice-section">
+    <div class="na-practice-section__title"><i class="bi bi-arrow-repeat"></i> Review</div>
+    <div class="na-review-row">
+        <div class="na-review-card">
+            <div class="na-review-card__icon"><i class="bi bi-card-text"></i></div>
+            <h6>Flashcards</h6>
+            <small>Review due cards with spaced repetition</small>
+            <div class="mt-2">
+                <a asp-controller="Flashcards" asp-action="Practice" class="btn-na-primary btn-sm">Start Review</a>
+            </div>
+            @if (dueCount > 0)
+            {
+                <div class="mt-2"><small class="text-na-primary"><i class="bi bi-bell-fill"></i> @dueCount card@(dueCount > 1 ? "s" : "") due</small></div>
+            }
+        </div>
+        <div class="na-review-card">
+            <div class="na-review-card__icon"><i class="bi bi-patch-question"></i></div>
+            <h6>Quizzes</h6>
+            <small>Test what you've learned</small>
+            <div class="mt-2">
+                <a asp-controller="Quizzes" asp-action="Index" class="btn-na-outline btn-sm">Take a Quiz</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* ===== CHALLENGE YOURSELF ===== *@
+<div class="na-practice-section">
+    <div class="na-practice-section__title"><i class="bi bi-trophy"></i> Challenge Yourself</div>
+    <div class="na-challenge-grid">
+        <a asp-action="SpeedRound" class="na-challenge-card">
+            <div class="na-challenge-card__icon">⚡</div>
+            <div class="na-challenge-card__label">Speed Round</div>
+        </a>
+        <a asp-action="DictationChallenge" class="na-challenge-card">
+            <div class="na-challenge-card__icon">🎧</div>
+            <div class="na-challenge-card__label">Dictation</div>
+        </a>
+        <a asp-action="SentenceBuilder" class="na-challenge-card">
+            <div class="na-challenge-card__icon">🧩</div>
+            <div class="na-challenge-card__label">Sentence Builder</div>
+        </a>
+        <a asp-action="Mode" asp-route-skill="speaking" asp-route-mode="shadowing" class="na-challenge-card">
+            <div class="na-challenge-card__icon">🗣</div>
+            <div class="na-challenge-card__label">Shadowing</div>
+        </a>
+        <a asp-action="MixedChallenge" class="na-challenge-card">
+            <div class="na-challenge-card__icon">🎯</div>
+            <div class="na-challenge-card__label">Mixed Challenge</div>
+        </a>
+    </div>
+</div>

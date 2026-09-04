@@ -1,0 +1,383 @@
+@model CommunityIndexViewModel
+@using NihongoAcademy.Models
+@using NihongoAcademy.Controllers
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
+
+@{
+    ViewData["Title"] = "Community";
+    var categoryList = new[] {
+        CommunityCategory.ForYou,
+        CommunityCategory.General,
+        CommunityCategory.Study,
+        CommunityCategory.Questions,
+        CommunityCategory.Japan
+    };
+    var categoryLabels = new Dictionary<CommunityCategory, string>
+    {
+        { CommunityCategory.ForYou, "For You" },
+        { CommunityCategory.General, "Community" },
+        { CommunityCategory.Study, "Study" },
+        { CommunityCategory.Questions, "Questions" },
+        { CommunityCategory.Japan, "Japan" }
+    };
+    var categoryJp = new Dictionary<CommunityCategory, string>
+    {
+        { CommunityCategory.ForYou, "" },
+        { CommunityCategory.General, "コミュニティ" },
+        { CommunityCategory.Study, "勉強" },
+        { CommunityCategory.Questions, "質問" },
+        { CommunityCategory.Japan, "日本" }
+    };
+}
+
+@functions {
+    public string TimeAgo(DateTime date)
+    {
+        var diff = DateTime.UtcNow - date;
+        if (diff.TotalMinutes < 1) return "just now";
+        if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
+        if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
+        if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
+        return date.ToLocalTime().ToString("MMM d");
+    }
+
+    public string CategoryTagClass(CommunityCategory cat)
+    {
+        return cat switch
+        {
+            CommunityCategory.General => "na-cat--community",
+            CommunityCategory.Study => "na-cat--study",
+            CommunityCategory.Questions => "na-cat--questions",
+            CommunityCategory.Japan => "na-cat--japan",
+            _ => "na-cat--default"
+        };
+    }
+
+    public string CategoryIcon(CommunityCategory cat)
+    {
+        return cat switch
+        {
+            CommunityCategory.General => "bi-people",
+            CommunityCategory.Study => "bi-lightbulb",
+            CommunityCategory.Questions => "bi-question-circle",
+            CommunityCategory.Japan => "bi-globe-asia-australia",
+            _ => "bi-grid"
+        };
+    }
+
+    public string GetUserInitial(string? userName)
+    {
+        if (string.IsNullOrEmpty(userName)) return "?";
+        return userName.Substring(0, 1).ToUpper();
+    }
+}
+
+<div class="na-community">
+    @* ===== Header ===== *@
+    <div class="na-community-header">
+        <h1><i class="bi bi-people na-page-icon"></i> Community <span class="na-subtitle-jp">コミュニティ</span></h1>
+        <p class="na-community-subtitle">Learn, share, and grow together. 一緒に学び、成長しましょう。</p>
+    </div>
+
+    @* ===== Category Tabs ===== *@
+    <div class="na-community-tabs">
+        <div class="na-tabs-scroll">
+            @foreach (var cat in categoryList)
+            {
+                var isActive = Model.CurrentCategory == cat;
+                <a asp-action="Index" asp-route-category="@cat"
+                   class="na-tab @(isActive ? "na-tab--active" : "")">
+                    <i class="bi @CategoryIcon(cat)"></i>
+                    @categoryLabels[cat]
+                    @if (!string.IsNullOrEmpty(categoryJp[cat]))
+                    {
+                        <span class="na-tab-jp">@categoryJp[cat]</span>
+                    }
+                </a>
+            }
+        </div>
+    </div>
+
+    <div class="na-community-layout">
+        @* ===== Main Feed ===== *@
+        <div class="na-community-main">
+            @* Create post prompt *@
+            @if (SignInManager.IsSignedIn(User))
+            {
+                var currentUserId = UserManager.GetUserId(User) ?? "";
+                var currentUserAvatarJson = Model.AuthorAvatars.ContainsKey(currentUserId) 
+                    ? Model.AuthorAvatars[currentUserId] : null;
+                <div class="na-create-prompt na-card">
+                    <div class="na-create-prompt-avatar">
+                        <div class="na-avatar-sm na-avatar-inline" data-size="36"
+                             data-avatar-json="@(currentUserAvatarJson ?? "{}")">U</div>
+                    </div>
+                    <a asp-action="Create" class="na-create-prompt-input">
+                        Ask a Japanese question or share a study tip...
+                    </a>
+                    <a asp-action="Create" class="btn-na-primary btn-sm">
+                        <i class="bi bi-plus-lg"></i> Create Post
+                    </a>
+                </div>
+                <div class="na-create-chips">
+                    <a asp-action="Create" asp-route-category="@CommunityCategory.General" class="na-chip na-chip--sm">Community</a>
+                    <a asp-action="Create" asp-route-category="@CommunityCategory.Study" class="na-chip na-chip--sm">Study</a>
+                    <a asp-action="Create" asp-route-category="@CommunityCategory.Questions" class="na-chip na-chip--sm">Questions</a>
+                    <a asp-action="Create" asp-route-category="@CommunityCategory.Japan" class="na-chip na-chip--sm">Japan</a>
+                </div>
+            }
+            else
+            {
+                <div class="na-create-prompt na-card">
+                    <div class="text-center w-100 py-2">
+                        <a asp-area="Identity" asp-page="/Account/Login" class="na-link-soft">Sign in</a> to post and interact with the community.
+                    </div>
+                </div>
+            }
+
+            @* Post Feed *@
+            @if (!Model.Posts.Any())
+            {
+                <div class="na-card text-center py-5">
+                    <i class="bi bi-chat-square-text" style="font-size: 3rem; color: var(--na-text-muted); opacity: 0.4;"></i>
+                    <h5 class="mt-3 text-muted">No posts yet</h5>
+                    <p class="text-muted small">Be the first to share something!</p>
+                    @if (SignInManager.IsSignedIn(User))
+                    {
+                        <a asp-action="Create" class="btn-na-primary mt-2">Create the First Post</a>
+                    }
+                </div>
+            }
+
+            @foreach (var post in Model.Posts)
+            {
+                var isLiked = Model.LikedPostIds.Contains(post.Id);
+                var likeCount = Model.PostLikeCounts.ContainsKey(post.Id) ? Model.PostLikeCounts[post.Id] : 0;
+                var commentCount = Model.PostCommentCounts.ContainsKey(post.Id) ? Model.PostCommentCounts[post.Id] : 0;
+                var avatarJson = Model.AuthorAvatars.ContainsKey(post.UserId) ? Model.AuthorAvatars[post.UserId] : null;
+                <div class="na-post-card na-card" data-post-id="@post.Id">
+                    @* Post header: avatar + username + time *@
+                    <div class="na-post-header">
+                        <div class="na-post-avatar">
+                            <div class="na-avatar-sm na-avatar-inline" data-size="36"
+                                 data-avatar-json="@(avatarJson ?? "{}")">@GetUserInitial(post.User?.UserName)</div>
+                        </div>
+                        <div class="na-post-meta">
+                            <span class="na-post-username">@@@(post.User?.UserName ?? "learner")</span>
+                            <span class="na-post-time">&middot; @TimeAgo(post.CreatedDate)</span>
+                        </div>
+                    </div>
+
+                    @* Category tag *@
+                    <div class="na-post-category">
+                        <span class="na-cat-tag @CategoryTagClass(post.Category)">
+                            <i class="bi @CategoryIcon(post.Category)"></i> @categoryLabels[post.Category]
+                        </span>
+                        @if (post.FeedbackWanted)
+                        {
+                            <span class="na-cat-tag na-cat--feedback">
+                                <i class="bi bi-stars"></i> Feedback Wanted
+                            </span>
+                        }
+                    </div>
+
+                    @* Title + content preview *@
+                    <a asp-action="Details" asp-route-id="@post.Id" class="na-post-link">
+                        <h5 class="na-post-title">@post.Title</h5>
+                        <p class="na-post-preview">
+                            @(post.Content.Length > 160 ? post.Content.Substring(0, 160) + "..." : post.Content)
+                        </p>
+                    </a>
+
+                    @* Action bar *@
+                    <div class="na-post-actions">
+                        <button class="na-post-action na-like-btn @(isLiked ? "na-like-btn--active" : "")"
+                                data-post-id="@post.Id"
+                                onclick="toggleCommunityLike(this, @post.Id)">
+                            <i class="bi @(isLiked ? "bi-heart-fill" : "bi-heart")"></i>
+                            <span class="na-like-count">@likeCount</span>
+                        </button>
+                        <a asp-action="Details" asp-route-id="@post.Id" class="na-post-action">
+                            <i class="bi bi-chat"></i>
+                            <span>@commentCount</span>
+                        </a>
+                        <button class="na-post-action na-save-btn" onclick="savePost(this)" title="Save">
+                            <i class="bi bi-bookmark"></i>
+                        </button>
+                    </div>
+                </div>
+            }
+
+            @* Pagination *@
+            @if (Model.TotalPosts > Model.PageSize)
+            {
+                var totalPages = (int)Math.Ceiling((double)Model.TotalPosts / Model.PageSize);
+                <div class="na-pagination mt-3">
+                    @if (Model.Page > 1)
+                    {
+                        <a asp-action="Index" asp-route-category="@Model.CurrentCategory" asp-route-page="@(Model.Page - 1)"
+                           class="btn-na-outline btn-sm">
+                            <i class="bi bi-chevron-left"></i> Previous
+                        </a>
+                    }
+                    <span class="text-muted small">Page @Model.Page of @totalPages</span>
+                    @if (Model.Page < totalPages)
+                    {
+                        <a asp-action="Index" asp-route-category="@Model.CurrentCategory" asp-route-page="@(Model.Page + 1)"
+                           class="btn-na-outline btn-sm">
+                            Next <i class="bi bi-chevron-right"></i>
+                        </a>
+                    }
+                </div>
+            }
+        </div>
+
+        @* ===== Sidebar ===== *@
+        <aside class="na-community-sidebar na-sidebar-sticky d-none d-lg-block">
+            @* Trending Topics *@
+            <div class="na-card na-sidebar-card">
+                <h6><i class="bi bi-fire"></i> Trending Topics</h6>
+                <div class="na-trending-list">
+                    @if (Model.TrendingCategories.Any())
+                    {
+                        @foreach (var cat in Model.TrendingCategories)
+                        {
+                            <a asp-action="Index" asp-route-category="@cat" class="na-trending-item">
+                                <span class="na-cat-tag @CategoryTagClass(cat)" style="font-size: 0.75rem;">
+                                    @categoryLabels[cat]
+                                </span>
+                            </a>
+                        }
+                    }
+                    else
+                    {
+                        <span class="text-muted small">No trending topics yet</span>
+                    }
+                </div>
+            </div>
+
+            @* Community Guidelines *@
+            <div class="na-card na-sidebar-card">
+                <h6><i class="bi bi-shield-check"></i> Community Guidelines</h6>
+                <ul class="na-guidelines-list">
+                    <li><i class="bi bi-heart"></i> Be respectful</li>
+                    <li><i class="bi bi-bookmark"></i> Stay on topic</li>
+                    <li><i class="bi bi-hand-thumbs-up"></i> Help each other learn</li>
+                    <li><i class="bi bi-translate"></i> Japanese welcome!</li>
+                </ul>
+            </div>
+
+            @* Popular Learners *@
+            @if (Model.PopularLearners.Any())
+            {
+                <div class="na-card na-sidebar-card">
+                    <h6><i class="bi bi-star"></i> Popular Learners</h6>
+                    <div class="na-popular-list">
+                        @foreach (var learner in Model.PopularLearners)
+                        {
+                            <a asp-action="Index" asp-route-category="@Model.CurrentCategory" class="na-popular-item">
+                                <div class="na-avatar-sm na-avatar-sm--md na-avatar-inline" data-size="40"
+                                     data-avatar-json="@(learner.AvatarJson ?? "{}")">@GetUserInitial(learner.UserName)</div>
+                                <div>
+                                    <span class="na-popular-name">@@@learner.UserName</span>
+                                    <span class="na-popular-count">@learner.PostCount posts</span>
+                                </div>
+                            </a>
+                        }
+                    </div>
+                </div>
+            }
+
+            @* Friends (placeholder) *@
+            <div class="na-card na-sidebar-card">
+                <h6><i class="bi bi-people"></i> Friends</h6>
+                <p class="text-muted small text-center py-2">
+                    <a href="#" class="na-community-friends-btn">
+                        <i class="bi bi-person-plus"></i> Friends
+                    </a>
+                    <br /><br />
+                    <small>Add friends and share posts. Coming soon.</small>
+                </p>
+            </div>
+        </aside>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/avatar-builder.js"></script>
+    <script>
+        // Render all inline avatars from data-avatar-json
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!window.AvatarBuilder) return;
+            document.querySelectorAll('.na-avatar-inline').forEach(function (el) {
+                try {
+                    var json = el.dataset.avatarJson || '{}';
+                    var config = JSON.parse(json);
+                    var size = parseInt(el.dataset.size, 10) || 36;
+                    // Merge with defaults
+                    var merged = Object.assign({}, AvatarBuilder.defaults, config);
+                    AvatarBuilder.renderAvatar(merged, el);
+                    el.style.width = size + 'px';
+                    el.style.height = size + 'px';
+                    el.style.overflow = 'hidden';
+                    el.style.borderRadius = '50%';
+                    el.style.flexShrink = '0';
+                } catch (e) {
+                    // Fallback: keep the text initial
+                }
+            });
+        });
+
+        function toggleCommunityLike(btn, postId) {
+            var token = getAntiForgeryToken();
+            if (!token) return;
+
+            fetch('/Community/ToggleLike', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': token
+                },
+                body: 'postId=' + postId
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.success) {
+                    var icon = btn.querySelector('i');
+                    var count = btn.querySelector('.na-like-count');
+                    if (data.isLiked) {
+                        btn.classList.add('na-like-btn--active');
+                        icon.className = 'bi bi-heart-fill';
+                    } else {
+                        btn.classList.remove('na-like-btn--active');
+                        icon.className = 'bi bi-heart';
+                    }
+                    if (count) count.textContent = data.likeCount;
+                }
+            })
+            .catch(function() {});
+        }
+
+        function savePost(btn) {
+            var icon = btn.querySelector('i');
+            if (icon.classList.contains('bi-bookmark-fill')) {
+                icon.className = 'bi bi-bookmark';
+                btn.classList.remove('na-save-btn--active');
+            } else {
+                icon.className = 'bi bi-bookmark-fill';
+                btn.classList.add('na-save-btn--active');
+            }
+            // Save to localStorage
+            try {
+                var postId = btn.closest('.na-post-card').dataset.postId;
+                var saved = JSON.parse(localStorage.getItem('na-saved-posts') || '[]');
+                var idx = saved.indexOf(postId);
+                if (idx >= 0) saved.splice(idx, 1);
+                else saved.push(postId);
+                localStorage.setItem('na-saved-posts', JSON.stringify(saved));
+            } catch(e) {}
+        }
+    </script>
+}

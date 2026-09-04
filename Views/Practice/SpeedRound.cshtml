@@ -1,0 +1,158 @@
+@{
+    ViewData["Title"] = "Speed Round";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-action="Index">Practice</a></li>
+        <li class="breadcrumb-item"><a asp-action="Challenges">Challenges</a></li>
+        <li class="breadcrumb-item active">Speed Round</li>
+    </ol>
+</nav>
+
+<div class="mb-4">
+    <h2><span class="me-2">⚡</span> Speed Round</h2>
+    <p class="text-muted">60 seconds — answer as many as you can!</p>
+</div>
+
+<div class="na-card-flat p-4 text-center" id="speed-area">
+    <div class="mb-3">
+        <span class="na-speed-timer" id="speed-timer">60</span>
+        <small class="text-muted d-block">seconds</small>
+    </div>
+    <div class="mb-2">
+        <span class="text-na-primary fw-bold" id="speed-score">0</span>
+        <small class="text-muted">correct</span>
+    </div>
+
+    <div id="speed-start-area">
+        <p>Ready?</p>
+        <button class="btn-na-primary" id="speed-start-btn"><i class="bi bi-play-fill"></i> Start</button>
+    </div>
+
+    <div id="speed-play-area" style="display:none;">
+        <h5 id="speed-question" style="font-size:1.5rem;" class="mb-3"></h5>
+        <div class="row g-2 justify-content-center" id="speed-options"></div>
+    </div>
+
+    <div id="speed-result-area" style="display:none;">
+        <div style="font-size:3rem;">🎉</div>
+        <h4 class="mt-2">Time's Up!</h4>
+        <p>You answered <strong id="speed-final-score">0</strong> correctly!</p>
+        <button class="btn-na-primary" id="speed-retry-btn">Try Again</button>
+        <a asp-action="Challenges" class="btn-na-outline ms-2">Back to Challenges</a>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a asp-action="Challenges" class="na-link-soft"><i class="bi bi-arrow-left"></i> Back to Challenges</a>
+</div>
+
+@section Scripts {
+    <script>
+    (function() {
+        // Load vocab data from the page or fetch
+        let vocabData = [];
+        let score = 0;
+        let timer = null;
+        let timeLeft = 60;
+
+        async function loadVocab() {
+            try {
+                const resp = await fetch('/Flashcards/Practice');
+                // Parse vocab from the practice page — simpler: use inline data
+                // For MVP, we'll use a small embedded set
+                vocabData = [
+                    {j:"あ",r:"a",e:"a"},{j:"い",r:"i",e:"i"},{j:"う",r:"u",e:"u"},{j:"え",r:"e",e:"e"},{j:"お",r:"o",e:"o"},
+                    {j:"か",r:"ka",e:"ka"},{j:"き",r:"ki",e:"ki"},{j:"く",r:"ku",e:"ku"},{j:"け",r:"ke",e:"ke"},{j:"こ",r:"ko",e:"ko"},
+                    {j:"さ",r:"sa",e:"sa"},{j:"し",r:"shi",e:"shi"},{j:"す",r:"su",e:"su"},{j:"せ",r:"se",e:"se"},{j:"そ",r:"so",e:"so"},
+                    {j:"た",r:"ta",e:"ta"},{j:"ち",r:"chi",e:"chi"},{j:"つ",r:"tsu",e:"tsu"},{j:"て",r:"te",e:"te"},{j:"と",r:"to",e:"to"},
+                    {j:"な",r:"na",e:"na"},{j:"に",r:"ni",e:"ni"},{j:"ぬ",r:"nu",e:"nu"},{j:"ね",r:"ne",e:"ne"},{j:"の",r:"no",e:"no"},
+                    {j:"は",r:"ha",e:"ha"},{j:"ひ",r:"hi",e:"hi"},{j:"ふ",r:"fu",e:"fu"},{j:"へ",r:"he",e:"he"},{j:"ほ",r:"ho",e:"ho"},
+                    {j:"ま",r:"ma",e:"ma"},{j:"み",r:"mi",e:"mi"},{j:"む",r:"mu",e:"mu"},{j:"め",r:"me",e:"me"},{j:"も",r:"mo",e:"mo"},
+                    {j:"や",r:"ya",e:"ya"},{j:"ゆ",r:"yu",e:"yu"},{j:"よ",r:"yo",e:"yo"},
+                    {j:"ら",r:"ra",e:"ra"},{j:"り",r:"ri",e:"ri"},{j:"る",r:"ru",e:"ru"},{j:"れ",r:"re",e:"re"},{j:"ろ",r:"ro",e:"ro"},
+                    {j:"わ",r:"wa",e:"wa"},{j:"を",r:"wo",e:"wo"},{j:"ん",r:"n",e:"n"}
+                ];
+            } catch(e) {
+                console.error('Failed to load vocab', e);
+            }
+        }
+
+        function shuffle(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        function nextQuestion() {
+            if (vocabData.length < 4) return;
+            const correct = vocabData[Math.floor(Math.random() * vocabData.length)];
+            document.getElementById('speed-question').textContent = correct.j;
+
+            const options = [correct];
+            while (options.length < 4) {
+                const rand = vocabData[Math.floor(Math.random() * vocabData.length)];
+                if (!options.find(o => o.r === rand.r)) options.push(rand);
+            }
+            const shuffled = shuffle(options);
+
+            const container = document.getElementById('speed-options');
+            container.innerHTML = '';
+            shuffled.forEach(opt => {
+                const col = document.createElement('div');
+                col.className = 'col-6 col-md-3';
+                const btn = document.createElement('button');
+                btn.className = 'quiz-option w-100';
+                btn.textContent = opt.r;
+                btn.onclick = function() {
+                    if (opt.r === correct.r) {
+                        btn.classList.add('correct');
+                        score++;
+                        document.getElementById('speed-score').textContent = score;
+                    } else {
+                        btn.classList.add('incorrect');
+                    }
+                    setTimeout(nextQuestion, 300);
+                };
+                col.appendChild(btn);
+                container.appendChild(col);
+            });
+        }
+
+        function startGame() {
+            score = 0;
+            timeLeft = 60;
+            document.getElementById('speed-score').textContent = '0';
+            document.getElementById('speed-timer').textContent = '60';
+            document.getElementById('speed-start-area').style.display = 'none';
+            document.getElementById('speed-play-area').style.display = 'block';
+            document.getElementById('speed-result-area').style.display = 'none';
+
+            timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('speed-timer').textContent = timeLeft;
+                if (timeLeft <= 10) {
+                    document.getElementById('speed-timer').classList.add('quiz-timer', 'warning');
+                }
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    document.getElementById('speed-play-area').style.display = 'none';
+                    document.getElementById('speed-result-area').style.display = 'block';
+                    document.getElementById('speed-final-score').textContent = score;
+                    document.getElementById('speed-timer').classList.remove('quiz-timer', 'warning');
+                }
+            }, 1000);
+
+            nextQuestion();
+        }
+
+        document.getElementById('speed-start-btn').onclick = () => { loadVocab().then(startGame); };
+        document.getElementById('speed-retry-btn').onclick = startGame;
+    })();
+    </script>
+}

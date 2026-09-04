@@ -1,0 +1,38 @@
+@using NihongoAcademy.Models.ExploreJapan
+@model List<ExploreItem>
+
+@{
+    ViewData["Title"] = "Dialects";
+}
+
+<nav class="na-explore-backbar mb-3">
+    <a asp-controller="ExploreJapan" asp-action="Index" class="na-explore-back-link">
+        <i class="bi bi-arrow-left"></i> Back to Interactive Japan Map
+    </a>
+</nav>
+
+<div class="na-explore-detail-header">
+    <h2>
+        <i class="bi bi-chat-quote na-page-icon"></i>
+        Dialects <span class="na-subtitle-jp">方言</span>
+    </h2>
+    <p class="text-muted">Six regional flavors of spoken Japanese — from Kansai theatre to Okinawan roots.</p>
+</div>
+
+<div class="na-explore-card-grid">
+    @foreach (var item in Model)
+    {
+        @await Html.PartialAsync("_ExploreCard", item)
+    }
+</div>
+
+<div class="na-explore-other-cats mt-4">
+    <h6 class="text-muted small mb-2">Explore other categories</h6>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-action="Regions" class="na-chip na-chip-sm"><i class="bi bi-globe-asia-australia"></i> Regions</a>
+        <a asp-action="Food" class="na-chip na-chip-sm"><i class="bi bi-cup-hot"></i> Food</a>
+        <a asp-action="Festivals" class="na-chip na-chip-sm"><i class="bi bi-music-note-beamed"></i> Festivals</a>
+        <a asp-action="Landmarks" class="na-chip na-chip-sm"><i class="bi bi-building"></i> Landmarks</a>
+        <a asp-action="Culture" class="na-chip na-chip-sm"><i class="bi bi-heart"></i> Culture</a>
+    </div>
+</div>

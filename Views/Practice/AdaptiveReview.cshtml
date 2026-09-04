@@ -1,0 +1,58 @@
+@{
+    ViewData["Title"] = "Adaptive Review";
+    var dueCards = ViewBag.DueCards as List<NihongoAcademy.Models.FlashcardProgress>;
+    var weakItems = ViewBag.WeakItems as List<object>;
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-action="Index">Practice</a></li>
+        <li class="breadcrumb-item active">Adaptive Review</li>
+    </ol>
+</nav>
+
+<div class="mb-4">
+    <h2><span class="me-2">✨</span> Adaptive Review</h2>
+    <p class="text-muted">Practice your weak areas and due cards.</p>
+</div>
+
+@if (dueCards != null && dueCards.Any())
+{
+    <div class="na-card-flat p-3 mb-3">
+        <h6><i class="bi bi-bell-fill text-na-primary"></i> Cards Due for Review</h6>
+        <p class="text-muted small">@dueCards.Count card@(dueCards.Count > 1 ? "s" : "") need your attention.</p>
+        <a asp-controller="Flashcards" asp-action="Practice" class="btn-na-primary btn-sm">Start Review</a>
+    </div>
+}
+
+@if (weakItems != null && weakItems.Any())
+{
+    <div class="na-card-flat p-3 mb-3">
+        <h6><i class="bi bi-exclamation-triangle text-warning"></i> Weak Areas</h6>
+        <p class="text-muted small">These items need more practice:</p>
+        <div class="d-flex flex-wrap gap-2">
+            @foreach (dynamic item in weakItems)
+            {
+                <span class="na-chip">@item.Japanese — @item.English</span>
+            }
+        </div>
+        <div class="mt-2">
+            <a asp-controller="Flashcards" asp-action="Practice" class="btn-na-outline btn-sm">Practice Weak Cards</a>
+        </div>
+    </div>
+}
+
+@if ((dueCards == null || !dueCards.Any()) && (weakItems == null || !weakItems.Any()))
+{
+    <div class="text-center py-5">
+        <div style="font-size:3rem;">🎉</div>
+        <h5 class="mt-2">All Caught Up!</h5>
+        <p class="text-muted">No due cards or weak areas right now. Great work!</p>
+        <a asp-action="Index" class="btn-na-outline">Back to Practice</a>
+    </div>
+}
+
+<div class="mt-4">
+    <a asp-action="Index" class="na-link-soft"><i class="bi bi-arrow-left"></i> Back to Practice</a>
+</div>

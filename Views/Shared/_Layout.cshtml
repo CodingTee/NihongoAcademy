@@ -1,0 +1,152 @@
+﻿@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - NihongoAcademy</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/bootstrap-icons.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/NihongoAcademy.styles.css" asp-append-version="true" />
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="~/favicon.ico" asp-append-version="true" />
+</head>
+<body class="na-app">
+    <div class="sakura-decoration"></div>
+
+    <header class="sticky-top na-app-header">
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm na-navbar">
+            <div class="container">
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex">
+                    <div class="na-navbar-grid">
+                        <div class="na-navbar-cell na-navbar-cell--left">
+                            <a class="navbar-brand na-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                                NihongoAcademy<span class="jp">日本語学院</span>
+                            </a>
+                        </div>
+                        <div class="na-navbar-cell na-navbar-cell--center">
+                            <ul class="navbar-nav na-nav-primary">
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-area="" asp-controller="Lessons" asp-action="Index">Learn</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-area="" asp-controller="Practice" asp-action="Index">Practice</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-area="" asp-controller="Community" asp-action="Index">Community</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" asp-area="" asp-controller="Dashboard" asp-action="Index">Progress</a>
+                                </li>
+                            </ul>
+                            <form class="na-nav-search" asp-controller="Lessons" asp-action="Index" method="get" role="search">
+                                <i class="bi bi-search na-nav-search-icon"></i>
+                                <input type="search"
+                                       name="searchString"
+                                       class="na-nav-search-input"
+                                       placeholder="Search Japanese… 日本語を検索"
+                                       aria-label="Search Japanese words"
+                                       value="@(ViewContext.HttpContext.Request.Query["searchString"].ToString())"
+                                       autocomplete="off" />
+                                <button type="submit" class="na-nav-search-btn" aria-label="Search">
+                                    <i class="bi bi-arrow-right"></i>
+                                </button>
+                            </form>
+                        </div>
+                        <div class="na-navbar-cell na-navbar-cell--right">
+                            <a asp-controller="ExploreJapan" asp-action="Index" class="na-nav-icon-btn" title="Explore Japan 日本を探索">
+                                <i class="bi bi-geo-alt"></i>
+                            </a>
+                            <partial name="_LoginPartial" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container mt-3" style="position: relative; z-index: 1;">
+        <main role="main" class="pb-3">
+            @if (TempData["Success"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle"></i> @TempData["Success"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="bi bi-exclamation-circle"></i> @TempData["Error"]
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            }
+            @RenderBody()
+        </main>
+    </div>
+
+    <footer class="na-footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>NihongoAcademy</strong> &mdash; 日本語学院<br />
+                    <small>Your journey to Japanese fluency starts here.</small>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    &copy; 2026 NihongoAcademy &mdash;
+                    <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a> &mdash;
+                    <a asp-area="" asp-controller="Home" asp-action="About">About</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    @* Mobile bottom tab bar *@
+    <nav class="na-mobile-nav d-md-none" aria-label="Mobile navigation">
+        <a asp-area="" asp-controller="Home" asp-action="Index" class="na-mobile-nav-item">
+            <i class="bi bi-house"></i>
+            <span>Home</span>
+        </a>
+        <a asp-area="" asp-controller="Lessons" asp-action="Index" class="na-mobile-nav-item">
+            <i class="bi bi-book"></i>
+            <span>Learn</span>
+        </a>
+        <a asp-area="" asp-controller="Practice" asp-action="Index" class="na-mobile-nav-item">
+            <i class="bi bi-pencil-square"></i>
+            <span>Practice</span>
+        </a>
+        <a asp-area="" asp-controller="Community" asp-action="Index" class="na-mobile-nav-item">
+            <i class="bi bi-people"></i>
+            <span>Community</span>
+        </a>
+        <a asp-area="" asp-controller="Dashboard" asp-action="Index" class="na-mobile-nav-item">
+            <i class="bi bi-graph-up"></i>
+            <span>Progress</span>
+        </a>
+    </nav>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/sakura-cursor.js" asp-append-version="true"></script>
+    <script src="~/js/translate-popup.js" asp-append-version="true"></script>
+
+    @* Global anti-forgery token for AJAX POST requests (Fix #1: CSRF) *@
+    <form id="na-global-antiforgery" style="display:none;">
+        @Html.AntiForgeryToken()
+    </form>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

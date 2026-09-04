@@ -1,0 +1,152 @@
+@{
+    ViewData["Title"] = "Sentence Builder";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-action="Index">Practice</a></li>
+        <li class="breadcrumb-item"><a asp-action="Challenges">Challenges</a></li>
+        <li class="breadcrumb-item active">Sentence Builder</li>
+    </ol>
+</nav>
+
+<div class="mb-4">
+    <h2><span class="me-2">🧩</span> Sentence Builder</h2>
+    <p class="text-muted">Arrange the words into a correct Japanese sentence.</p>
+</div>
+
+<div class="na-card-flat p-4" id="sentence-area">
+    @* Target answer area *@
+    <div class="mb-3">
+        <small class="text-muted d-block mb-2">Your sentence:</small>
+        <div id="sentence-target" class="na-sentence-slot p-3 rounded" style="min-height:60px;border:2px dashed var(--na-border);background:var(--na-bg);"></div>
+    </div>
+
+    @* Word tiles *@
+    <div class="mb-3">
+        <small class="text-muted d-block mb-2">Available words:</small>
+        <div id="sentence-words" class="d-flex flex-wrap gap-2"></div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button class="btn-na-primary btn-sm" id="sentence-check"><i class="bi bi-check-lg"></i> Check</button>
+        <button class="btn-na-outline btn-sm" id="sentence-clear"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
+        <button class="btn-na-outline btn-sm" id="sentence-next" style="display:none;">Next</button>
+    </div>
+
+    <div id="sentence-feedback" class="mt-3" style="display:none;"></div>
+</div>
+
+<div class="mt-4">
+    <a asp-action="Challenges" class="na-link-soft"><i class="bi bi-arrow-left"></i> Back to Challenges</a>
+</div>
+
+@section Scripts {
+    <script>
+    (function() {
+        const sentences = [
+            { parts: ["わたし", "は", "学生", "です"], answer: "わたしは学生です" },
+            { parts: ["今日", "は", "いい", "天気", "ですね"], answer: "今日はいい天気ですね" },
+            { parts: ["お名前", "は", "何", "です", "か"], answer: "お名前は何ですか" },
+            { parts: ["日本語", "を", "勉強", "しています"], answer: "日本語を勉強しています" },
+            { parts: ["朝ご飯", "を", "食べました"], answer: "朝ご飯を食べました" },
+            { parts: ["友達", "と", "映画", "を", "見ます"], answer: "友達と映画を見ます" },
+            { parts: ["毎日", "日本語", "を", "練習", "します"], answer: "毎日日本語を練習します" },
+            { parts: ["東京", "へ", "行きたい", "です"], answer: "東京へ行きたいです" },
+        ];
+
+        let currentIdx = 0;
+        let placed = [];
+
+        function shuffle(arr) {
+            const a = [...arr];
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        function render() {
+            const s = sentences[currentIdx];
+            const target = document.getElementById('sentence-target');
+            const wordsContainer = document.getElementById('sentence-words');
+            placed = [];
+            target.innerHTML = '<span class="text-muted" style="font-size:0.85rem;">Click words below to build the sentence...</span>';
+            wordsContainer.innerHTML = '';
+
+            const shuffled = shuffle(s.parts);
+            shuffled.forEach((word, i) => {
+                const chip = document.createElement('button');
+                chip.className = 'na-chip na-chip--clickable';
+                chip.textContent = word;
+                chip.dataset.index = i;
+                chip.onclick = () => addWord(word, chip);
+                wordsContainer.appendChild(chip);
+            });
+
+            document.getElementById('sentence-feedback').style.display = 'none';
+            document.getElementById('sentence-next').style.display = 'none';
+        }
+
+        function addWord(word, chipEl) {
+            chipEl.style.opacity = '0.3';
+            chipEl.style.pointerEvents = 'none';
+            placed.push({ word, chipEl });
+
+            const target = document.getElementById('sentence-target');
+            target.innerHTML = '';
+            placed.forEach(p => {
+                const span = document.createElement('span');
+                span.className = 'na-sentence-word';
+                span.textContent = p.word;
+                span.onclick = () => removeWord(p);
+                target.appendChild(span);
+            });
+        }
+
+        function removeWord(item) {
+            placed = placed.filter(p => p !== item);
+            item.chipEl.style.opacity = '1';
+            item.chipEl.style.pointerEvents = 'auto';
+
+            const target = document.getElementById('sentence-target');
+            target.innerHTML = '';
+            if (placed.length === 0) {
+                target.innerHTML = '<span class="text-muted" style="font-size:0.85rem;">Click words below to build the sentence...</span>';
+            } else {
+                placed.forEach(p => {
+                    const span = document.createElement('span');
+                    span.className = 'na-sentence-word';
+                    span.textContent = p.word;
+                    span.onclick = () => removeWord(p);
+                    target.appendChild(span);
+                });
+            }
+        }
+
+        document.getElementById('sentence-check').onclick = () => {
+            const s = sentences[currentIdx];
+            const userAnswer = placed.map(p => p.word).join('');
+            const fb = document.getElementById('sentence-feedback');
+            fb.style.display = 'block';
+
+            if (userAnswer === s.answer) {
+                fb.innerHTML = '<div class="p-2 rounded" style="background:#E5F8E5;color:#2C5F2D;"><i class="bi bi-check-circle-fill"></i> Correct! <strong>' + s.answer + '</strong></div>';
+                document.getElementById('sentence-next').style.display = 'inline-block';
+            } else {
+                fb.innerHTML = '<div class="p-2 rounded" style="background:#FFE5E5;color:#D44;"><i class="bi bi-x-circle-fill"></i> Not quite. Try again or reset.</div>';
+            }
+        };
+
+        document.getElementById('sentence-clear').onclick = render;
+        document.getElementById('sentence-next').onclick = () => {
+            currentIdx = (currentIdx + 1) % sentences.length;
+            render();
+        };
+
+        render();
+    })();
+    </script>
+}

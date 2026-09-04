@@ -1,0 +1,78 @@
+@model IEnumerable<NihongoAcademy.Models.QuizAttempt>
+
+@{
+    ViewData["Title"] = "Quiz History";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-controller="Quizzes" asp-action="Index">Quizzes</a></li>
+        <li class="breadcrumb-item active">History</li>
+    </ol>
+</nav>
+
+<h2><i class="bi bi-clock-history"></i> Quiz History <span class="text-muted small">テスト履歴</span></h2>
+
+@if (!Model.Any())
+{
+    <div class="na-card text-center py-5">
+        <i class="bi bi-inbox" style="font-size: 3rem; color: var(--na-text-muted);"></i>
+        <h4 class="mt-3">No quiz attempts yet</h4>
+        <p class="text-muted">Take your first quiz to see your history here.</p>
+        <a asp-action="Index" class="btn-na-primary">Browse Quizzes</a>
+    </div>
+}
+else
+{
+    <div class="table-responsive mt-4">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Quiz</th>
+                    <th>Category</th>
+                    <th>Score</th>
+                    <th>Correct</th>
+                    <th>Time</th>
+                    <th>Result</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var attempt in Model)
+                {
+                    <tr>
+                        <td>@attempt.AttemptDate.ToString("MMM dd, yyyy HH:mm")</td>
+                        <td>@attempt.Quiz?.Title</td>
+                        <td>
+                            <span class="na-badge na-badge-@(attempt.Quiz?.Category?.Name?.ToLower())">
+                                @attempt.Quiz?.Category?.Name
+                            </span>
+                        </td>
+                        <td>
+                            <strong style="color: @(attempt.IsPassed ? "var(--na-secondary)" : "#D44");">
+                                @attempt.ScorePercentage%
+                            </strong>
+                        </td>
+                        <td>@attempt.CorrectAnswers / @attempt.TotalQuestions</td>
+                        <td>@TimeSpan.FromSeconds(attempt.TimeTakenSeconds).ToString(@"m\:ss")</td>
+                        <td>
+                            @if (attempt.IsPassed)
+                            {
+                                <span class="na-badge" style="background: #E5F8E5; color: #2C5F2D;">
+                                    <i class="bi bi-check-circle"></i> Passed
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="na-badge" style="background: #FFE5E5; color: #D44;">
+                                    <i class="bi bi-x-circle"></i> Failed
+                                </span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
