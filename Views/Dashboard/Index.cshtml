@@ -3,6 +3,8 @@
 @{
     ViewData["Title"] = "Progress";
     var completionPct = Model.TotalLessons > 0 ? (Model.CompletedLessons * 100 / Model.TotalLessons) : 0;
+    var today = DateTime.Now.Date;
+    var calendarStart = today.AddDays(-27);
 }
 
 <div class="row mb-4">
@@ -48,13 +50,46 @@
         <div class="na-card-flat">
             <h5><i class="bi bi-calendar-check"></i> Study Calendar</h5>
             <hr />
-            <p class="text-muted small text-center py-3">
-                <i class="bi bi-calendar3" style="font-size: 2rem; opacity: 0.3; display: block; margin-bottom: 8px;"></i>
-                Study calendar coming soon. Track your daily study activity here.
-            </p>
+            <div class="d-flex justify-content-between small text-muted mb-2">
+                <span>@calendarStart.ToString("MMM d")</span>
+                <span>@today.ToString("MMM d")</span>
+            </div>
+            <div class="na-study-calendar" aria-label="Study activity for the last 28 days">
+                @for (var i = 0; i < 28; i++)
+                {
+                    var day = calendarStart.AddDays(i);
+                    var active = Model.ActiveDays.Contains(day);
+                    <span class="na-study-day @(active ? "na-study-day--active" : "") @(day == today ? "na-study-day--today" : "")"
+                          title="@day.ToString("MMM d"): @(active ? "Studied" : "No activity")"
+                          aria-label="@day.ToString("MMMM d"): @(active ? "studied" : "no activity")"></span>
+                }
+            </div>
+            <div class="small text-muted mt-3">
+                <i class="bi bi-square-fill text-success me-1"></i> Study activity includes lessons and flashcard reviews.
+            </div>
         </div>
     </div>
 </div>
+
+@if (Model.AwaitingReviewCount > 0)
+{
+    <div class="alert @(Model.DueReviewCount > 0 ? "alert-warning" : "alert-info") d-flex align-items-center justify-content-between gap-3 mb-4" role="status">
+        <div>
+            <strong><i class="bi bi-clock-history me-1"></i> Stable mastery review</strong>
+            <div class="small">
+                @if (Model.DueReviewCount > 0)
+                {
+                    <span>@Model.DueReviewCount lesson(s) are ready for their delayed review.</span>
+                }
+                else
+                {
+                    <span>@Model.AwaitingReviewCount lesson(s) passed the first check and are waiting for a later-day review.</span>
+                }
+            </div>
+        </div>
+        <a asp-controller="Lessons" asp-action="Index" class="btn btn-sm btn-outline-dark text-nowrap">View lessons</a>
+    </div>
+}
 
 <div class="row mb-4">
     <div class="col-md-3 col-6 mb-3">
@@ -155,11 +190,25 @@
                                         <small class="text-muted">@p.Lesson?.Category?.Name</small>
                                     </td>
                                     <td>
-                                        @if (p.IsCompleted)
+                                        @if (p.StableMasteryDate.HasValue)
                                         {
                                             <span class="na-badge" style="background: #E5F8E5; color: #2C5F2D;">
-                                                <i class="bi bi-check-circle"></i> Done
+                                                <i class="bi bi-check-circle"></i> Mastered
                                             </span>
+                                        }
+                                        else if (p.FirstMasteryPassedDate.HasValue && p.MasteryReviewDueDate <= DateTime.Now)
+                                        {
+                                            <span class="na-badge" style="background: #FFF0D5; color: #9A6200;">
+                                                <i class="bi bi-clock-history"></i> Review due
+                                            </span>
+                                            <br /><small class="text-muted">Available now</small>
+                                        }
+                                        else if (p.FirstMasteryPassedDate.HasValue)
+                                        {
+                                            <span class="na-badge" style="background: #E8F1FF; color: #315A91;">
+                                                <i class="bi bi-hourglass-split"></i> Review pending
+                                            </span>
+                                            <br /><small class="text-muted">@p.MasteryReviewDueDate?.ToString("MMM d, h:mm tt")</small>
                                         }
                                         else
                                         {
@@ -268,3 +317,20 @@
         }
     </script>
 }
+
+<style>
+    .na-study-calendar {
+        display: grid;
+        grid-template-columns: repeat(14, minmax(12px, 1fr));
+        gap: 6px;
+    }
+    .na-study-day {
+        aspect-ratio: 1;
+        min-width: 12px;
+        border-radius: 4px;
+        background: #edf0eb;
+        border: 1px solid rgba(44, 95, 45, .08);
+    }
+    .na-study-day--active { background: var(--na-secondary, #6f946f); }
+    .na-study-day--today { outline: 2px solid var(--na-primary, #c84b31); outline-offset: 1px; }
+</style>

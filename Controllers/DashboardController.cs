@@ -69,6 +69,7 @@ namespace NihongoAcademy.Controllers
             var allActiveDays = activityDays.Union(flashcardDays).OrderByDescending(d => d).ToList();
             var currentStreak = CalculateStreak(allActiveDays);
             var longestStreak = CalculateLongestStreak(allActiveDays);
+            var now = DateTime.Now;
 
             var viewModel = new DashboardViewModel
             {
@@ -83,7 +84,13 @@ namespace NihongoAcademy.Controllers
                 RecentQuizScores = quizAttempts.Take(10).Reverse().Select(a => a.ScorePercentage).ToList(),
                 RecentQuizLabels = quizAttempts.Take(10).Reverse().Select(a => a.AttemptDate.ToString("MM/dd")).ToList(),
                 CurrentStreak = currentStreak,
-                LongestStreak = longestStreak
+                LongestStreak = longestStreak,
+                ActiveDays = allActiveDays.Select(d => d.Date).ToHashSet(),
+                AwaitingReviewCount = lessonProgress.Count(p =>
+                    !p.IsCompleted && p.FirstMasteryPassedDate.HasValue),
+                DueReviewCount = lessonProgress.Count(p =>
+                    !p.IsCompleted && p.FirstMasteryPassedDate.HasValue &&
+                    p.MasteryReviewDueDate.HasValue && p.MasteryReviewDueDate.Value <= now)
             };
 
             return View(viewModel);
@@ -140,6 +147,9 @@ namespace NihongoAcademy.Controllers
         public List<string> RecentQuizLabels { get; set; } = new();
         public int CurrentStreak { get; set; }
         public int LongestStreak { get; set; }
+        public HashSet<DateTime> ActiveDays { get; set; } = new();
+        public int AwaitingReviewCount { get; set; }
+        public int DueReviewCount { get; set; }
     }
 
     public class CategoryProgressItem
