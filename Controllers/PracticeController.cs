@@ -30,10 +30,28 @@ namespace NihongoAcademy.Controllers
             // SRS due count
             var dueCount = 0;
             var weakAreas = new List<string>();
+            var dueMasteryReviews = new List<LessonProgress>();
+            var pendingMasteryReviewCount = 0;
             if (userId != null)
             {
+                var now = DateTime.Now;
                 dueCount = await _context.FlashcardProgress
-                    .CountAsync(fp => fp.UserId == userId && fp.NextReview <= DateTime.Now);
+                    .CountAsync(fp => fp.UserId == userId && fp.NextReview <= now);
+
+                dueMasteryReviews = await _context.LessonProgress
+                    .Where(p => p.UserId == userId && !p.IsCompleted &&
+                        p.FirstMasteryPassedDate.HasValue &&
+                        p.MasteryReviewDueDate.HasValue && p.MasteryReviewDueDate <= now)
+                    .Include(p => p.Lesson)
+                    .ThenInclude(l => l!.Category)
+                    .OrderBy(p => p.MasteryReviewDueDate)
+                    .Take(5)
+                    .ToListAsync();
+
+                pendingMasteryReviewCount = await _context.LessonProgress
+                    .CountAsync(p => p.UserId == userId && !p.IsCompleted &&
+                        p.FirstMasteryPassedDate.HasValue &&
+                        p.MasteryReviewDueDate.HasValue && p.MasteryReviewDueDate > now);
 
                 // Simple rule-based weak areas: categories with low average ease factor
                 var weakCategories = await _context.FlashcardProgress
@@ -52,6 +70,8 @@ namespace NihongoAcademy.Controllers
 
             ViewBag.DueCount = dueCount;
             ViewBag.WeakAreas = weakAreas;
+            ViewBag.DueMasteryReviews = dueMasteryReviews;
+            ViewBag.PendingMasteryReviewCount = pendingMasteryReviewCount;
 
             // Topics (non-Culture categories that have vocabulary)
             var topics = await _context.Categories
