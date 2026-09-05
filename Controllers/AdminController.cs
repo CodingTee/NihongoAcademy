@@ -86,16 +86,40 @@ namespace NihongoAcademy.Controllers
             var roles = await _userManager.GetRolesAsync(user);
             if (roles.Contains("Admin"))
             {
-                await _userManager.RemoveFromRoleAsync(user, "Admin");
+                var admins = await _userManager.GetUsersInRoleAsync("Admin");
+                if (admins.Count <= 1)
+                {
+                    TempData["Error"] = "The final administrator account cannot be demoted.";
+                    return RedirectToAction(nameof(Index));
+                }
+
+                var removeResult = await _userManager.RemoveFromRoleAsync(user, "Admin");
+                if (!removeResult.Succeeded)
+                {
+                    TempData["Error"] = string.Join(" ", removeResult.Errors.Select(error => error.Description));
+                    return RedirectToAction(nameof(Index));
+                }
+
                 if (!roles.Contains("Student"))
                 {
-                    await _userManager.AddToRoleAsync(user, "Student");
+                    var studentResult = await _userManager.AddToRoleAsync(user, "Student");
+                    if (!studentResult.Succeeded)
+                    {
+                        await _userManager.AddToRoleAsync(user, "Admin");
+                        TempData["Error"] = string.Join(" ", studentResult.Errors.Select(error => error.Description));
+                        return RedirectToAction(nameof(Index));
+                    }
                 }
                 TempData["Success"] = $"Removed Admin role from {user.Email}.";
             }
             else
             {
-                await _userManager.AddToRoleAsync(user, "Admin");
+                var result = await _userManager.AddToRoleAsync(user, "Admin");
+                if (!result.Succeeded)
+                {
+                    TempData["Error"] = string.Join(" ", result.Errors.Select(error => error.Description));
+                    return RedirectToAction(nameof(Index));
+                }
                 TempData["Success"] = $"Promoted {user.Email} to Admin.";
             }
 

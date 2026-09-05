@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using NihongoAcademy.Data;
 using NihongoAcademy.Models;
 using System.Text.Json;
+using System.ComponentModel.DataAnnotations;
 
 namespace NihongoAcademy.Controllers
 {
@@ -33,13 +34,16 @@ namespace NihongoAcademy.Controllers
         [Authorize]
         public async Task<IActionResult> Post([FromBody] TutorRequest request)
         {
+            if (request.History?.Count > 20)
+                return BadRequest(new { error = "Conversation history is too long." });
+
             // Load lesson context
             string lessonContext = "";
             if (request.LessonId.HasValue)
             {
                 var lesson = await _context.Lessons
                     .Include(l => l.Category)
-                    .FirstOrDefaultAsync(l => l.Id == request.LessonId.Value);
+                    .FirstOrDefaultAsync(l => l.Id == request.LessonId.Value && l.IsPublished);
 
                 if (lesson != null)
                 {
@@ -78,9 +82,12 @@ namespace NihongoAcademy.Controllers
             // Add conversation history
             if (request.History != null)
             {
-                foreach (var msg in request.History)
+                foreach (var msg in request.History
+                    .Where(m => m.Role is "user" or "assistant")
+                    .Where(m => !string.IsNullOrWhiteSpace(m.Content))
+                    .TakeLast(10))
                 {
-                    messages.Add(new { role = msg.Role, content = msg.Content });
+                    messages.Add(new { role = msg.Role, content = msg.Content[..Math.Min(msg.Content.Length, 1000)] });
                 }
             }
 
@@ -172,6 +179,7 @@ namespace NihongoAcademy.Controllers
 
     public class TutorRequest
     {
+        [Required, StringLength(1000, MinimumLength = 1)]
         public string Message { get; set; } = "";
         public int? LessonId { get; set; }
         public List<TutorMessage>? History { get; set; }
@@ -179,7 +187,9 @@ namespace NihongoAcademy.Controllers
 
     public class TutorMessage
     {
+        [Required, RegularExpression("user|assistant")]
         public string Role { get; set; } = "";
+        [Required, StringLength(1000)]
         public string Content { get; set; } = "";
     }
 }

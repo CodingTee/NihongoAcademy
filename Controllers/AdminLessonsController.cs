@@ -34,8 +34,10 @@ namespace NihongoAcademy.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Lesson lesson)
+        public async Task<IActionResult> Create([Bind("CategoryId,Title,JapaneseTitle,Description,Content,VideoUrl,ImageUrl,DifficultyLevel,EstimatedMinutes,IsPublished,DisplayOrder")] Lesson lesson)
         {
+            if (!await _context.Categories.AnyAsync(c => c.Id == lesson.CategoryId))
+                ModelState.AddModelError(nameof(lesson.CategoryId), "Select a valid category.");
             if (ModelState.IsValid)
             {
                 lesson.CreatedDate = DateTime.Now;
@@ -59,22 +61,36 @@ namespace NihongoAcademy.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Lesson lesson)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,CategoryId,Title,JapaneseTitle,Description,Content,VideoUrl,ImageUrl,DifficultyLevel,EstimatedMinutes,IsPublished,DisplayOrder")] Lesson lesson)
         {
             if (id != lesson.Id) return NotFound();
+            if (!await _context.Categories.AnyAsync(c => c.Id == lesson.CategoryId))
+                ModelState.AddModelError(nameof(lesson.CategoryId), "Select a valid category.");
 
             if (ModelState.IsValid)
             {
+                var existing = await _context.Lessons.FindAsync(id);
+                if (existing == null) return NotFound();
                 try
                 {
-                    lesson.ModifiedDate = DateTime.Now;
-                    _context.Update(lesson);
+                    existing.CategoryId = lesson.CategoryId;
+                    existing.Title = lesson.Title;
+                    existing.JapaneseTitle = lesson.JapaneseTitle;
+                    existing.Description = lesson.Description;
+                    existing.Content = lesson.Content;
+                    existing.VideoUrl = lesson.VideoUrl;
+                    existing.ImageUrl = lesson.ImageUrl;
+                    existing.DifficultyLevel = lesson.DifficultyLevel;
+                    existing.EstimatedMinutes = lesson.EstimatedMinutes;
+                    existing.IsPublished = lesson.IsPublished;
+                    existing.DisplayOrder = lesson.DisplayOrder;
+                    existing.ModifiedDate = DateTime.Now;
                     await _context.SaveChangesAsync();
                     TempData["Success"] = "Lesson updated successfully.";
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!LessonExists(lesson.Id)) return NotFound();
+                    if (!LessonExists(id)) return NotFound();
                     throw;
                 }
                 return RedirectToAction(nameof(Index));
@@ -110,9 +126,16 @@ namespace NihongoAcademy.Controllers
             var lesson = await _context.Lessons.FindAsync(id);
             if (lesson != null)
             {
-                _context.Lessons.Remove(lesson);
-                await _context.SaveChangesAsync();
-                TempData["Success"] = "Lesson deleted successfully.";
+                try
+                {
+                    _context.Lessons.Remove(lesson);
+                    await _context.SaveChangesAsync();
+                    TempData["Success"] = "Lesson deleted successfully.";
+                }
+                catch (DbUpdateException)
+                {
+                    TempData["Error"] = "This lesson has learner activity and cannot be deleted safely. Unpublish it instead to preserve progress records.";
+                }
             }
             return RedirectToAction(nameof(Index));
         }

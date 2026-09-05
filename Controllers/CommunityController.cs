@@ -242,6 +242,7 @@ namespace NihongoAcademy.Controllers
 
             var userId = _userManager.GetUserId(User);
             if (userId == null) return Challenge();
+            if (!await _context.CommunityPosts.AnyAsync(p => p.Id == model.PostId)) return NotFound();
 
             // Ensure user has a profile
             var profile = await _context.UserProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
@@ -284,6 +285,7 @@ namespace NihongoAcademy.Controllers
         {
             var userId = _userManager.GetUserId(User);
             if (userId == null) return Json(new { success = false, error = "Not authenticated" });
+            if (!await _context.CommunityPosts.AnyAsync(p => p.Id == postId)) return NotFound();
 
             var existing = await _context.CommunityLikes
                 .FirstOrDefaultAsync(l => l.PostId == postId && l.UserId == userId);

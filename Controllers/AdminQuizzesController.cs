@@ -35,8 +35,10 @@ namespace NihongoAcademy.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Quiz quiz)
+        public async Task<IActionResult> Create([Bind("CategoryId,Title,JapaneseTitle,Description,TimeLimitMinutes,PassingScore,IsPublished,DisplayOrder")] Quiz quiz)
         {
+            if (!await _context.Categories.AnyAsync(c => c.Id == quiz.CategoryId))
+                ModelState.AddModelError(nameof(quiz.CategoryId), "Select a valid category.");
             if (ModelState.IsValid)
             {
                 quiz.CreatedDate = DateTime.Now;
@@ -63,9 +65,11 @@ namespace NihongoAcademy.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Quiz quiz)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,CategoryId,Title,JapaneseTitle,Description,TimeLimitMinutes,PassingScore,IsPublished,DisplayOrder")] Quiz quiz)
         {
             if (id != quiz.Id) return NotFound();
+            if (!await _context.Categories.AnyAsync(c => c.Id == quiz.CategoryId))
+                ModelState.AddModelError(nameof(quiz.CategoryId), "Select a valid category.");
 
             var existingQuiz = await _context.Quizzes
                 .Include(q => q.Questions)
@@ -95,13 +99,19 @@ namespace NihongoAcademy.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AddQuestion(QuizQuestion question)
+        public async Task<IActionResult> AddQuestion([Bind("QuizId,QuestionText,OptionA,OptionB,OptionC,OptionD,CorrectOption,Explanation,DisplayOrder,AudioPath")] QuizQuestion question)
         {
+            if (!await _context.Quizzes.AnyAsync(q => q.Id == question.QuizId)) return NotFound();
             if (ModelState.IsValid)
             {
                 _context.Add(question);
                 await _context.SaveChangesAsync();
                 TempData["Success"] = "Question added successfully.";
+            }
+            else
+            {
+                TempData["Error"] = string.Join(" ", ModelState.Values
+                    .SelectMany(v => v.Errors).Select(e => e.ErrorMessage).Where(m => !string.IsNullOrWhiteSpace(m)));
             }
             return RedirectToAction(nameof(Edit), new { id = question.QuizId });
         }
@@ -113,6 +123,7 @@ namespace NihongoAcademy.Controllers
             var question = await _context.QuizQuestions.FindAsync(questionId);
             if (question != null)
             {
+                quizId = question.QuizId;
                 _context.QuizQuestions.Remove(question);
                 await _context.SaveChangesAsync();
                 TempData["Success"] = "Question deleted.";

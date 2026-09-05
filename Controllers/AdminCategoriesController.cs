@@ -35,8 +35,10 @@ namespace NihongoAcademy.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Models.Category category)
+        public async Task<IActionResult> Create([Bind("Name,Description,IconClass,DisplayOrder")] Models.Category category)
         {
+            if (await _context.Categories.AnyAsync(c => c.Name == category.Name))
+                ModelState.AddModelError(nameof(category.Name), "A category with this name already exists.");
             if (ModelState.IsValid)
             {
                 category.CreatedDate = DateTime.Now;
@@ -58,20 +60,27 @@ namespace NihongoAcademy.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Models.Category category)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Description,IconClass,DisplayOrder")] Models.Category category)
         {
             if (id != category.Id) return NotFound();
+            if (await _context.Categories.AnyAsync(c => c.Id != id && c.Name == category.Name))
+                ModelState.AddModelError(nameof(category.Name), "A category with this name already exists.");
             if (ModelState.IsValid)
             {
+                var existing = await _context.Categories.FindAsync(id);
+                if (existing == null) return NotFound();
                 try
                 {
-                    _context.Update(category);
+                    existing.Name = category.Name;
+                    existing.Description = category.Description;
+                    existing.IconClass = category.IconClass;
+                    existing.DisplayOrder = category.DisplayOrder;
                     await _context.SaveChangesAsync();
                     TempData["Success"] = "Category updated successfully.";
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!_context.Categories.Any(e => e.Id == category.Id)) return NotFound();
+                    if (!_context.Categories.Any(e => e.Id == id)) return NotFound();
                     throw;
                 }
                 return RedirectToAction(nameof(Index));

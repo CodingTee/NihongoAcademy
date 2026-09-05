@@ -58,7 +58,7 @@ namespace NihongoAcademy.Controllers
         {
             var quiz = await _context.Quizzes
                 .Include(q => q.Questions)
-                .FirstOrDefaultAsync(q => q.Id == quizId);
+                .FirstOrDefaultAsync(q => q.Id == quizId && q.IsPublished);
 
             if (quiz == null) return NotFound();
 
@@ -85,7 +85,7 @@ namespace NihongoAcademy.Controllers
                 CorrectAnswers = correctAnswers,
                 ScorePercentage = scorePercentage,
                 IsPassed = isPassed,
-                TimeTakenSeconds = timeTakenSeconds,
+                TimeTakenSeconds = Math.Clamp(timeTakenSeconds, 0, quiz.TimeLimitMinutes * 60),
                 AttemptDate = DateTime.Now
             };
 

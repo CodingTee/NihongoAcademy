@@ -34,8 +34,10 @@ namespace NihongoAcademy.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(Vocabulary vocabulary)
+        public async Task<IActionResult> Create([Bind("CategoryId,Japanese,Romaji,English,PartOfSpeech,ExampleJapanese,ExampleEnglish,AudioPath,ImagePath,JlptLevel,DisplayOrder")] Vocabulary vocabulary)
         {
+            if (!await _context.Categories.AnyAsync(c => c.Id == vocabulary.CategoryId))
+                ModelState.AddModelError(nameof(vocabulary.CategoryId), "Select a valid category.");
             if (ModelState.IsValid)
             {
                 vocabulary.CreatedDate = DateTime.Now;
@@ -59,21 +61,35 @@ namespace NihongoAcademy.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Vocabulary vocabulary)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,CategoryId,Japanese,Romaji,English,PartOfSpeech,ExampleJapanese,ExampleEnglish,AudioPath,ImagePath,JlptLevel,DisplayOrder")] Vocabulary vocabulary)
         {
             if (id != vocabulary.Id) return NotFound();
+            if (!await _context.Categories.AnyAsync(c => c.Id == vocabulary.CategoryId))
+                ModelState.AddModelError(nameof(vocabulary.CategoryId), "Select a valid category.");
 
             if (ModelState.IsValid)
             {
+                var existing = await _context.Vocabulary.FindAsync(id);
+                if (existing == null) return NotFound();
                 try
                 {
-                    _context.Update(vocabulary);
+                    existing.CategoryId = vocabulary.CategoryId;
+                    existing.Japanese = vocabulary.Japanese;
+                    existing.Romaji = vocabulary.Romaji;
+                    existing.English = vocabulary.English;
+                    existing.PartOfSpeech = vocabulary.PartOfSpeech;
+                    existing.ExampleJapanese = vocabulary.ExampleJapanese;
+                    existing.ExampleEnglish = vocabulary.ExampleEnglish;
+                    existing.AudioPath = vocabulary.AudioPath;
+                    existing.ImagePath = vocabulary.ImagePath;
+                    existing.JlptLevel = vocabulary.JlptLevel;
+                    existing.DisplayOrder = vocabulary.DisplayOrder;
                     await _context.SaveChangesAsync();
                     TempData["Success"] = "Vocabulary card updated successfully.";
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!VocabExists(vocabulary.Id)) return NotFound();
+                    if (!VocabExists(id)) return NotFound();
                     throw;
                 }
                 return RedirectToAction(nameof(Index));
@@ -109,9 +125,16 @@ namespace NihongoAcademy.Controllers
             var vocab = await _context.Vocabulary.FindAsync(id);
             if (vocab != null)
             {
-                _context.Vocabulary.Remove(vocab);
-                await _context.SaveChangesAsync();
-                TempData["Success"] = "Vocabulary card deleted successfully.";
+                try
+                {
+                    _context.Vocabulary.Remove(vocab);
+                    await _context.SaveChangesAsync();
+                    TempData["Success"] = "Vocabulary card deleted successfully.";
+                }
+                catch (DbUpdateException)
+                {
+                    TempData["Error"] = "This vocabulary item is used by lessons or learner attempts and cannot be deleted safely. Reassign or unpublish the related content first.";
+                }
             }
             return RedirectToAction(nameof(Index));
         }
