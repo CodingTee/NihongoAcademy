@@ -4,7 +4,6 @@ using NihongoAcademy.Models;
 
 namespace NihongoAcademy.Services
 {
-    public record ExerciseMasteryResult(int Count, int Accuracy, int Covered, int Required);
     public record MasteryEvaluation(
         bool Mastered,
         bool FirstPassComplete,
@@ -14,7 +13,6 @@ namespace NihongoAcademy.Services
 
     public class LessonMasteryService
     {
-        private static readonly string[] CoreTypes = { "recognition", "listening", "recall" };
         private readonly ApplicationDbContext _context;
 
         public LessonMasteryService(ApplicationDbContext context) => _context = context;
@@ -34,8 +32,8 @@ namespace NihongoAcademy.Services
                 .Where(a => a.UserId == userId && a.LessonId == lessonId)
                 .ToListAsync();
             var requiredTypes = lesson.Title.StartsWith("A1:") || lesson.Title.StartsWith("A2:")
-                ? CoreTypes.Concat(new[] { "production" }).ToArray()
-                : CoreTypes;
+                ? LessonMasteryPolicy.CoreTypes.Concat(new[] { "production" }).ToArray()
+                : LessonMasteryPolicy.CoreTypes;
 
             var results = requiredTypes.ToDictionary(
                 type => type,
@@ -49,18 +47,14 @@ namespace NihongoAcademy.Services
                         type == "production" ? 1 : vocabularyIds.Count);
                 });
 
-            var firstPassComplete = results.All(x => x.Key == "production"
-                ? x.Value.Count >= 1 && x.Value.Accuracy == 100
-                : x.Value.Count >= Math.Max(5, vocabularyIds.Count)
-                    && x.Value.Covered >= vocabularyIds.Count
-                    && x.Value.Accuracy >= 80);
-
             var requiredActivityIds = await _context.LessonActivities
                 .Where(a => a.LessonId == lessonId && a.ActivityType != "dialogue")
                 .Select(a => a.Id)
                 .ToListAsync();
-            firstPassComplete = firstPassComplete && requiredActivityIds.All(activityId => attempts.Any(a =>
+            var activitiesComplete = requiredActivityIds.All(activityId => attempts.Any(a =>
                 a.LessonActivityId == activityId && a.IsCorrect));
+            var firstPassComplete = LessonMasteryPolicy.HasPassedFirstCheck(
+                results, vocabularyIds.Count, activitiesComplete);
 
             var progress = await _context.LessonProgress
                 .FirstOrDefaultAsync(p => p.UserId == userId && p.LessonId == lessonId);
@@ -90,7 +84,9 @@ namespace NihongoAcademy.Services
                 {
                     reviewDue ??= progress.FirstMasteryPassedDate.Value.AddDays(1);
                     progress.MasteryReviewDueDate = reviewDue;
-                    if (now >= reviewDue && HasPassedDelayedReview(attempts, vocabularyIds, reviewDue.Value))
+                    var delayedAttemptData = attempts.Select(a => new MasteryAttemptData(
+                        a.ExerciseType, a.VocabularyId, a.IsCorrect, a.AttemptedAt));
+                    if (now >= reviewDue && LessonMasteryPolicy.HasPassedDelayedReview(delayedAttemptData, vocabularyIds, reviewDue.Value))
                     {
                         progress.CompletionPercentage = 100;
                         progress.IsCompleted = true;
@@ -107,20 +103,6 @@ namespace NihongoAcademy.Services
             }
 
             return new MasteryEvaluation(progress?.IsCompleted == true, firstPassComplete, awaitingReview, reviewDue, results);
-        }
-
-        private static bool HasPassedDelayedReview(List<PracticeAttempt> attempts, List<int> vocabularyIds, DateTime reviewDue)
-        {
-            var delayed = attempts.Where(a => a.AttemptedAt >= reviewDue).ToList();
-            return CoreTypes.All(type =>
-            {
-                var group = delayed.Where(a => a.ExerciseType == type).ToList();
-                var requiredCoverage = Math.Min(3, vocabularyIds.Count);
-                var accuracy = group.Count == 0 ? 0 : (int)Math.Round(group.Count(a => a.IsCorrect) * 100d / group.Count);
-                return group.Count >= requiredCoverage
-                    && group.Where(a => a.VocabularyId.HasValue).Select(a => a.VocabularyId).Distinct().Count() >= requiredCoverage
-                    && accuracy >= 80;
-            });
         }
     }
 }

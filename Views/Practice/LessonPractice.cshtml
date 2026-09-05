@@ -9,6 +9,7 @@
     var masteryReviewDueText = masteryReviewDueDate?.ToString("g");
     var itemCount = vocabulary?.Count() ?? 0;
     var activities = ViewBag.Activities as List<NihongoAcademy.Models.LessonActivity> ?? new();
+    var masteryEvaluation = ViewBag.MasteryEvaluation as NihongoAcademy.Services.MasteryEvaluation;
 }
 
 <nav aria-label="breadcrumb" class="mb-3">
@@ -43,6 +44,24 @@
         <span id="mastery-status" class="na-chip @(isMastered ? "text-success" : masteryReviewDueDate.HasValue ? "text-na-primary" : "")">@(isMastered ? "Mastered" : masteryReviewDueDate.HasValue ? "Review pending" : "In progress")</span>
     </div>
 </div>
+@if (masteryEvaluation != null)
+{
+    <div id="mastery-metrics" class="row g-2 mb-4">
+        @foreach (var mode in new[] { ("recognition", "Recognition"), ("listening", "Listening"), ("recall", "Recall") })
+        {
+            var metric = masteryEvaluation.Results.GetValueOrDefault(mode.Item1);
+            <div class="col-md-4">
+                <div class="na-card-flat p-3 h-100" data-mastery-mode="@mode.Item1">
+                    <div class="d-flex justify-content-between"><strong>@mode.Item2</strong><span class="mastery-accuracy">@(metric?.Accuracy ?? 0)%</span></div>
+                    <div class="small text-muted mt-1">
+                        <span class="mastery-coverage">@(metric?.Covered ?? 0)</span>/@itemCount items ·
+                        <span class="mastery-attempts">@(metric?.Count ?? 0)</span> attempts
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
 
 @* ===== EXERCISE TABS ===== *@
 <div class="na-tabs-scroll mb-4">

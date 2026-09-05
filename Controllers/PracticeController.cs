@@ -95,6 +95,12 @@ namespace NihongoAcademy.Controllers
         public async Task<IActionResult> LessonPractice(int lessonId)
         {
             var userId = _userManager.GetUserId(User);
+            var lesson = await _context.Lessons
+                .Include(l => l.Category)
+                .FirstOrDefaultAsync(l => l.Id == lessonId && l.IsPublished);
+
+            if (lesson == null) return NotFound();
+
             var hasUnmetPrerequisite = await _context.LessonPrerequisites
                 .Where(p => p.LessonId == lessonId)
                 .AnyAsync(p => !_context.LessonProgress.Any(progress =>
@@ -106,12 +112,6 @@ namespace NihongoAcademy.Controllers
                 TempData["Message"] = "Complete the required previous lesson before opening this practice.";
                 return RedirectToAction("Index", "Lessons");
             }
-
-            var lesson = await _context.Lessons
-                .Include(l => l.Category)
-                .FirstOrDefaultAsync(l => l.Id == lessonId);
-
-            if (lesson == null) return NotFound();
 
             // Prefer explicit lesson content. Older lessons fall back to category data
             // until they have been migrated to lesson-specific mappings.
@@ -152,6 +152,9 @@ namespace NihongoAcademy.Controllers
                 .FirstOrDefaultAsync(p => p.UserId == userId && p.LessonId == lessonId);
             ViewBag.IsMastered = progress?.IsCompleted == true;
             ViewBag.MasteryReviewDueDate = progress?.MasteryReviewDueDate;
+            ViewBag.MasteryEvaluation = userId != null && hasExplicitContent
+                ? await _masteryService.EvaluateAsync(userId, lessonId)
+                : null;
 
             return View();
         }
@@ -164,8 +167,9 @@ namespace NihongoAcademy.Controllers
             if (userId == null) return Unauthorized();
 
             var allowedTypes = new[] { "recognition", "listening", "recall", "production" };
+            if (answer?.Length > 2000) return BadRequest();
             var expectedAnswer = await _context.LessonVocabulary
-                .Where(x => x.LessonId == lessonId && x.VocabularyId == vocabularyId)
+                .Where(x => x.LessonId == lessonId && x.VocabularyId == vocabularyId && x.Lesson!.IsPublished)
                 .Select(x => x.Vocabulary!.Japanese)
                 .FirstOrDefaultAsync();
             if (!allowedTypes.Contains(exerciseType) || expectedAnswer == null)
@@ -199,6 +203,8 @@ namespace NihongoAcademy.Controllers
             return Json(new
             {
                 success = true,
+                isCorrect,
+                correctAnswer = expectedAnswer,
                 mastered = evaluation.Mastered,
                 firstPassComplete = evaluation.FirstPassComplete,
                 awaitingDelayedReview = evaluation.AwaitingDelayedReview,
@@ -215,8 +221,10 @@ namespace NihongoAcademy.Controllers
             if (userId == null) return Unauthorized();
 
             var activity = await _context.LessonActivities
-                .FirstOrDefaultAsync(a => a.Id == activityId && a.LessonId == lessonId && a.ActivityType != "dialogue");
+                .FirstOrDefaultAsync(a => a.Id == activityId && a.LessonId == lessonId &&
+                    a.Lesson!.IsPublished && a.ActivityType != "dialogue");
             if (activity == null) return BadRequest();
+            if (answer?.Length > 2000) return BadRequest();
 
             if (await _context.LessonPrerequisites
                 .Where(p => p.LessonId == lessonId)
@@ -227,7 +235,7 @@ namespace NihongoAcademy.Controllers
                 return Forbid();
 
             var normalize = (string value) => string.Concat(value.Where(c => !char.IsWhiteSpace(c))).Trim();
-            var isCorrect = normalize(answer) == normalize(activity.CorrectAnswer ?? string.Empty);
+            var isCorrect = normalize(answer ?? string.Empty) == normalize(activity.CorrectAnswer ?? string.Empty);
             _context.PracticeAttempts.Add(new PracticeAttempt
             {
                 UserId = userId,
@@ -256,7 +264,7 @@ namespace NihongoAcademy.Controllers
         {
             var lesson = await _context.Lessons
                 .Include(l => l.Category)
-                .FirstOrDefaultAsync(l => l.Id == lessonId);
+                .FirstOrDefaultAsync(l => l.Id == lessonId && l.IsPublished);
 
             if (lesson == null) return NotFound();
 

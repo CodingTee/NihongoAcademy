@@ -25,6 +25,19 @@
                 : 'Complete delayed review';
             status.classList.add('text-na-primary');
         }
+
+        if (data.results) {
+            Object.entries(data.results).forEach(([mode, metric]) => {
+                const card = document.querySelector(`[data-mastery-mode="${mode}"]`);
+                if (!card) return;
+                const accuracy = card.querySelector('.mastery-accuracy');
+                const coverage = card.querySelector('.mastery-coverage');
+                const attempts = card.querySelector('.mastery-attempts');
+                if (accuracy) accuracy.textContent = `${metric.accuracy}%`;
+                if (coverage) coverage.textContent = metric.covered;
+                if (attempts) attempts.textContent = metric.count;
+            });
+        }
     }
 
     function recordAttempt(vocabularyId, exerciseType, answer) {
@@ -203,15 +216,16 @@
                 btn.className = 'quiz-option w-100';
                 btn.textContent = opt.Japanese;
                 btn.onclick = function () {
-                    const isCorrect = opt.Id === correct.Id;
-                    if (isCorrect) {
-                        btn.classList.add('correct');
-                    } else {
-                        btn.classList.add('incorrect');
-                    }
-                    recordAttempt(correct.Id, 'recognition', opt.Japanese);
                     // Disable all
                     recOptions.querySelectorAll('button').forEach(b => b.disabled = true);
+                    recordAttempt(correct.Id, 'recognition', opt.Japanese).then(result => {
+                        const isCorrect = result?.isCorrect === true;
+                        btn.classList.add(isCorrect ? 'correct' : 'incorrect');
+                        if (!isCorrect) {
+                            [...recOptions.querySelectorAll('button')]
+                                .find(b => b.textContent === result?.correctAnswer)?.classList.add('correct');
+                        }
+                    });
                 };
                 col.appendChild(btn);
                 recOptions.appendChild(col);
@@ -259,14 +273,15 @@
                 btn.className = 'quiz-option w-100';
                 btn.textContent = opt.Japanese;
                 btn.onclick = function () {
-                    const isCorrect = opt.Id === correct.Id;
-                    if (isCorrect) {
-                        btn.classList.add('correct');
-                    } else {
-                        btn.classList.add('incorrect');
-                    }
-                    recordAttempt(correct.Id, 'listening', opt.Japanese);
                     listenOptions.querySelectorAll('button').forEach(b => b.disabled = true);
+                    recordAttempt(correct.Id, 'listening', opt.Japanese).then(result => {
+                        const isCorrect = result?.isCorrect === true;
+                        btn.classList.add(isCorrect ? 'correct' : 'incorrect');
+                        if (!isCorrect) {
+                            [...listenOptions.querySelectorAll('button')]
+                                .find(b => b.textContent === result?.correctAnswer)?.classList.add('correct');
+                        }
+                    });
                 };
                 col.appendChild(btn);
                 listenOptions.appendChild(col);
@@ -308,15 +323,15 @@
     document.getElementById('recall-check')?.addEventListener('click', () => {
         const current = vocabData[recallOrder[recallIndex]];
         const answer = recallInput?.value.trim() || '';
-        const isCorrect = answer === current.Japanese;
         if (recallInput) recallInput.disabled = true;
-        if (recallFeedback) {
-            recallFeedback.innerHTML = isCorrect
-                ? '<span class="text-success">Correct!</span>'
-                : `<span class="text-danger">Answer: <strong>${current.Japanese}</strong></span>`;
-        }
-        recordAttempt(current.Id, 'recall', answer);
-        setTimeout(() => { recallIndex++; showRecallQuestion(); }, 1100);
+        recordAttempt(current.Id, 'recall', answer).then(result => {
+            if (recallFeedback) {
+                recallFeedback.innerHTML = result?.isCorrect
+                    ? '<span class="text-success">Correct!</span>'
+                    : `<span class="text-danger">Answer: <strong>${result?.correctAnswer || current.Japanese}</strong></span>`;
+            }
+            setTimeout(() => { recallIndex++; showRecallQuestion(); }, 1100);
+        });
     });
     recallInput?.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('recall-check')?.click(); });
     showRecallQuestion();
