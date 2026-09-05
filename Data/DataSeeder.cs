@@ -19,6 +19,7 @@ namespace NihongoAcademy.Data
             await SeedCategoriesAsync(context);
             await SeedLessonsAsync(context);
             await SeedVocabularyAsync(context);
+            await SeedLessonVocabularyAsync(context);
             await SeedHiraganaCurriculumAsync(context);
             await SeedAdvancedHiraganaCurriculumAsync(context);
             await SeedKatakanaCurriculumAsync(context);
@@ -29,7 +30,7 @@ namespace NihongoAcademy.Data
                        await SeedKanjiFoundationCurriculumAsync(context);
                        await SeedA2CurriculumAsync(context);
             await SeedLessonPrerequisitesAsync(context);
-            await SeedLessonVocabularyAsync(context);
+            await ValidateHiraganaCurriculumAsync(context);
             await SeedQuizzesAsync(context);
             await SeedCommunityUsersAsync(userManager, context);
             await SeedCommunityPostsAsync(context);
@@ -295,12 +296,7 @@ namespace NihongoAcademy.Data
                 .Where(v => v.Category!.Name == "Hiragana" && new[] { "あ", "い", "う", "え", "お" }.Contains(v.Japanese))
                 .OrderBy(v => v.DisplayOrder)
                 .ToListAsync();
-            foreach (var item in items)
-            {
-                if (!await context.LessonVocabulary.AnyAsync(x => x.LessonId == lesson.Id && x.VocabularyId == item.Id))
-                    context.LessonVocabulary.Add(new LessonVocabulary { LessonId = lesson.Id, VocabularyId = item.Id, DisplayOrder = item.DisplayOrder });
-            }
-            await context.SaveChangesAsync();
+            await SyncLessonItems(context, lesson, items);
         }
 
         private static async Task SeedHiraganaCurriculumAsync(ApplicationDbContext context)
@@ -324,20 +320,21 @@ namespace NihongoAcademy.Data
                 {
                     lesson = new Lesson
                     {
-                        CategoryId = hiraganaId,
                         Title = group.Title,
-                        JapaneseTitle = group.JapaneseTitle,
-                        DifficultyLevel = 1,
-                        EstimatedMinutes = group.Kana.Length <= 5 ? 20 : 25,
-                        DisplayOrder = group.Order,
-                        IsPublished = true
                     };
                     context.Lessons.Add(lesson);
                 }
+                lesson.CategoryId = hiraganaId;
+                lesson.JapaneseTitle = group.JapaneseTitle;
+                lesson.DifficultyLevel = 1;
+                lesson.EstimatedMinutes = group.Kana.Length <= 5 ? 20 : 25;
+                lesson.DisplayOrder = group.Order;
+                lesson.IsPublished = true;
                 lesson.Description = $"Learn to hear, recognise and actively recall {string.Join("・", group.Kana)}.";
                 lesson.Content = BuildKanaLessonContent(group.JapaneseTitle, group.Kana, group.Romaji, group.Note);
                 await context.SaveChangesAsync();
 
+                var lessonItems = new List<Vocabulary>();
                 for (var i = 0; i < group.Kana.Length; i++)
                 {
                     var kana = group.Kana[i];
@@ -353,21 +350,44 @@ namespace NihongoAcademy.Data
                         context.Vocabulary.Add(vocab);
                         await context.SaveChangesAsync();
                     }
-                    if (!await context.LessonVocabulary.AnyAsync(x => x.LessonId == lesson.Id && x.VocabularyId == vocab.Id))
-                        context.LessonVocabulary.Add(new LessonVocabulary { LessonId = lesson.Id, VocabularyId = vocab.Id, DisplayOrder = i });
+                    vocab.Romaji = group.Romaji[i];
+                    vocab.English = $"hiragana {group.Romaji[i]}";
+                    vocab.PartOfSpeech = "Hiragana";
+                    vocab.DisplayOrder = group.Order * 10 + i;
+                    lessonItems.Add(vocab);
                 }
-                await context.SaveChangesAsync();
+                await SyncLessonItems(context, lesson, lessonItems);
             }
         }
 
         private static string BuildKanaLessonContent(string title, string[] kana, string[] romaji, string note)
         {
             var cells = string.Join("", kana.Select((k, i) => $"<div class='kana-cell vowel'><strong>{k}</strong><span class='kana-romaji'>{romaji[i]}</span></div>"));
+            var handwriting = new Dictionary<string, string>
+            {
+                ["か"] = "keep the right vertical stroke separate from the left curve", ["き"] = "printed and handwritten forms may connect differently; preserve four clear stroke movements",
+                ["く"] = "one angled stroke; do not round it into し", ["け"] = "keep the left pair separate from the long right stroke", ["こ"] = "two horizontal strokes with open space between them",
+                ["さ"] = "the printed lower loop is often open in handwriting", ["し"] = "one rising curve from upper left to lower right", ["す"] = "centre the loop and let the final curve descend",
+                ["せ"] = "the short vertical crosses the horizontal before the final stroke", ["そ"] = "learn the standard two-part structure despite font variation",
+                ["た"] = "distinguish it from な by the left cross and right shape", ["ち"] = "the upper bar is separate from the long curved stroke", ["つ"] = "one broad curve; keep it wider than し",
+                ["て"] = "one stroke that turns smoothly", ["と"] = "a short mark followed by a longer curved stroke",
+                ["な"] = "four balanced strokes; keep the final loop compact", ["に"] = "left vertical plus two separate right strokes", ["ぬ"] = "retain the loop and finishing tail; compare with め",
+                ["ね"] = "the right side loops and finishes outward", ["の"] = "one continuous rounded stroke",
+                ["は"] = "left vertical plus a right section with a small loop", ["ひ"] = "one continuous symmetrical curve", ["ふ"] = "four separated marks; do not join them into one symbol",
+                ["へ"] = "one peaked stroke with unequal slopes", ["ほ"] = "distinguish it from は by the extra right horizontal stroke",
+                ["ま"] = "three horizontal/vertical movements followed by a loop", ["み"] = "keep the central curve open and the final mark distinct", ["む"] = "the loop sits low with a separate finishing mark",
+                ["め"] = "the crossing curve has no final loop-tail like ぬ", ["も"] = "two short horizontals cross the long curved stroke",
+                ["や"] = "three separated strokes with an open centre", ["ゆ"] = "the inner vertical sits inside the broad outer curve", ["よ"] = "two short upper strokes and a lower loop",
+                ["ら"] = "a short top stroke precedes the lower curve", ["り"] = "two strokes; the right stroke descends farther", ["る"] = "finish with a small loop, unlike ろ",
+                ["れ"] = "the right stroke travels outward without closing a loop", ["ろ"] = "one open curve; contrast the ending with る",
+                ["わ"] = "the right curve stays open and flowing", ["を"] = "three strokes; it is mainly used as the object particle", ["ん"] = "one continuous nasal-sign curve; contrast it with そ"
+            };
+            var formItems = string.Join("", kana.Select(k => $"<li><strong>{k}</strong>: {handwriting.GetValueOrDefault(k, "preserve the standard stroke direction and overall balance")}.</li>"));
             return $"<h2>Can-do goal</h2><p>You can hear, read and type <strong>{string.Join("・", kana)}</strong> without answer choices.</p>" +
                 $"<h2>{title}</h2><div class='kana-chart'>{cells}</div><p>Click each character, listen, and imitate the sound. Then cover the romaji and retrieve it from memory.</p>" +
                 $"<h2>Pronunciation focus</h2><p>{note}</p>" +
-                "<h2>Form and handwriting</h2><p>Observe the number, direction and balance of the strokes. Write each character slowly five times, then once from memory. Compare the result with the model instead of tracing indefinitely.</p>" +
-                "<h2>Mixed retrieval</h2><p>Mix this group with earlier groups. Practise both directions: character to sound and sound to character. Reading alone is not enough.</p>" +
+                $"<h2>Form and handwriting</h2><ul>{formItems}</ul><p>Write each character slowly three times, then once from memory. Compare structure and stroke direction rather than decorative font thickness.</p>" +
+                "<h2>Mixed retrieval</h2><p>The practice screen mixes roughly 70% current targets with 30% characters from mastered earlier groups. Practise both directions: character to sound and sound to character.</p>" +
                 "<h2>Mastery task</h2><p>Complete recognition, listening and active recall practice. Each mode requires at least five attempts and 80% accuracy. Review the group again tomorrow before treating it as stable knowledge.</p>";
         }
 
@@ -423,27 +443,47 @@ namespace NihongoAcademy.Data
                 var lesson = await context.Lessons.FirstOrDefaultAsync(l => l.Title == module.Title);
                 if (lesson == null)
                 {
-                    lesson = new Lesson { CategoryId = hiraganaId, Title = module.Title, JapaneseTitle = module.JapaneseTitle, DifficultyLevel = 2, EstimatedMinutes = 25, DisplayOrder = module.Order, IsPublished = true };
+                    lesson = new Lesson { Title = module.Title };
                     context.Lessons.Add(lesson);
                 }
+                lesson.CategoryId = hiraganaId;
+                lesson.JapaneseTitle = module.JapaneseTitle;
+                lesson.DifficultyLevel = 2;
+                lesson.EstimatedMinutes = 25;
+                lesson.DisplayOrder = module.Order;
+                lesson.IsPublished = true;
                 lesson.Description = $"Train accurate perception and recall of {module.JapaneseTitle}.";
                 lesson.Content = BuildAdvancedKanaContent(module.JapaneseTitle, module.Items, module.Readings, module.Intro, module.Contrast);
                 await context.SaveChangesAsync();
 
+                var lessonItems = new List<Vocabulary>();
+                var meanings = new Dictionary<string, string>
+                {
+                    ["きて"] = "come; wear (te-form)", ["きって"] = "postage stamp; cut (te-form)", ["さか"] = "slope", ["さっか"] = "author",
+                    ["かこ"] = "past", ["かっこ"] = "appearance; parentheses", ["もっと"] = "more", ["ちょっと"] = "a little",
+                    ["おばさん"] = "aunt; middle-aged woman", ["おばあさん"] = "grandmother; elderly woman", ["おじさん"] = "uncle; middle-aged man", ["おじいさん"] = "grandfather; elderly man",
+                    ["ここ"] = "here", ["こうこう"] = "high school", ["ゆき"] = "snow", ["ゆうき"] = "courage", ["え"] = "picture", ["えい"] = "ray fish",
+                    ["あさ"] = "morning", ["いえ"] = "house", ["うえ"] = "above", ["えき"] = "station", ["おと"] = "sound", ["かさ"] = "umbrella",
+                    ["すし"] = "sushi", ["ねこ"] = "cat", ["いぬ"] = "dog", ["みず"] = "water", ["やま"] = "mountain", ["くるま"] = "car",
+                    ["さかな"] = "fish", ["たまご"] = "egg", ["ひらがな"] = "hiragana"
+                };
                 for (var i = 0; i < module.Items.Length; i++)
                 {
                     var text = module.Items[i];
                     var item = await context.Vocabulary.FirstOrDefaultAsync(v => v.CategoryId == hiraganaId && v.Japanese == text);
                     if (item == null)
                     {
-                        item = new Vocabulary { CategoryId = hiraganaId, Japanese = text, Romaji = module.Readings[i], English = $"reading practice: {module.Readings[i]}", PartOfSpeech = "Hiragana pattern", DisplayOrder = module.Order * 100 + i, JlptLevel = 5 };
+                        item = new Vocabulary { CategoryId = hiraganaId, Japanese = text, Romaji = module.Readings[i], English = meanings.GetValueOrDefault(text, $"hiragana pattern: {module.Readings[i]}"), PartOfSpeech = "Hiragana pattern", DisplayOrder = module.Order * 100 + i, JlptLevel = 5 };
                         context.Vocabulary.Add(item);
                         await context.SaveChangesAsync();
                     }
-                    if (!await context.LessonVocabulary.AnyAsync(x => x.LessonId == lesson.Id && x.VocabularyId == item.Id))
-                        context.LessonVocabulary.Add(new LessonVocabulary { LessonId = lesson.Id, VocabularyId = item.Id, DisplayOrder = i });
+                    item.Romaji = module.Readings[i];
+                    item.English = meanings.GetValueOrDefault(text, item.English);
+                    item.PartOfSpeech = "Hiragana pattern";
+                    item.DisplayOrder = module.Order * 100 + i;
+                    lessonItems.Add(item);
                 }
-                await context.SaveChangesAsync();
+                await SyncLessonItems(context, lesson, lessonItems);
             }
 
             // Replaced by the focused modules above.
@@ -461,6 +501,23 @@ namespace NihongoAcademy.Data
                 $"<h2>Meaningful contrast</h2><p>{contrast}</p>" +
                 "<h2>Practice sequence</h2><ol><li>Listen without looking.</li><li>Imitate the timing aloud.</li><li>Read the displayed form.</li><li>Type it from sound or romaji without choices.</li><li>Mix it with earlier material.</li></ol>" +
                 "<h2>Mastery task</h2><p>Complete recognition, listening and active recall with at least five attempts and 80% accuracy in each mode. Recheck the contrasts on a later day.</p>";
+        }
+
+        private static async Task SyncLessonItems(ApplicationDbContext context, Lesson lesson, IReadOnlyList<Vocabulary> items)
+        {
+            var desiredIds = items.Select(x => x.Id).ToHashSet();
+            var existing = await context.LessonVocabulary.Where(x => x.LessonId == lesson.Id).ToListAsync();
+            context.LessonVocabulary.RemoveRange(existing.Where(x => !desiredIds.Contains(x.VocabularyId)));
+
+            for (var i = 0; i < items.Count; i++)
+            {
+                var mapping = existing.FirstOrDefault(x => x.VocabularyId == items[i].Id);
+                if (mapping == null)
+                    context.LessonVocabulary.Add(new LessonVocabulary { LessonId = lesson.Id, VocabularyId = items[i].Id, DisplayOrder = i });
+                else
+                    mapping.DisplayOrder = i;
+            }
+            await context.SaveChangesAsync();
         }
 
         private static async Task SeedKatakanaCurriculumAsync(ApplicationDbContext context)

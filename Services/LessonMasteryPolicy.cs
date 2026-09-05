@@ -32,7 +32,8 @@ namespace NihongoAcademy.Services
 
             return CoreTypes.All(type =>
             {
-                var group = delayed.Where(a => a.ExerciseType == type).ToList();
+                var group = delayed.Where(a => a.ExerciseType == type &&
+                    a.VocabularyId.HasValue && vocabularyIds.Contains(a.VocabularyId.Value)).ToList();
                 var accuracy = group.Count == 0
                     ? 0
                     : (int)Math.Round(group.Count(a => a.IsCorrect) * 100d / group.Count);

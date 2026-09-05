@@ -53,6 +53,21 @@ var checks = new List<(string Name, Action Run)>
         attempts.AddRange(LessonMasteryPolicy.CoreTypes.Select(type => Attempt(type, 4, false, due.AddMinutes(10))));
         attempts.AddRange(LessonMasteryPolicy.CoreTypes.Select(type => Attempt(type, 5, false, due.AddMinutes(11))));
         Expect(!LessonMasteryPolicy.HasPassedDelayedReview(attempts, kanaIds, due));
+    }),
+    ("earlier-lesson review items do not distort current mastery", () =>
+    {
+        var due = DateTime.Today;
+        var attempts = DelayedAttempts(due);
+        attempts.AddRange(LessonMasteryPolicy.CoreTypes.SelectMany(type =>
+            Enumerable.Range(0, 20).Select(i => Attempt(type, 99, false, due.AddMinutes(i)))));
+        Expect(LessonMasteryPolicy.HasPassedDelayedReview(attempts, kanaIds, due));
+    }),
+    ("earlier-lesson items cannot replace current targets", () =>
+    {
+        var due = DateTime.Today;
+        var attempts = LessonMasteryPolicy.CoreTypes.SelectMany(type =>
+            new[] { 91, 92, 93, 94, 95 }.Select(id => Attempt(type, id, true, due))).ToList();
+        Expect(!LessonMasteryPolicy.HasPassedDelayedReview(attempts, kanaIds, due));
     })
 };
 

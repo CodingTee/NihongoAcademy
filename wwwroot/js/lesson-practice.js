@@ -11,6 +11,9 @@
     if (!dataEl) return;
     const vocabData = JSON.parse(dataEl.textContent);
     if (!vocabData || !vocabData.length) return;
+    const reviewEl = document.getElementById('lesson-review-vocab-data');
+    const reviewData = reviewEl ? JSON.parse(reviewEl.textContent) : [];
+    const allPracticeData = [...vocabData, ...reviewData];
     const lessonId = Number(document.getElementById('lesson-practice-id')?.value || 0);
 
     function updateMasteryStatus(data) {
@@ -128,6 +131,20 @@
         return a;
     }
 
+    function makePracticeOrder() {
+        const targets = shuffle(vocabData);
+        if (!reviewData.length) return targets;
+        const reviewCount = Math.max(1, Math.ceil(targets.length * 3 / 7));
+        return shuffle([...targets, ...shuffle(reviewData).slice(0, reviewCount)]);
+    }
+
+    function showPracticeKind(elementId, item) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        el.textContent = item.IsReview ? 'Earlier lesson review' : 'Current lesson target';
+        el.className = item.IsReview ? 'small text-na-primary' : 'small text-muted';
+    }
+
     // ══════════════════════════════
     //  FLASHCARDS
     // ══════════════════════════════
@@ -191,18 +208,18 @@
     //  RECOGNITION (MCQ)
     // ══════════════════════════════
     let recIndex = 0;
-    const recOrder = shuffle(vocabData.map((_, i) => i));
+    const recOrder = makePracticeOrder();
     const recTarget = document.getElementById('rec-target');
     const recOptions = document.getElementById('rec-options');
 
     function showRecQuestion() {
         if (recIndex >= recOrder.length) recIndex = 0;
-        const vIdx = recOrder[recIndex];
-        const correct = vocabData[vIdx];
+        const correct = recOrder[recIndex];
         if (recTarget) recTarget.textContent = correct.Romaji || correct.English;
+        showPracticeKind('rec-kind', correct);
 
         const options = [correct];
-        const pool = vocabData.filter(v => v.Id !== correct.Id);
+        const pool = allPracticeData.filter(v => v.Id !== correct.Id);
         const shuffledPool = shuffle(pool);
         for (let i = 0; i < 3 && i < shuffledPool.length; i++) options.push(shuffledPool[i]);
         const shuffledOpts = shuffle(options);
@@ -243,14 +260,14 @@
     //  LISTENING (MCQ from audio)
     // ══════════════════════════════
     let listenIndex = 0;
-    const listenOrder = shuffle(vocabData.map((_, i) => i));
+    const listenOrder = makePracticeOrder();
     const listenOptions = document.getElementById('listen-options');
     const listenPlayBtn = document.getElementById('listen-play-btn');
 
     function showListenQuestion() {
         if (listenIndex >= listenOrder.length) listenIndex = 0;
-        const vIdx = listenOrder[listenIndex];
-        const correct = vocabData[vIdx];
+        const correct = listenOrder[listenIndex];
+        showPracticeKind('listen-kind', correct);
 
         // Play audio
         const listeningText = correct.PartOfSpeech === 'Kanji' && correct.ExampleJapanese
@@ -259,7 +276,7 @@
         speak(listeningText);
 
         const options = [correct];
-        const pool = vocabData.filter(v => v.Id !== correct.Id);
+        const pool = allPracticeData.filter(v => v.Id !== correct.Id);
         const shuffledPool = shuffle(pool);
         for (let i = 0; i < 3 && i < shuffledPool.length; i++) options.push(shuffledPool[i]);
         const shuffledOpts = shuffle(options);
@@ -290,9 +307,8 @@
     }
 
     listenPlayBtn?.addEventListener('click', () => {
-        const vIdx = listenOrder[listenIndex];
-        if (vocabData[vIdx]) {
-            const item = vocabData[vIdx];
+        const item = listenOrder[listenIndex];
+        if (item) {
             speak(item.PartOfSpeech === 'Kanji' && item.ExampleJapanese ? item.ExampleJapanese : item.Japanese);
         }
     });
@@ -307,21 +323,22 @@
     //  ACTIVE RECALL (no choices)
     // ══════════════════════════════
     let recallIndex = 0;
-    const recallOrder = shuffle(vocabData.map((_, i) => i));
+    const recallOrder = makePracticeOrder();
     const recallTarget = document.getElementById('recall-target');
     const recallInput = document.getElementById('recall-input');
     const recallFeedback = document.getElementById('recall-feedback');
 
     function showRecallQuestion() {
         if (recallIndex >= recallOrder.length) recallIndex = 0;
-        const current = vocabData[recallOrder[recallIndex]];
+        const current = recallOrder[recallIndex];
         if (recallTarget) recallTarget.textContent = current.Romaji;
+        showPracticeKind('recall-kind', current);
         if (recallInput) { recallInput.value = ''; recallInput.disabled = false; recallInput.focus(); }
         if (recallFeedback) recallFeedback.textContent = '';
     }
 
     document.getElementById('recall-check')?.addEventListener('click', () => {
-        const current = vocabData[recallOrder[recallIndex]];
+        const current = recallOrder[recallIndex];
         const answer = recallInput?.value.trim() || '';
         if (recallInput) recallInput.disabled = true;
         recordAttempt(current.Id, 'recall', answer).then(result => {

@@ -141,6 +141,19 @@ namespace NihongoAcademy.Controllers
 
             ViewBag.Lesson = lesson;
             ViewBag.Vocabulary = vocab;
+            var targetVocabularyIds = vocab.Select(v => v.Id).ToList();
+            ViewBag.ReviewVocabulary = userId == null || lesson.Category?.Name != "Hiragana"
+                ? new List<Vocabulary>()
+                : await _context.LessonVocabulary
+                    .Where(lv => lv.LessonId != lessonId && !targetVocabularyIds.Contains(lv.VocabularyId) &&
+                        lv.Lesson!.CategoryId == lesson.CategoryId &&
+                        lv.Lesson.ProgressRecords.Any(p => p.UserId == userId && p.StableMasteryDate != null))
+                    .OrderByDescending(lv => lv.Lesson!.DisplayOrder)
+                    .ThenBy(lv => lv.DisplayOrder)
+                    .Select(lv => lv.Vocabulary!)
+                    .Distinct()
+                    .Take(20)
+                    .ToListAsync();
             ViewBag.Quizzes = quizzes;
             ViewBag.RequiresProduction = lesson.Title.StartsWith("A1:") || lesson.Title.StartsWith("A2:");
             ViewBag.Activities = await _context.LessonActivities
@@ -172,6 +185,22 @@ namespace NihongoAcademy.Controllers
                 .Where(x => x.LessonId == lessonId && x.VocabularyId == vocabularyId && x.Lesson!.IsPublished)
                 .Select(x => x.Vocabulary!.Japanese)
                 .FirstOrDefaultAsync();
+            var countsTowardMastery = expectedAnswer != null;
+            if (expectedAnswer == null)
+            {
+                var lessonCategoryId = await _context.Lessons
+                    .Where(l => l.Id == lessonId && l.IsPublished)
+                    .Select(l => (int?)l.CategoryId)
+                    .FirstOrDefaultAsync();
+                if (lessonCategoryId.HasValue)
+                {
+                    expectedAnswer = await _context.LessonVocabulary
+                        .Where(x => x.VocabularyId == vocabularyId && x.Lesson!.CategoryId == lessonCategoryId &&
+                            x.Lesson.ProgressRecords.Any(p => p.UserId == userId && p.StableMasteryDate != null))
+                        .Select(x => x.Vocabulary!.Japanese)
+                        .FirstOrDefaultAsync();
+                }
+            }
             if (!allowedTypes.Contains(exerciseType) || expectedAnswer == null)
                 return BadRequest();
 
@@ -205,6 +234,7 @@ namespace NihongoAcademy.Controllers
                 success = true,
                 isCorrect,
                 correctAnswer = expectedAnswer,
+                countsTowardMastery,
                 mastered = evaluation.Mastered,
                 firstPassComplete = evaluation.FirstPassComplete,
                 awaitingDelayedReview = evaluation.AwaitingDelayedReview,

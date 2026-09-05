@@ -39,7 +39,8 @@ namespace NihongoAcademy.Services
                 type => type,
                 type =>
                 {
-                    var group = attempts.Where(a => a.ExerciseType == type).ToList();
+                    var group = attempts.Where(a => a.ExerciseType == type &&
+                        a.VocabularyId.HasValue && vocabularyIds.Contains(a.VocabularyId.Value)).ToList();
                     return new ExerciseMasteryResult(
                         group.Count,
                         group.Count == 0 ? 0 : (int)Math.Round(group.Count(a => a.IsCorrect) * 100d / group.Count),

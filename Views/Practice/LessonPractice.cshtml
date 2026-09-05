@@ -2,6 +2,7 @@
     ViewData["Title"] = "Practice This Lesson";
     var lesson = ViewBag.Lesson as NihongoAcademy.Models.Lesson;
     var vocabulary = ViewBag.Vocabulary as IEnumerable<NihongoAcademy.Models.Vocabulary>;
+    var reviewVocabulary = ViewBag.ReviewVocabulary as IEnumerable<NihongoAcademy.Models.Vocabulary> ?? Enumerable.Empty<NihongoAcademy.Models.Vocabulary>();
     var quizzes = ViewBag.Quizzes as IEnumerable<NihongoAcademy.Models.Quiz>;
     var requiresProduction = ViewBag.RequiresProduction == true;
     var isMastered = ViewBag.IsMastered == true;
@@ -188,6 +189,7 @@
         <div class="text-center mb-3">
             <h5>Type the kana for “<span id="recall-target"></span>”</h5>
             <p class="small text-muted">This tests recall without showing answer choices.</p>
+            <div id="recall-kind" class="small text-muted">Current lesson target</div>
         </div>
         <div class="row justify-content-center"><div class="col-sm-6 col-md-4">
             <input id="recall-input" class="form-control form-control-lg text-center" lang="ja" autocomplete="off" />
@@ -240,7 +242,13 @@
         @* Hidden data for JS *@
         <script id="lesson-vocab-data" type="application/json">
             @Html.Raw(System.Text.Json.JsonSerializer.Serialize(vocabulary.Select(v => new {
-                v.Id, v.Japanese, v.Romaji, v.English, v.PartOfSpeech,
+                v.Id, v.Japanese, v.Romaji, v.English, v.PartOfSpeech, IsReview = false,
+                v.ExampleJapanese, v.ExampleEnglish
+            })))
+        </script>
+        <script id="lesson-review-vocab-data" type="application/json">
+            @Html.Raw(System.Text.Json.JsonSerializer.Serialize(reviewVocabulary.Select(v => new {
+                v.Id, v.Japanese, v.Romaji, v.English, v.PartOfSpeech, IsReview = true,
                 v.ExampleJapanese, v.ExampleEnglish
             })))
         </script>
@@ -261,6 +269,7 @@
         {
             <div class="text-center mb-3">
                 <h5 id="rec-question">Which character is "<span id="rec-target"></span>"?</h5>
+                <div id="rec-kind" class="small text-muted">Current lesson target</div>
             </div>
             <div class="row g-2 justify-content-center" id="rec-options">
                 @* Populated by JS *@
@@ -288,6 +297,7 @@
                     <i class="bi bi-volume-up-fill"></i>
                 </button>
                 <p class="mt-2 text-muted">Which character did you hear?</p>
+                <div id="listen-kind" class="small text-muted">Current lesson target</div>
             </div>
             <div class="row g-2 justify-content-center" id="listen-options">
                 @* Populated by JS *@
