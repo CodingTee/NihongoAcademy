@@ -55,6 +55,11 @@
 
             <p class="text-muted">@Model.Lesson.Description</p>
 
+            @if (Model.MasteryEvaluation != null)
+            {
+                <partial name="_MasteryProgressPartial" model="@(new NihongoAcademy.Models.MasteryProgressViewModel { Evaluation = Model.MasteryEvaluation, ItemCount = Model.Lesson.LessonVocabulary.Count, RequiresProduction = Model.Lesson.Title.StartsWith("A1:") || Model.Lesson.Title.StartsWith("A2:") })" />
+            }
+
             @if (!string.IsNullOrEmpty(Model.Lesson.VideoUrl))
             {
                 <div class="ratio ratio-16x9 mb-4">
@@ -66,6 +71,76 @@
                 @Html.Raw(Model.Lesson.Content)
             </div>
 
+            @{
+                var readingExamples = Model.Lesson.Activities
+                    .Where(activity => !string.IsNullOrWhiteSpace(activity.ReadingSupportText) &&
+                        (activity.ActivityType == "dialogue" || activity.DisplayOrder == 2))
+                    .OrderBy(activity => activity.DisplayOrder)
+                    .GroupBy(activity => activity.ReadingSupportText)
+                    .Select(group => group.First())
+                    .ToList();
+            }
+            @if (readingExamples.Any())
+            {
+                <section class="na-reading-guide mt-4" aria-labelledby="reading-guide-heading">
+                    <div class="d-flex align-items-center justify-content-between gap-3 mb-2">
+                        <div>
+                            <h4 id="reading-guide-heading" class="mb-1"><i class="bi bi-spellcheck text-na-primary"></i> Reading Guide <small class="text-muted">よみかた</small></h4>
+                            <p class="text-muted small mb-0">Open the kana only when you need help reading the lesson's core Japanese.</p>
+                        </div>
+                    </div>
+                    @foreach (var example in readingExamples)
+                    {
+                        <details class="na-card-flat na-reading-example mt-2">
+                            <summary class="d-flex align-items-center justify-content-between gap-2">
+                                <span><i class="bi bi-book me-1"></i> @(example.ActivityType == "dialogue" ? "Model dialogue" : "Target sentence")</span>
+                                <span class="small text-na-primary">Show kana</span>
+                            </summary>
+                            <div class="mt-3 p-3 rounded bg-light" lang="ja" style="white-space:pre-line">
+                                @example.ReadingSupportText
+                                <button type="button" class="na-speak-btn na-speak-btn-sm ms-2" data-speak="@example.ReadingSupportText" title="Hear the kana reading"><i class="bi bi-volume-up-fill"></i></button>
+                            </div>
+                        </details>
+                    }
+                </section>
+            }
+
+            @if (Model.Lesson.LessonGrammarPoints.Any())
+            {
+                <section class="mt-4" aria-labelledby="grammar-focus-heading">
+                    <h4 id="grammar-focus-heading"><i class="bi bi-braces text-na-primary"></i> Grammar Focus <small class="text-muted">文法ポイント</small></h4>
+                    @foreach (var link in Model.Lesson.LessonGrammarPoints.OrderBy(x => x.DisplayOrder))
+                    {
+                        var grammar = link.GrammarPoint!;
+                        <article class="na-card-flat mt-3 p-3">
+                            <div class="d-flex justify-content-between gap-3 align-items-start">
+                                <h5 class="text-na-primary mb-2">@grammar.Pattern</h5>
+                                <span class="na-badge">@grammar.Level</span>
+                            </div>
+                            <p class="mb-2"><strong>Meaning:</strong> @grammar.Meaning</p>
+                            <p class="mb-2"><strong>Build it:</strong> <code>@grammar.Formation</code></p>
+                            @if (!string.IsNullOrWhiteSpace(grammar.UsageNotes))
+                            {
+                                <p class="mb-2"><strong>When to use it:</strong> @grammar.UsageNotes</p>
+                            }
+                            <div class="rounded p-3 bg-light mb-2">
+                                <span lang="ja" class="fs-5">@grammar.ExampleJapanese</span>
+                                <button type="button" class="na-speak-btn na-speak-btn-sm ms-2" data-speak="@grammar.ExampleJapanese" title="Hear example"><i class="bi bi-volume-up-fill"></i></button>
+                                <details class="reading-support mt-2">
+                                    <summary class="small text-na-primary"><i class="bi bi-spellcheck"></i> Reading help · よみかた</summary>
+                                    <div class="small mt-1" lang="ja">@grammar.ExampleReading</div>
+                                </details>
+                                <div class="text-muted small mt-1">@grammar.ExampleEnglish</div>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(grammar.CommonMistake))
+                            {
+                                <p class="small mb-0 text-danger"><i class="bi bi-exclamation-triangle"></i> <strong>Watch out:</strong> @grammar.CommonMistake</p>
+                            }
+                        </article>
+                    }
+                </section>
+            }
+
             @if (User.Identity?.IsAuthenticated == true)
             {
                 <hr />
@@ -73,7 +148,7 @@
                     @if (isCompleted)
                     {
                         <button class="btn-na-outline" disabled>
-                            <i class="bi bi-check-circle-fill text-success"></i> Completed
+                            <i class="bi bi-check-circle-fill text-na-accent"></i> Completed
                         </button>
                     }
                     else
@@ -101,7 +176,7 @@
 
                 <div class="na-card-flat mt-3 p-3">
                     <h6 class="mb-1"><i class="bi bi-lightning-charge-fill text-na-primary"></i> Practice This Lesson</h6>
-                    <small class="text-muted d-block mb-2">Reinforce what you just learned — no setup needed.</small>
+                    <small class="text-muted d-block mb-2">Reinforce what you just learned. No setup needed.</small>
                     <div class="d-flex gap-2">
                         <a asp-controller="Practice" asp-action="LessonPractice" asp-route-lessonId="@Model.Lesson.Id" class="btn-na-primary btn-sm">
                             <i class="bi bi-lightning-charge"></i> Practice This Lesson
@@ -110,6 +185,10 @@
                             <i class="bi bi-patch-question"></i> Take Mini Quiz
                         </a>
                     </div>
+                    <small class="text-muted d-block mt-2">
+                        <strong>Practice This Lesson</strong> runs the full mastery check and updates your progress.
+                        <strong>Take Mini Quiz</strong> is a short warm-up that leaves your progress untouched.
+                    </small>
                 </div>
             }
             else
@@ -121,7 +200,7 @@
         </div>
 
         @* ===== UP NEXT ===== *@
-        @if (User.Identity?.IsAuthenticated == true && Model.NextLesson != null && Model.Progress?.StableMasteryDate.HasValue == true)
+        @if (User.Identity?.IsAuthenticated == true && Model.NextLesson != null && Model.Progress?.FirstMasteryPassedDate.HasValue == true)
         {
             <a asp-action="Details" asp-route-id="@Model.NextLesson.Id" class="text-decoration-none">
                 <div class="na-card-flat na-next-lesson-card mt-4">
@@ -171,7 +250,7 @@
                         <span class="text-muted">Status</span>
                         @if (isCompleted)
                         {
-                            <span class="text-success"><i class="bi bi-check-circle-fill"></i> Completed</span>
+                            <span class="text-na-accent"><i class="bi bi-check-circle-fill"></i> Completed</span>
                         }
                         else if (isInProgress)
                         {
@@ -225,16 +304,6 @@
         initLessonProgress(@Model.Lesson.Id, @(Model.Progress?.CompletionPercentage ?? 0), @(Model.Progress?.IsCompleted == true ? "true" : "false"));
     </script>
     }
-    <script>
-    // Lesson context for AI Tutor
-    window.__naLessonContext = {
-        lessonId: @Model.Lesson.Id,
-        title: @Json.Serialize(Model.Lesson.Title),
-        japaneseTitle: @Json.Serialize(Model.Lesson.JapaneseTitle),
-        category: @Json.Serialize(Model.Lesson.Category?.Name)
-    };
-    </script>
-    <script src="~/js/ai-tutor.js" asp-append-version="true"></script>
     <script>
     (function() {
         // Build TOC from headings
@@ -334,6 +403,123 @@
                 setTimeout(function() { cell.classList.remove('na-cell-speaking'); }, 600);
             });
         });
+
+        // ==========================================
+        // KEYBOARD SHORTCUTS FOR LESSON STUDY
+        // ==========================================
+        if (window.naKeys) {
+            // A: Play audio
+            naKeys.register({
+                keys: ['a'],
+                group: 'Lesson Study',
+                label: 'Listen to pronunciation',
+                run: function () {
+                    var speakBtn = document.querySelector('button[data-speak]');
+                    if (speakBtn) {
+                        speakBtn.click();
+                        naKeys.toast('Playing pronunciation', 'A');
+                    } else if (typeof speakJapanese === 'function') {
+                        var text = @Json.Serialize(Model.Lesson.JapaneseTitle ?? Model.Lesson.Title);
+                        speakJapanese(text);
+                        naKeys.toast('Playing pronunciation', 'A');
+                    }
+                }
+            });
+
+            // R: Toggle reading guide
+            naKeys.register({
+                keys: ['r'],
+                group: 'Lesson Study',
+                label: 'Toggle kana reading guide (よみかた)',
+                run: function () {
+                    var detailsList = document.querySelectorAll('details.na-reading-example, details.reading-support');
+                    if (detailsList.length === 0) {
+                        naKeys.toast('No reading guide on this lesson', 'R');
+                        return;
+                    }
+                    var shouldOpen = !detailsList[0].open;
+                    detailsList.forEach(function (d) { d.open = shouldOpen; });
+                    naKeys.toast(shouldOpen ? 'Reading guide opened' : 'Reading guide closed', 'R');
+                }
+            });
+
+            // N: Next lesson
+            var nextLessonUrl = '@(Model.NextLesson != null ? Url.Action("Details", "Lessons", new { id = Model.NextLesson.Id }) : "")';
+            naKeys.register({
+                keys: ['n'],
+                group: 'Lesson Study',
+                label: 'Next lesson in path',
+                run: function () {
+                    if (nextLessonUrl) {
+                        naKeys.toast('Loading next lesson...', 'N');
+                        window.location.href = nextLessonUrl;
+                    } else {
+                        naKeys.toast('No next lesson in path', 'N');
+                    }
+                }
+            });
+
+            // P: Previous lesson
+            var prevLessonUrl = '@(Model.PreviousLesson != null ? Url.Action("Details", "Lessons", new { id = Model.PreviousLesson.Id }) : "")';
+            naKeys.register({
+                keys: ['p'],
+                group: 'Lesson Study',
+                label: 'Previous lesson in path',
+                run: function () {
+                    if (prevLessonUrl) {
+                        naKeys.toast('Loading previous lesson...', 'P');
+                        window.location.href = prevLessonUrl;
+                    } else {
+                        naKeys.toast('First lesson in path', 'P');
+                    }
+                }
+            });
+
+            // M: Mark complete / Practice check
+            naKeys.register({
+                keys: ['m'],
+                group: 'Lesson Study',
+                label: 'Mark complete / Practice',
+                run: function () {
+                    var completeBtn = document.getElementById('complete-btn');
+                    var practiceLink = document.querySelector('a[href*="LessonPractice"]');
+                    if (completeBtn && !completeBtn.disabled) {
+                        naKeys.toast('Marking lesson complete...', 'M');
+                        completeBtn.click();
+                    } else if (practiceLink) {
+                        naKeys.toast('Opening practice check...', 'M');
+                        practiceLink.click();
+                    } else {
+                        naKeys.toast('Lesson already completed', 'M');
+                    }
+                }
+            });
+
+            // T: Jump to Table of Contents
+            naKeys.register({
+                keys: ['t'],
+                group: 'Lesson Study',
+                label: 'Jump to lesson outline / contents',
+                run: function () {
+                    var toc = document.getElementById('lesson-toc');
+                    if (toc) {
+                        toc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        naKeys.toast('Lesson contents', 'T');
+                    }
+                }
+            });
+
+            // B: Return to All Lessons
+            naKeys.register({
+                keys: ['b'],
+                group: 'Lesson Study',
+                label: 'Back to all lessons',
+                run: function () {
+                    naKeys.toast('Back to lessons...', 'B');
+                    window.location.href = '@Url.Action("Index", "Lessons")';
+                }
+            });
+        }
     })();
     </script>
 }

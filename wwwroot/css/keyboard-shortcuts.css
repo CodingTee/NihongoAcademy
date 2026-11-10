@@ -1,0 +1,249 @@
+/* ==========================================================================
+   keyboard-shortcuts.css — the chrome around na-shortcuts.js
+
+   · kbd            the little key chips used inside the page hints
+   · .na-keys-pill  the floating "Shortcuts" capsule, bottom LEFT
+   · .na-keys       the cheat-sheet overlay (press ? )
+   · .na-keys-toast the "you just pressed this" note at the bottom
+   ========================================================================== */
+
+/* ===== key chips ========================================================= */
+kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.5em;
+    padding: .08em .42em;
+    margin: 0 .1em;
+    font-family: 'Segoe UI', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
+    font-size: .74rem;
+    font-weight: 600;
+    line-height: 1.55;
+    color: #8b3c63;
+    background: linear-gradient(#ffffff, #f7eef1);
+    border: 1px solid rgba(180, 67, 106, .32);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    box-shadow: 0 1px 0 rgba(180, 67, 106, .14);
+    white-space: nowrap;
+}
+
+/* ===== floating capsule ================================================== */
+.na-keys-pill {
+    position: fixed;
+    left: 18px;
+    bottom: 22px;
+    z-index: 900;
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .5rem .95rem;
+    font-size: .82rem;
+    font-weight: 600;
+    color: #6d2f4d;
+    background: rgba(255, 255, 255, .88);
+    border: 1px solid rgba(180, 67, 106, .3);
+    border-radius: 999px;
+    box-shadow: 0 6px 20px rgba(150, 95, 105, .18);
+    cursor: pointer;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+
+.na-keys-pill:hover {
+    transform: translateY(-2px);
+    background: #fff;
+    box-shadow: 0 10px 26px rgba(150, 95, 105, .26);
+}
+
+.na-keys-pill:active { transform: translateY(0); }
+
+.na-keys-pill i { font-size: 1rem; color: #B4436A; }
+
+.na-keys-pill kbd { margin-left: .1em; }
+
+/* ===== the toast ========================================================= */
+.na-keys-toast {
+    position: fixed;
+    left: 50%;
+    bottom: 30px;
+    z-index: 1200;
+    display: inline-flex;
+    align-items: center;
+    gap: .55rem;
+    padding: .5rem 1rem;
+    font-size: .84rem;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(62, 35, 26, .92);
+    border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(62, 35, 26, .28);
+    opacity: 0;
+    transform: translate(-50%, 14px);
+    pointer-events: none;
+    transition: opacity .22s ease, transform .22s ease;
+}
+
+.na-keys-toast.is-on { opacity: 1; transform: translate(-50%, 0); }
+
+/* the chord hint can list several destinations — let it grow and wrap */
+.na-keys-toast.is-chord {
+    max-width: min(680px, 92vw);
+    border-radius: 18px;
+    text-align: left;
+    line-height: 1.5;
+}
+
+.na-keys-toast kbd {
+    color: #fff;
+    background: rgba(255, 255, 255, .16);
+    border-color: rgba(255, 255, 255, .34);
+    border-bottom-color: rgba(255, 255, 255, .34);
+    box-shadow: none;
+}
+
+/* ===== the cheat sheet =================================================== */
+.na-keys { position: fixed; inset: 0; z-index: 1100; display: flex; }
+.na-keys[hidden] { display: none; }
+
+.na-keys-scrim {
+    position: absolute;
+    inset: 0;
+    background: rgba(62, 35, 26, .42);
+    -webkit-backdrop-filter: blur(3px);
+    backdrop-filter: blur(3px);
+    opacity: 0;
+    transition: opacity .22s ease;
+}
+
+.na-keys.is-on .na-keys-scrim { opacity: 1; }
+
+.na-keys-card {
+    position: relative;
+    width: min(720px, calc(100% - 32px));
+    max-height: min(86vh, 720px);
+    margin: auto;
+    overflow: auto;
+    background: #fffdfc;
+    border: 1px solid rgba(180, 67, 106, .22);
+    border-radius: 18px;
+    box-shadow: 0 24px 60px rgba(62, 35, 26, .32);
+    opacity: 0;
+    transform: translateY(16px) scale(.98);
+    transition: opacity .24s ease, transform .24s ease;
+}
+
+.na-keys.is-on .na-keys-card { opacity: 1; transform: none; }
+
+.na-keys-close {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    color: #8b3c63;
+    background: rgba(180, 67, 106, .08);
+    border: 1px solid rgba(180, 67, 106, .2);
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.na-keys-close:hover { background: rgba(180, 67, 106, .16); }
+
+.na-keys-head {
+    display: flex;
+    gap: .85rem;
+    align-items: center;
+    padding: 1.35rem 2.6rem 1rem 1.6rem;
+    border-bottom: 1px solid rgba(180, 67, 106, .16);
+    background: linear-gradient(#fff, #fdf4f6);
+}
+
+.na-keys-head > i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    aspect-ratio: 1 / 1;
+    font-size: 1.35rem;
+    color: #fff;
+    background: linear-gradient(135deg, #ee96a4, #d96d80);
+    border-radius: 12px;
+}
+
+.na-keys-head h2 { margin: 0; font-size: 1.15rem; }
+
+.na-keys-head-jp { font-size: .9rem; font-weight: 500; color: #a2677d; }
+
+.na-keys-head p { margin: .15rem 0 0; font-size: .85rem; color: #6B4A3A; }
+
+.na-keys-body { padding: 1.1rem 1.6rem 1.6rem; }
+
+.na-keys-group { margin: 0 0 1.1rem; }
+
+.na-keys-group:last-child { margin-bottom: 0; }
+
+.na-keys-group h4 {
+    margin: 0 0 .55rem;
+    font-size: .76rem;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: #B4436A;
+}
+
+.na-keys-group ul {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+    gap: .1rem .5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.na-keys-row {
+    display: flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .35rem .5rem;
+    border-radius: 8px;
+    transition: background .12s ease;
+}
+
+.na-keys-row.is-hit { background: rgba(238, 150, 164, .22); }
+
+.na-keys-row-keys { flex: 0 0 auto; min-width: 92px; }
+
+/* chord separator: "G then H" */
+.na-keys-then {
+    margin: 0 .3rem;
+    font-size: .62rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--na-text-muted, #6B4A3A);
+    opacity: .75;
+}
+
+.na-keys-row-keys kbd { border-bottom-width: 1px; }
+
+.na-keys-row-label { font-size: .86rem; color: #4a3128; }
+
+@media (max-width: 575px) {
+    .na-keys-pill { left: 12px; bottom: 84px; padding: .45rem .8rem; }
+    .na-keys-pill span { display: none; }
+    .na-keys-head { padding: 1.1rem 3rem .9rem 1.1rem; }
+    .na-keys-body { padding: 1rem 1.1rem 1.3rem; }
+    .na-keys-row-keys { min-width: 74px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .na-keys-card, .na-keys-scrim, .na-keys-toast { transition: none; }
+}

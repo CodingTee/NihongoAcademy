@@ -679,55 +679,6 @@
         return null;
     }
 
-    // ========== AI TUTOR FALLBACK ==========
-    async function callAiTutorForTranslation(text, lang) {
-        var direction = lang === 'ja' ? 'Japanese to English' : 'English to Japanese';
-        var prompt = 'Translate the following text from ' + direction + '. Return ONLY a JSON object with these fields:\n'
-            + '- "translation": the translated text\n'
-            + '- "reading": Japanese reading in hiragana (if applicable)\n'
-            + '- "romaji": romanized reading (if applicable)\n'
-            + '- "explanation": one short sentence explaining the meaning\n\n'
-            + 'Text: "' + text + '"';
-
-        try {
-            var token = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
-            var res = await fetch('/api/tutor', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'RequestVerificationToken': token
-                },
-                body: JSON.stringify({
-                    message: prompt,
-                    lessonId: null,
-                    history: []
-                })
-            });
-
-            if (!res.ok) return null;
-            var data = await res.json();
-            var reply = data.reply || '';
-            // Try to extract JSON from the reply
-            var jsonMatch = reply.match(/\{[\s\S]*?\}/);
-            if (jsonMatch) {
-                try {
-                    var parsed = JSON.parse(jsonMatch[0]);
-                    return {
-                        translation: parsed.translation || '',
-                        reading: parsed.reading || '',
-                        romaji: parsed.romaji || '',
-                        explanation: parsed.explanation || ''
-                    };
-                } catch (e) { /* fall through */ }
-            }
-            // If no JSON, try to use the raw reply as translation
-            if (reply.length > 0 && reply.length < 200) {
-                return { translation: reply, reading: '', romaji: '', explanation: '' };
-            }
-        } catch (e) { /* silent fail */ }
-        return null;
-    }
-
     // ========== SPEAK ==========
     function speak(text, lang) {
         if (!window.speechSynthesis) return;
@@ -879,9 +830,9 @@
         var ignoreTags = ['INPUT', 'TEXTAREA', 'SELECT', 'OPTION'];
         var tag = el.tagName;
         if (ignoreTags.indexOf(tag) >= 0) return true;
-        // Ignore nav bar, mobile nav, AI tutor, and translation popup itself
+        // Ignore nav bar, mobile nav, and translation popup itself
         if (el.closest) {
-            if (el.closest('.navbar, .na-mobile-nav, .na-tutor-panel, .na-tutor-fab, .na-translate-popup')) return true;
+            if (el.closest('.navbar, .na-mobile-nav, .na-translate-popup')) return true;
         }
         return false;
     }
@@ -982,29 +933,7 @@
             }
         }
 
-        // STAGE 3: AI Tutor fallback
-        try {
-            var aiResult = await callAiTutorForTranslation(text, lang);
-            if (aiResult && aiResult.translation) {
-                var finalResult = {
-                    type: lang,
-                    original: rawText,
-                    matched: null,
-                    translation: aiResult.translation,
-                    reading: aiResult.reading || '',
-                    romaji: aiResult.romaji || '',
-                    explanation: aiResult.explanation || '',
-                    source: 'ai-tutor'
-                };
-                translationCache[text + '|' + lang] = finalResult;
-                showResultPopup(finalResult, rect);
-                return;
-            }
-        } catch (err) {
-            // AI failed, fall through to unavailable
-        }
-
-        // All stages failed — still show popup with unavailable message
+        // All offline stages failed — show popup with unavailable message
         showUnavailablePopup(rawText, rect);
     }
 

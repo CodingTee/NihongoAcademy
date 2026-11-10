@@ -1,0 +1,41 @@
+@model NihongoAcademy.Models.SpeakingWorkspaceViewModel
+@using System.Text.Json
+@{ ViewData["Title"] = Model.Task.Title; var latest = Model.History.FirstOrDefault(); }
+
+<nav aria-label="breadcrumb" class="mb-3"><ol class="breadcrumb"><li class="breadcrumb-item"><a asp-action="SpeakingLibrary">Speaking Studio</a></li><li class="breadcrumb-item active">@Model.Task.Title</li></ol></nav>
+<div class="d-flex justify-content-between gap-3 mb-4"><div><span class="na-badge">@Model.Task.Level · @Model.Task.TaskType</span><h2 class="mt-2 mb-0">@Model.Task.Title</h2><div class="text-na-primary" lang="ja">@Model.Task.JapaneseTitle</div></div><strong id="speaking-mastery" class="@(Model.IsMastered ? "text-success" : "text-muted")">@(Model.IsMastered ? "Stable mastery" : "Practice in progress")</strong></div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="na-card">
+            <h4>Situation</h4><p>@Model.Task.Situation</p>
+            <div class="na-card-flat p-3 mb-3"><div class="d-flex align-items-start gap-3"><button type="button" class="na-speak-btn flex-shrink-0" id="speak-prompt" aria-label="Play Japanese prompt"><i class="bi bi-volume-up-fill"></i></button><div><strong lang="ja" class="fs-5">@Model.Task.PromptJapanese</strong><details class="reading-support mt-1"><summary class="small text-na-primary"><i class="bi bi-spellcheck"></i> Reading help · よみかた</summary><div class="small" lang="ja">@Model.Task.PromptReading</div></details><p class="small text-muted mb-0">@Model.Task.PromptEnglish</p></div></div></div>
+            <h5>Build your response</h5><ol>@foreach (var step in Model.Steps) { <li>@step</li> }</ol>
+            @Html.AntiForgeryToken()<input type="hidden" id="speaking-task-id" value="@Model.Task.Id" /><input type="hidden" id="speaking-prompt-text" value="@Model.Task.PromptJapanese" />
+            <label class="form-label fw-semibold" for="speaking-transcript">Your Japanese response</label>
+            <textarea id="speaking-transcript" class="form-control" rows="5" lang="ja" maxlength="4000" placeholder="Use the microphone, or type your response here…"></textarea>
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2"><span class="small text-muted"><span id="speaking-character-count">0</span>/@Model.Task.MinimumJapaneseCharacters Japanese characters</span><div class="d-flex gap-2"><button type="button" id="record-speaking" class="btn-na-outline btn-sm"><i class="bi bi-mic"></i> Speak</button><button type="button" id="save-speaking" class="btn-na-primary btn-sm">Check response</button></div></div>
+            <p id="recognition-note" class="small text-muted mt-2 mb-0">Microphone recognition is optional. You can edit the transcript before saving.</p><div id="speaking-feedback" class="mt-3" aria-live="polite"></div>
+        </div>
+
+        @if (Model.History.Any())
+        {
+            <details class="na-card-flat mt-4"><summary class="fw-semibold">Model response and comparison</summary><div class="row g-3 mt-2"><div class="col-md-6"><h6>Your latest transcript</h6><div lang="ja">@latest!.Transcript</div></div><div class="col-md-6"><h6>One possible response</h6><div lang="ja">@Model.Task.ModelResponse</div><details class="reading-support mt-2"><summary class="small text-na-primary">Reading help · よみかた</summary><div class="small" lang="ja">@Model.Task.ModelResponseReading</div></details><button type="button" class="btn-na-outline btn-sm mt-2 speak-model" data-text="@Model.Task.ModelResponse"><i class="bi bi-volume-up"></i> Hear model</button></div></div><p class="small text-muted mt-3 mb-0">Use the model for structure and useful expressions; it is not the only correct response.</p></details>
+        }
+
+        <section class="mt-4"><h4>Attempt History</h4>
+        @if (!Model.History.Any()) { <p class="text-muted">Your checked responses will appear here.</p> }
+        @foreach (var attempt in Model.History)
+        {
+            var feedback = JsonSerializer.Deserialize<List<string>>(attempt.FeedbackJson ?? "[]") ?? new();
+            <details class="na-card-flat mt-2"><summary><strong>@attempt.Score%</strong> · @attempt.AttemptedAt.ToString("g") · @(attempt.InputMode == "voice" ? "Microphone transcript" : "Typed transcript") @(attempt.IsPassing ? "· Passed transcript check" : "· Keep practising")</summary><div lang="ja" class="mt-2">@attempt.Transcript</div><ul class="small mt-2 mb-0">@foreach (var note in feedback) { <li>@note</li> }</ul></details>
+        }
+        </section>
+    </div>
+    <aside class="col-lg-4">
+        <div class="na-card-flat mb-3"><h5>Useful Language</h5><ul class="mb-0">@foreach (var requirement in Model.Requirements) { var parts = requirement.Split('|', 2); <li>@parts[0]@if (parts.Length > 1) { <small class="d-block text-muted" lang="ja">Try: @parts[1].Replace('/', '・')</small> }</li> }</ul></div>
+        <div class="na-card-flat"><h5>Can-do Self-check</h5>@foreach (var item in Model.Checklist) { <div class="form-check mb-2"><input class="form-check-input speaking-self-check" type="checkbox" /><label class="form-check-label small">@item</label></div> }<small class="text-muted">Transcript points cannot measure pronunciation, pace or confidence. Judge these honestly after speaking aloud.</small></div>
+    </aside>
+</div>
+
+@section Scripts { <script src="~/js/speaking-workspace.js" asp-append-version="true"></script> }

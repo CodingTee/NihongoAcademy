@@ -38,8 +38,12 @@
         <p class="na-region-hero-tagline">@Model.Tagline</p>
     </div>
 
-    <!-- Centerpiece "region seal" card — middle grid column (240×240 silhouette) -->
-    <div class="na-region-hero-seal" style="background-image: url('@heroImage');">
+    <!-- Centerpiece "region seal" card — middle grid column.
+         The silhouette lives in its own layer (.na-region-hero-seal-art) and the
+         地名 pill sits in a separate row BELOW it, so the label can never be
+         painted on top of the map. -->
+    <div class="na-region-hero-seal">
+        <div class="na-region-hero-seal-art" style="background-image: url('@heroImage');" role="img" aria-label="@Model.NameJa region map"></div>
         <span class="na-region-hero-seal-label">@Model.NameJa</span>
     </div>
 
@@ -104,15 +108,187 @@
         <i class="bi bi-bookmark-star"></i>
         <h2>Overview <span class="na-subtitle-jp">概要</span></h2>
     </div>
-    <p class="na-region-prose">@Model.Description</p>
+    <p class="na-region-prose">@Html.Raw(JapanRegions.Highlight(Model.Description, Model.OverviewHighlights))</p>
 </section>
 
-<!-- ===== HIGHLIGHTS ===== -->
+<!-- ===== HIGHLIGHTS (interactive showcase) ===== -->
+@{
+    string photoFolder = "Japance Image";
+    string Img(string? file) => string.IsNullOrEmpty(file) ? "" : $"/{Uri.EscapeDataString(photoFolder)}/{Uri.EscapeDataString(file)}";
+
+    // Second frames of the sights, collected up front so the little corner
+    // thumbnail can sit OUTSIDE the photo viewport (the viewport swallows
+    // every click that lands inside it).
+    var frames = new List<(RegionPoint Entry, string Src)>();
+    foreach (var h in Model.Highlights)
+    {
+        if (!string.IsNullOrWhiteSpace(h.ExtraImage)) frames.Add((h, Img(h.ExtraImage!)));
+    }
+
+    string KindOf(RegionPoint e) =>
+        Model.Highlights.Any(x => ReferenceEquals(x, e)) ? "Must-see highlight"
+        : Model.Foods.Any(x => ReferenceEquals(x, e)) ? "Regional cuisine"
+        : "Festival & events";
+
+    // 1) MUST-SEE HIGHLIGHTS — one interactive slide per sight.
+    var shots = new List<(RegionPoint Entry, string Src, string Kind)>();
+    foreach (var h in Model.Highlights)
+    {
+        if (!string.IsNullOrWhiteSpace(h.Image)) shots.Add((h, Img(h.Image), KindOf(h)));
+    }
+
+    // 2) REGIONAL CUISINE — one waterfall card per dish (a dish without a
+    //    photo still gets a card, rendered as a "photo pending" tile).
+    var dishes = new List<(RegionPoint Entry, string Src)>();
+    foreach (var f in Model.Foods) dishes.Add((f, Img(f.Image)));
+
+    // 3) FESTIVALS & EVENTS — one block card per event, plus any second frame.
+    var matsuri = new List<(RegionPoint Entry, string Src, string Extra)>();
+    foreach (var fe in Model.Festivals) matsuri.Add((fe, Img(fe.Image), Img(fe.ExtraImage)));
+
+    // 4) LET'S PLAY — every region ships its own eight rounds (food, sights and
+    //    festivals of THIS region), plus the stamp and the end-of-run card copy.
+    //    Round prompts are authored in Services/RegionQuizzes.cs; only the photo
+    //    URLs are resolved here, by the Img() helper above.
+    var quizSet = NihongoAcademy.Services.RegionQuizzes.Get(Model.Slug);
+    var quiz = quizSet.Rounds.Select(r => new {
+        kind = r.Kind,
+        ja = r.Ja,
+        reading = r.Reading,
+        romaji = r.Romaji,
+        say = r.Say,
+        pic = Img(r.Pic),
+        note = r.Note,
+        answer = r.Answer,
+        opts = r.Opts
+    }).ToArray();
+
+    // serialised once so the script can reshuffle the rounds itself
+    var quizJson = System.Text.Json.JsonSerializer.Serialize(quiz);
+    var quizMeta = new {
+        key = Model.Slug,
+        stamp = quizSet.Stamp,
+        ranks = quizSet.Ranks,
+        tips = quizSet.Tips
+    };
+    var quizMetaJson = System.Text.Json.JsonSerializer.Serialize(quizMeta);
+
+    // Rendered if any photo exists on the page; opens from the stage, the dish
+    // cards or the festival cards.
+    bool hasAnyPhoto = shots.Count > 0 || dishes.Any(d => !string.IsNullOrEmpty(d.Src))
+                       || matsuri.Any(m => !string.IsNullOrEmpty(m.Src));
+
+    string pad(int n) => n < 10 ? "0" + n : n.ToString();
+}
+
 <section class="na-region-section">
     <div class="na-region-section-head">
         <i class="bi bi-stars"></i>
         <h2>Must-see highlights <span class="na-subtitle-jp">見どころ</span></h2>
     </div>
+    @* the hint sits on its own line under the heading, never inline after it —
+       that is what used to leave "to jump" dangling on an orphan line *@
+    @if (shots.Count > 0)
+    {
+        <p class="na-showcase-hint">
+            <i class="bi bi-cursor-fill"></i>
+            Interactive — drag, click a photo, or press <kbd>←</kbd><kbd>→</kbd>
+            <kbd>Space</kbd> to let it wander on its own, <kbd>Enter</kbd> to enlarge,
+            <kbd>S</kbd> to hear the name, <kbd>1</kbd>–<kbd>9</kbd> to jump
+        </p>
+    }
+
+@if (shots.Count > 0)
+{
+    <link rel="stylesheet" href="~/css/region-showcase.css" asp-append-version="true" />
+
+    <div class="na-sh-wrap" data-na-showcase>
+        <div class="na-sh-stage">
+
+            <!-- LEFT — the caption card of whichever photo is on stage -->
+            <div class="na-sh-now" data-sh-now>
+                <span class="na-sh-now-kind" data-sh-now-kind></span>
+                <h3 class="na-sh-now-title" data-sh-now-title></h3>
+                <span class="na-sh-now-title-ja" data-sh-now-titleja></span>
+                <p class="na-sh-now-note" data-sh-now-note></p>
+            </div>
+
+            <!-- CENTRE — the photo itself, with bare chevrons floating on top -->
+            <div class="na-sh-media">
+                <button class="na-sh-nav na-sh-nav--prev" type="button" data-sh-prev aria-label="Previous photo">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+
+                <div class="na-sh-viewport" data-sh-viewport role="img" aria-label="Highlight photo viewer">
+                    @for (int s = 0; s < shots.Count; s++)
+                    {
+                        var entry = shots[s].Entry;
+                        var kind = shots[s].Kind;
+                        <figure class="na-sh-slide @(s == 0 ? "is-active" : "")" data-sh-slide="@s" aria-hidden="@(s == 0 ? "false" : "true")"
+                                data-sh-kind="@kind"
+                                data-sh-title="@entry.Title"
+                                data-sh-titleja="@entry.TitleJa"
+                                data-sh-note="@(!string.IsNullOrWhiteSpace(entry.Note) ? entry.Note : "")">
+                            <img src="@shots[s].Src" alt="@($"{entry.Title} — {entry.TitleJa}")" loading="@(s == 0 ? "eager" : "lazy")" decoding="async" />
+                        </figure>
+                    }
+                </div>
+
+                @foreach (var f in frames)
+                {
+                    <button type="button" class="na-sh-extra" data-sh-card
+                            data-sh-src="@f.Src"
+                            data-sh-alt="@($"{f.Entry.Title} — {f.Entry.TitleJa} (second frame)")"
+                            data-sh-kind="Must-see highlight"
+                            data-sh-title="@f.Entry.Title"
+                            data-sh-titleja="@f.Entry.TitleJa"
+                            data-sh-note="@f.Entry.Note"
+                            title="Second frame: @f.Entry.Title">
+                        <img src="@f.Src" alt="" loading="lazy" decoding="async" />
+                        <span class="na-sh-extra-cap"><i class="bi bi-images"></i><i>2</i></span>
+                    </button>
+                }
+
+                <button class="na-sh-nav na-sh-nav--next" type="button" data-sh-next aria-label="Next photo">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+
+            <!-- RIGHT — contents; clicking a row jumps straight to that photo -->
+            <aside class="na-sh-side na-sh-side--list">
+                <div class="na-sh-side-head">
+                    <span class="na-sh-side-head-en">WHAT YOU'LL SEE</span>
+                    <span class="na-sh-side-head-ja">この順に</span>
+                </div>
+                <ol class="na-sh-side-items">
+                    @for (int s = 0; s < shots.Count; s++)
+                    {
+                        <li>
+                            <button class="na-sh-side-item" type="button" data-sh-goto="@s">
+                                <span class="na-sh-side-item-no">@pad(s + 1)</span>
+                                <span class="na-sh-side-item-text">
+                                    <b>@shots[s].Entry.Title</b>
+                                    <i>@shots[s].Entry.TitleJa</i>
+                                </span>
+                            </button>
+                        </li>
+                    }
+                </ol>
+            </aside>
+        </div>
+
+        <!-- BOTTOM — counter, progress track, autoplay toggle -->
+        <div class="na-sh-bar">
+            <button class="na-sh-bar-btn" type="button" data-sh-autoplay aria-pressed="true">
+                <i class="bi bi-play-circle"></i> Auto
+            </button>
+            <div class="na-sh-bar-track"><span class="na-sh-bar-fill" data-sh-bar></span></div>
+            <div class="na-sh-bar-count"><b data-sh-index>01</b> / <span>@pad(shots.Count)</span></div>
+        </div>
+    </div>
+}
+else
+{
     <div class="row g-3">
         @foreach (var h in Model.Highlights)
         {
@@ -131,6 +307,7 @@
             </div>
         }
     </div>
+}
 </section>
 
 <!-- ===== CUISINE ===== -->
@@ -139,22 +316,53 @@
         <i class="bi bi-cup-hot-fill"></i>
         <h2>Regional cuisine <span class="na-subtitle-jp">郷土料理</span></h2>
     </div>
-    <div class="row g-3">
-        @foreach (var f in Model.Foods)
+@if (dishes.Count > 0)
+{
+    <link rel="stylesheet" href="~/css/region-cards.css" asp-append-version="true" />
+
+    <span class="na-sh-hint">
+        <i class="bi bi-egg-fried"></i> @dishes.Count dishes — a waterfall of cards with the
+        full text; tap any photo to see it full size. Jump here with <kbd>F</kbd>
+    </span>
+
+    <div class="na-flow">
+        @for (int i = 0; i < dishes.Count; i++)
         {
-            <div class="col-12 col-sm-6 col-lg-3">
-                <div class="na-region-food-card">
-                    <div class="na-region-food-icon"><i class="bi bi-egg-fried"></i></div>
-                    <div class="na-region-food-title">@f.Title</div>
-                    <div class="na-region-food-title-ja">@f.TitleJa</div>
-                    @if (!string.IsNullOrWhiteSpace(f.Note))
-                    {
-                        <div class="na-region-food-note">@f.Note</div>
-                    }
-                </div>
+            var d = dishes[i];
+            var hasImg = !string.IsNullOrEmpty(d.Src);
+            <div class="na-flow-item">
+                <!-- the whole card opens the viewer; the photo is not a nested
+                     button so the card keeps its flex layout -->
+                <article class="na-flow-card na-cul-card @(hasImg ? "" : "is-pending")"
+                         data-sh-card="@(hasImg ? "card" : null)"
+                         data-sh-src="@d.Src"
+                         data-sh-alt="@($"{d.Entry.Title} — {d.Entry.TitleJa}")"
+                         data-sh-kind="Regional cuisine"
+                         data-sh-title="@d.Entry.Title"
+                         data-sh-titleja="@d.Entry.TitleJa"
+                         data-sh-note="@d.Entry.Note">
+                    <span class="na-flow-shots">
+                        <span class="na-flow-shot">
+                            @if (hasImg)
+                            {
+                                <img src="@d.Src" alt="@d.Entry.Title" loading="lazy" decoding="async" />
+                                <span class="na-flow-zoom"><i class="bi bi-expand"></i></span>
+                            }
+                        </span>
+                    </span>
+                    <span class="na-flow-body">
+                        <span class="na-flow-head">
+                            <span class="na-flow-no">@pad(i + 1)</span>
+                            <span class="na-flow-title">@d.Entry.Title</span>
+                        </span>
+                        <span class="na-flow-ja">@d.Entry.TitleJa</span>
+                        <span class="na-flow-note">@d.Entry.Note</span>
+                    </span>
+                </article>
             </div>
         }
     </div>
+}
 </section>
 
 <!-- ===== FESTIVALS ===== -->
@@ -163,23 +371,193 @@
         <i class="bi bi-music-note-beamed"></i>
         <h2>Festivals &amp; events <span class="na-subtitle-jp">祭り</span></h2>
     </div>
-    <div class="na-region-festival-row">
-        @foreach (var fe in Model.Festivals)
+    <span class="na-sh-hint">
+        <i class="bi bi-calendar-event"></i> @matsuri.Count festivals, and two seasons to plan around —
+        jump here with <kbd>M</kbd>, on to the game with <kbd>G</kbd>
+    </span>
+
+    <div class="na-flow">
+        @for (int f = 0; f < matsuri.Count; f++)
         {
-            <div class="na-region-festival-card">
-                <div class="na-region-festival-icon"><i class="bi bi-flag-fill"></i></div>
-                <div>
-                    <div class="na-region-festival-title">@fe.Title</div>
-                    <div class="na-region-festival-title-ja">@fe.TitleJa</div>
-                    @if (!string.IsNullOrWhiteSpace(fe.Note))
-                    {
-                        <div class="na-region-festival-note">@fe.Note</div>
-                    }
-                </div>
+            var m = matsuri[f];
+            <div class="na-flow-item">
+                <article class="na-flow-card na-fes-card">
+                    <span class="na-flow-shots">
+                        <span class="na-flow-shot">
+                            <button type="button" class="na-flow-shot-btn" data-sh-card
+                                    data-sh-src="@m.Src"
+                                    data-sh-alt="@($"{m.Entry.Title} — {m.Entry.TitleJa}")"
+                                    data-sh-kind="Festival &amp; events"
+                                    data-sh-title="@m.Entry.Title"
+                                    data-sh-titleja="@m.Entry.TitleJa"
+                                    data-sh-note="@m.Entry.Note"
+                                    aria-label="Enlarge photo: @($"{m.Entry.Title} — {m.Entry.TitleJa}")">
+                                <img src="@m.Src" alt="@m.Entry.Title" loading="lazy" decoding="async" />
+                                <span class="na-flow-zoom"><i class="bi bi-expand"></i></span>
+                            </button>
+                        </span>
+
+                        @if (!string.IsNullOrEmpty(m.Extra))
+                        {
+                            <!-- the second frame sits beside the main one, as a
+                                 small thumbnail of the very same size -->
+                            <button type="button" class="na-flow-shot na-flow-shot--extra" data-sh-card
+                                    data-sh-src="@m.Extra"
+                                    data-sh-alt="@($"{m.Entry.Title} (second frame)")"
+                                    data-sh-kind="Festival &amp; events"
+                                    data-sh-title="@m.Entry.Title"
+                                    data-sh-titleja="@m.Entry.TitleJa"
+                                    data-sh-note="@($"{m.Entry.Note} (second frame)")"
+                                    aria-label="Enlarge the second frame of @m.Entry.Title">
+                                <img src="@m.Extra" alt="" loading="eager" decoding="async" />
+                                <span class="na-flow-shot-tag">2</span>
+                            </button>
+                        }
+                    </span>
+
+                    <div class="na-flow-body">
+                        <div class="na-flow-head">
+                            <span class="na-flow-no">@pad(f + 1)</span>
+                            <span class="na-flow-title">@m.Entry.Title</span>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(m.Entry.When))
+                        {
+                            <span class="na-flow-when"><i class="bi bi-calendar-event"></i> @m.Entry.When</span>
+                        }
+                        <div class="na-flow-ja">@m.Entry.TitleJa</div>
+                        <p class="na-flow-note">@m.Entry.Note</p>
+                    </div>
+                </article>
             </div>
         }
+
+        <!-- the two season cards carry the same box, but no photo at all —
+             just the months when the festivals belong. Data comes from the
+             region model (Winter*/Summer*), so every region gets its own text. -->
+        <div class="na-flow-item">
+            <article class="na-flow-card na-fes-card na-note-card">
+                <div class="na-flow-body">
+                    <div class="na-note-top">
+                        <span class="na-note-icon"><i class="bi bi-snow"></i></span>
+                        <span class="na-flow-when na-flow-when--static"><i class="bi bi-snow"></i> 冬 / Fuyu</span>
+                    </div>
+                    <div class="na-note-mark">@Model.WinterMonths</div>
+                    <div class="na-note-ja">@Model.WinterSub</div>
+                    <p class="na-note-text">@Model.WinterNote</p>
+                </div>
+            </article>
+        </div>
+
+        <div class="na-flow-item">
+            <article class="na-flow-card na-fes-card na-note-card">
+                <div class="na-flow-body">
+                    <div class="na-note-top">
+                        <span class="na-note-icon"><i class="bi bi-sun"></i></span>
+                        <span class="na-flow-when na-flow-when--static"><i class="bi bi-sun"></i> 夏 / Natsu</span>
+                    </div>
+                    <div class="na-note-mark">@Model.SummerMonths</div>
+                    <div class="na-note-ja">@Model.SummerSub</div>
+                    <p class="na-note-text">@Model.SummerNote</p>
+                </div>
+            </article>
+        </div>
     </div>
 </section>
+
+<!-- ===== LET'S PLAY — a small Japanese game for THIS region ===== -->
+<section class="na-region-section na-quiz-section">
+    <div class="na-region-section-head">
+        <i class="bi bi-controller"></i>
+        <h2>Let's play <span class="na-subtitle-jp">@(Model.NameJa)で遊ぼう</span></h2>
+    </div>
+    <p class="na-showcase-hint">
+        <i class="bi bi-lightning-charge-fill"></i>
+        @quiz.Length rounds — @Model.Name food, places and festivals, every round with a photo.
+        Press <b>Start</b>, then answer in English. Listen with the speaker button any time.
+    </p>
+
+    <div class="na-quiz-wrap" data-na-quiz>
+        <div class="na-quiz-hud">
+            <div class="na-quiz-hud-cell">
+                <span class="na-quiz-hud-k">ROUND</span>
+                <b data-q-round>1<i>/@pad(quiz.Length)</i></b>
+            </div>
+            <div class="na-quiz-hud-cell" data-q-score-cell>
+                <span class="na-quiz-hud-k">SCORE</span>
+                <b data-q-score>0</b>
+            </div>
+            <div class="na-quiz-hud-cell">
+                <span class="na-quiz-hud-k">STREAK</span>
+                <b data-q-streak>0</b>
+            </div>
+            <div class="na-quiz-hud-cell">
+                <span class="na-quiz-hud-k">TIME</span>
+                <b data-q-time>15</b>
+            </div>
+            <div class="na-quiz-dots" data-q-dots></div>
+        </div>
+
+        <div class="na-quiz-timebar" data-q-timebar><span data-q-timefill></span></div>
+
+        <div class="na-quiz-stage">
+            <div class="na-quiz-prompt">
+                <div class="na-quiz-pic" data-q-pic></div>
+                <div class="na-quiz-prompt-text">
+                    <span class="na-quiz-kind" data-q-kind></span>
+                    <div class="na-quiz-ja" data-q-ja lang="ja"></div>
+                    <div class="na-quiz-reading" data-q-reading></div>
+                    <div class="na-quiz-romaji" data-q-romaji></div>
+                    <button type="button" class="na-quiz-say" data-q-say>
+                        <i class="bi bi-volume-up"></i> 読む / hear it
+                    </button>
+                </div>
+            </div>
+
+            <div class="na-quiz-options" data-q-options></div>
+        </div>
+
+        <p class="na-quiz-feedback is-idle" data-q-feedback></p>
+
+        <div class="na-quiz-foot">
+            <button type="button" class="na-quiz-btn" data-q-start>
+                <i class="bi bi-play-fill"></i> Start
+            </button>
+            <button type="button" class="na-quiz-btn na-quiz-btn--ghost" data-q-restart hidden>
+                <i class="bi bi-arrow-repeat"></i> Play again
+            </button>
+            <span class="na-quiz-best" data-q-best>First run</span>
+        </div>
+
+        <div class="na-quiz-over" data-q-over hidden>
+            <div class="na-quiz-over-card">
+                <div class="na-quiz-stamp" data-q-stamp>雪</div>
+                <div class="na-quiz-rank" data-q-rank></div>
+                <div class="na-quiz-score" data-q-final></div>
+                <p data-q-tip></p>
+                <button type="button" class="na-quiz-btn" data-q-again>
+                    <i class="bi bi-arrow-repeat"></i> Play again
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+@if (hasAnyPhoto)
+{
+    <!-- full-screen viewer — shared by the stage, the dish cards and the festival cards -->
+    <div class="na-sh-lb" data-sh-lightbox role="dialog" aria-modal="true" aria-label="Photo viewer">
+        <button class="na-sh-lb-btn na-sh-lb-btn--close" type="button" data-sh-lb-close aria-label="Close the photo viewer"><i class="bi bi-x-lg"></i></button>
+        <button class="na-sh-lb-btn na-sh-lb-btn--prev" type="button" data-sh-lb-prev aria-label="Previous photo"><i class="bi bi-chevron-left"></i></button>
+        <!-- the pink panel the photo sits on, mirroring the "Must-see highlights" stage -->
+        <div class="na-sh-lb-figure">
+            <!-- an empty src would fall back to the page URL and waste a request,
+                 so the picture starts transparent and is filled in on open -->
+            <img alt="" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" />
+        </div>
+        <button class="na-sh-lb-btn na-sh-lb-btn--next" type="button" data-sh-lb-next aria-label="Next photo"><i class="bi bi-chevron-right"></i></button>
+        <p class="na-sh-lb-caption" data-sh-lb-caption></p>
+    </div>
+}
 
 <!-- ===== ACCESS ===== -->
 <section class="na-region-section">
@@ -187,7 +565,7 @@
         <i class="bi bi-airplane-engines"></i>
         <h2>Getting there <span class="na-subtitle-jp">アクセス</span></h2>
     </div>
-    <p class="na-region-prose">@Model.Access</p>
+    <p class="na-region-prose">@Html.Raw(JapanRegions.Highlight(Model.Access, Model.AccessHighlights))</p>
 </section>
 
 <!-- ===== LEARN MORE ===== -->
@@ -197,6 +575,15 @@
         <i class="bi bi-arrow-up-right"></i>
     </a>
 </section>
+
+@if (Model.Slug == "okinawa")
+{
+    <!-- ===== REGION NOTE (from the Region Guide) ===== -->
+    <p class="na-region-disclaimer">
+        * Okinawa is administratively part of the Kyūshū region, but shown separately here for its
+        distinct Ryukyuan history, language, and culture.
+    </p>
+}
 
 <!-- ===== PREV / NEXT NAV ===== -->
 <nav class="na-region-prevnext">
@@ -234,3 +621,15 @@
         <span></span>
     }
 </nav>
+
+@section Scripts {
+    <link rel="stylesheet" href="~/css/region-quiz.css" asp-append-version="true" />
+    <script>
+        var naQuizQuestions = @Html.Raw(quizJson);
+        var naQuizMeta = @Html.Raw(quizMetaJson);
+    </script>
+    <script src="~/js/region-showcase.js" asp-append-version="true"></script>
+    @* region-page-keys.js teaches the shared engine the page own keys *@
+    <script src="~/js/region-page-keys.js" asp-append-version="true"></script>
+    <script src="~/js/region-quiz.js" asp-append-version="true"></script>
+}

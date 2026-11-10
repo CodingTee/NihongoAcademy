@@ -16,12 +16,37 @@
     <div class="alert alert-warning"><i class="bi bi-lock-fill"></i> @message</div>
 }
 
-<div class="row mb-4">
-    <div class="col-12">
-        <h2><i class="bi bi-journal-text na-page-icon"></i> Lessons <span class="na-subtitle-jp">レッスン</span></h2>
-        <p class="text-muted">Follow your Japanese learning journey step by step.</p>
+@* ===== Page banner ===== *@
+<section class="na-page-hero-v2" aria-label="Lessons">
+    <div class="na-hero-v2-deco" aria-hidden="true">
+        <span class="na-hero-v2-glyph na-hero-v2-glyph--a">学</span>
+        <span class="na-hero-v2-glyph na-hero-v2-glyph--b">本</span>
+        <span class="na-hero-v2-glyph na-hero-v2-glyph--c">日</span>
+        <span class="na-hero-v2-glyph na-hero-v2-glyph--d">語</span>
+        <span class="na-hero-v2-petal"></span>
+        <span class="na-hero-v2-petal"></span>
+        <span class="na-hero-v2-petal"></span>
+        <span class="na-hero-v2-petal"></span>
     </div>
-</div>
+    <div class="na-page-hero-v2-inner">
+        <span class="na-page-hero-v2-eyebrow"><i class="bi bi-stars"></i> Structured Learning Path</span>
+        <h1 class="na-page-hero-v2-title">Lessons <span>レッスン</span></h1>
+        <p class="na-page-hero-v2-lead">Follow your Japanese learning journey step by step. From first kana to real conversations.</p>
+    </div>
+</section>
+
+
+
+<section class="na-curriculum-scope mb-4" data-tour="tour-curriculum-scope" aria-labelledby="curriculum-scope-title">
+    <div>
+        <span class="na-badge">BEGINNER PATH · N5–N4 FOUNDATION</span>
+        <h3 id="curriculum-scope-title" class="h5 mt-2 mb-1">What this course covers <span class="na-subtitle-jp">学習範囲</span></h3>
+        <p class="mb-0 text-muted">A complete guided foundation: hiragana, katakana, 18 A1 lessons, 100 foundational kanji and 15 A2 lessons—with listening, reading, speaking, writing and delayed mastery review.</p>
+    </div>
+    <div class="na-scope-stats" aria-label="Course contents">
+        <span><strong>80</strong> core lessons</span><span><strong>100</strong> kanji</span><span><strong>48</strong> skill tasks</span><span><strong>2</strong> capstones</span>
+    </div>
+</section>
 
 @* ===== LEARNING PATH (compact inline) ===== *@
 @if (pathCategories.Any())
@@ -113,7 +138,7 @@ else if (User.Identity?.IsAuthenticated == true && continueLesson == null && pat
 }
 
 @* ===== SEARCH + FILTER CHIPS ===== *@
-<div class="d-flex flex-wrap align-items-center gap-2 mb-4">
+<div class="d-flex flex-wrap align-items-center gap-2 mb-4" data-tour="tour-category-filters">
     <form method="get" asp-action="Index" class="me-2" style="flex:1;min-width:200px;max-width:320px;">
         <div class="input-group input-group-sm">
             <input type="text" name="searchString" value="@(Html.Encode(ViewBag.SearchString))" class="form-control" placeholder="Search lessons..." />
@@ -141,7 +166,8 @@ else if (User.Identity?.IsAuthenticated == true && continueLesson == null && pat
 }
 else
 {
-    <div class="row">
+    <div class="row" data-na-list>
+        @{ var firstCard = true; }
         @foreach (var lesson in Model)
         {
             var lp = userProgress.FirstOrDefault(p => p.LessonId == lesson.Id);
@@ -150,8 +176,10 @@ else
             var pct = lp?.CompletionPercentage ?? 0;
             var isLocked = User.Identity?.IsAuthenticated == true && lockedPrerequisites.ContainsKey(lesson.Id);
             var isReviewPending = !isCompleted && lp?.MasteryReviewDueDate.HasValue == true;
+            var tourCardAttr = firstCard ? "data-tour=\"tour-lesson-card\"" : "";
+            firstCard = false;
 
-            <div class="col-lg-4 col-md-6 mb-4">
+            <div class="col-lg-4 col-md-6 mb-4" @Html.Raw(tourCardAttr)>
                 <a href="@(isLocked ? "#" : Url.Action("Details", new { id = lesson.Id }))" class="text-decoration-none @(isLocked ? "pe-none" : "")" aria-disabled="@isLocked.ToString().ToLowerInvariant()">
                     <div class="na-card h-100 @(isLocked ? "opacity-50" : "")">
                         <div class="d-flex justify-content-between align-items-start mb-2">
@@ -203,11 +231,117 @@ else
 }
 
 @section Scripts {
-    @if (User.Identity?.IsAuthenticated == true)
-    {
+
     <script>
-        window.__naLessonContext = { lessonId: null, title: "Lessons", japaneseTitle: "レッスン", category: null };
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!window.naKeys) return;
+
+            // Continue Learning: C
+            var continueLink = document.querySelector('.na-continue-card')?.closest('a');
+            if (continueLink) {
+                naKeys.register({
+                    keys: ['c'],
+                    group: 'Lessons',
+                    label: 'Continue active lesson',
+                    run: function () {
+                        naKeys.toast('Continuing lesson...', 'C');
+                        continueLink.click();
+                    }
+                });
+            }
+
+            // Quick Search: / or S
+            var searchInput = document.querySelector('input[name="searchString"]');
+            if (searchInput) {
+                naKeys.register({
+                    keys: ['/', 's'],
+                    group: 'Lessons',
+                    label: 'Search lessons',
+                    run: function (e) {
+                        e.preventDefault();
+                        searchInput.focus();
+                        searchInput.select();
+                        naKeys.toast('Search lessons', '/');
+                    }
+                });
+            }
+
+            // Category filter chips: 1-6
+            var chips = Array.from(document.querySelectorAll('.na-chip'));
+            if (chips.length > 0) {
+                ['1', '2', '3', '4', '5', '6'].forEach(function (num, idx) {
+                    if (idx < chips.length) {
+                        var targetChip = chips[idx];
+                        var name = targetChip.textContent.trim();
+                        naKeys.register({
+                            keys: [num],
+                            group: 'Lessons',
+                            label: 'Filter: ' + name,
+                            run: function () {
+                                naKeys.toast('Category: ' + name, num);
+                                targetChip.click();
+                            }
+                        });
+                    }
+                });
+            }
+
+            // Browse cards: J/K or Arrow Down/Up + Enter to open
+            var cardLinks = Array.from(document.querySelectorAll('.row .col-lg-4 a:not(.pe-none)'));
+            var activeCardIndex = -1;
+
+            function highlightCard(index) {
+                cardLinks.forEach(function (a) {
+                    var card = a.querySelector('.na-card');
+                    if (card) card.classList.remove('na-card-focus');
+                });
+                if (index >= 0 && index < cardLinks.length) {
+                    activeCardIndex = index;
+                    var activeA = cardLinks[activeCardIndex];
+                    var card = activeA.querySelector('.na-card');
+                    if (card) {
+                        card.classList.add('na-card-focus');
+                        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        var title = card.querySelector('h5')?.textContent?.trim() || 'Lesson';
+                        naKeys.toast(title, '#' + (activeCardIndex + 1));
+                    }
+                }
+            }
+
+            if (cardLinks.length > 0) {
+                naKeys.register({
+                    keys: ['j', 'arrowdown'],
+                    group: 'Lessons',
+                    label: 'Next lesson card',
+                    run: function () {
+                        var next = activeCardIndex + 1;
+                        if (next >= cardLinks.length) next = 0;
+                        highlightCard(next);
+                    }
+                });
+
+                naKeys.register({
+                    keys: ['k', 'arrowup'],
+                    group: 'Lessons',
+                    label: 'Previous lesson card',
+                    run: function () {
+                        var prev = activeCardIndex - 1;
+                        if (prev < 0) prev = cardLinks.length - 1;
+                        highlightCard(prev);
+                    }
+                });
+
+                naKeys.register({
+                    keys: ['enter'],
+                    group: 'Lessons',
+                    label: 'Open focused lesson card',
+                    when: function () { return activeCardIndex >= 0 && activeCardIndex < cardLinks.length; },
+                    run: function () {
+                        naKeys.toast('Opening lesson...', '⏎');
+                        cardLinks[activeCardIndex].click();
+                    }
+                });
+            }
+        });
     </script>
-    <script src="~/js/ai-tutor.js" asp-append-version="true"></script>
-    }
 }

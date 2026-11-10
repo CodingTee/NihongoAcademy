@@ -1,0 +1,104 @@
+@model NihongoAcademy.Models.QuizQuestion
+
+@{
+    ViewData["Title"] = "Edit Question";
+}
+
+@await Html.PartialAsync("_AdminPageHeader", new NihongoAcademy.Models.AdminPageHeaderModel
+{
+    Trail =
+    {
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Admin", Url = Url.Action("Index", "Admin") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Quizzes", Url = Url.Action("Index", "AdminContent", new { type = "quiz" }) },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Edit Question" }
+    },
+    Icon = "bi-pencil",
+    Title = "Edit Question",
+    TitleJp = "問題編集",
+    Lead = $"Quiz: {ViewBag.QuizTitle}",
+    Actions =
+    {
+        new NihongoAcademy.Models.AdminPageHeaderAction { Text = "Back to Quiz", Url = Url.Action("Editor", "AdminContent", new { type = "quiz", mode = "edit", id = ViewBag.QuizId }), Icon = "bi-arrow-left", Outline = true }
+    }
+})
+
+<p class="text-muted">Quiz: <strong>@ViewBag.QuizTitle</strong></p>
+
+<div class="row">
+    <div class="col-12">
+        <div class="na-card-flat">
+            <form asp-controller="AdminQuizzes" asp-action="EditQuestion">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <input type="hidden" asp-for="Id" />
+
+                <div class="mb-3">
+                    <label asp-for="QuestionText" class="form-label"></label>
+                    <textarea asp-for="QuestionText" class="form-control" rows="2"></textarea>
+                    <span asp-validation-for="QuestionText" class="text-danger"></span>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="OptionA" class="form-label"></label>
+                        <input asp-for="OptionA" class="form-control" />
+                        <span asp-validation-for="OptionA" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="OptionB" class="form-label"></label>
+                        <input asp-for="OptionB" class="form-control" />
+                        <span asp-validation-for="OptionB" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="OptionC" class="form-label"></label>
+                        <input asp-for="OptionC" class="form-control" />
+                        <span asp-validation-for="OptionC" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="OptionD" class="form-label"></label>
+                        <input asp-for="OptionD" class="form-control" />
+                        <span asp-validation-for="OptionD" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="CorrectOption" class="form-label"></label>
+                        <select asp-for="CorrectOption" class="form-select">
+                            <option value="1">A</option>
+                            <option value="2">B</option>
+                            <option value="3">C</option>
+                            <option value="4">D</option>
+                        </select>
+                        <span asp-validation-for="CorrectOption" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label asp-for="DisplayOrder" class="form-label"></label>
+                        <input asp-for="DisplayOrder" class="form-control" type="number" min="0" />
+                        <span asp-validation-for="DisplayOrder" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Explanation" class="form-label"></label>
+                    <textarea asp-for="Explanation" class="form-control" rows="2"></textarea>
+                    <span asp-validation-for="Explanation" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="AudioPath" class="form-label"></label>
+                    <input asp-for="AudioPath" class="form-control" />
+                    <span asp-validation-for="AudioPath" class="text-danger"></span>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn-na-primary"><i class="bi bi-check-circle"></i> Save Question</button>
+                    <a asp-controller="AdminContent" asp-action="Editor" asp-route-type="quiz" asp-route-mode="edit" asp-route-id="@ViewBag.QuizId" class="btn-na-outline">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

@@ -1,0 +1,57 @@
+@model NihongoAcademy.Models.MasteryProgressViewModel
+@using NihongoAcademy.Services
+@{
+    var status = LessonMasteryPolicy.GetFirstPassTypeStatus(Model.Evaluation.Results);
+    var firstPassProgress = Model.Evaluation.Mastered
+        ? 100
+        : LessonMasteryPolicy.GetFirstPassDisplayPercent(status);
+    var modes = new List<(string Key, string Label)>
+    {
+        ("recognition", "Recognition"),
+        ("listening", "Listening"),
+        ("recall", "Recall")
+    };
+    if (Model.RequiresProduction) modes.Add(("production", "Output Task"));
+}
+<div id="mastery-metrics" class="row g-2 mb-3">
+    @foreach (var mode in modes)
+    {
+        var st = status.GetValueOrDefault(mode.Key);
+        var met = st?.Met ?? false;
+        var metric = Model.Evaluation.Results.GetValueOrDefault(mode.Key);
+        var accuracy = metric?.Accuracy ?? 0;
+        var isProduction = mode.Key == "production";
+        <div class="col-md-@(Model.RequiresProduction ? "3" : "4")">
+            <div class="na-card-flat p-3 h-100 @(met ? "border-na-accent" : "")" data-mastery-mode="@mode.Key">
+                <div class="d-flex justify-content-between">
+                    <strong>@mode.Label</strong>
+                    <span class="mastery-accuracy">@(isProduction ? (met ? "Done" : "Pending") : accuracy + "%")</span>
+                </div>
+                <div class="progress na-progress-thin my-2">
+                    <div class="progress-bar @(met ? "bg-na-accent" : "bg-na-primary")" data-mastery-bar="@mode.Key" style="width:@(isProduction ? (met ? 100 : 0) : accuracy)%"></div>
+                </div>
+                <div class="small text-muted">
+                    <span class="mastery-coverage">@(metric?.Covered ?? 0)</span>/@Model.ItemCount items ·
+                    <span class="mastery-attempts">@(metric?.Count ?? 0)</span> attempts
+                    @if (met) { <span class="text-na-accent ms-1" data-mastery-badge="@mode.Key">&#10003;</span> }
+                </div>
+            </div>
+        </div>
+    }
+</div>
+@if (Model.Evaluation.ActivitiesTotal > 0)
+{
+    var actAllDone = Model.Evaluation.ActivitiesComplete == Model.Evaluation.ActivitiesTotal;
+    <div class="small text-muted mb-2" id="activities-status">
+        Activities: <strong class="@(actAllDone ? "text-na-accent" : "")">@Model.Evaluation.ActivitiesComplete/@Model.Evaluation.ActivitiesTotal</strong> complete · required to unlock
+    </div>
+}
+<div class="na-card-flat p-3 mb-4">
+    <div class="d-flex justify-content-between small text-muted">
+        <span>@(Model.Evaluation.Mastered ? "Stable mastery achieved" : "First-pass progress (exercises)")</span>
+        <span id="first-pass-progress-label">@firstPassProgress%</span>
+    </div>
+    <div class="progress na-progress-thin mt-1">
+        <div class="progress-bar bg-na-primary" id="first-pass-progress-bar" style="width:@firstPassProgress%"></div>
+    </div>
+</div>

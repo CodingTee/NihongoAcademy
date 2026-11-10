@@ -4,7 +4,23 @@
     ViewData["Title"] = "Vocabulary Details";
 }
 
-<h2><i class="bi bi-eye"></i> Vocabulary Details</h2>
+@await Html.PartialAsync("_AdminPageHeader", new NihongoAcademy.Models.AdminPageHeaderModel
+{
+    Trail =
+    {
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Admin", Url = Url.Action("Index", "Admin") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Vocabulary", Url = Url.Action("Index", "AdminContent", new { type = "vocabulary" }) },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Details" }
+    },
+    Icon = "bi-eye",
+    Title = "Vocabulary Details",
+    TitleJp = "単語詳細",
+    Lead = Model.Japanese,
+    Actions =
+    {
+        new NihongoAcademy.Models.AdminPageHeaderAction { Text = "Back to Vocabulary", Url = Url.Action("Index", "AdminContent", new { type = "vocabulary" }), Icon = "bi-arrow-left", Outline = true }
+    }
+})
 
 <div class="na-card-flat">
     <dl class="row">
@@ -26,7 +42,7 @@
         <dd class="col-sm-9">@Model.ExampleEnglish</dd>
     </dl>
     <div class="mt-3">
-        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-na-primary"><i class="bi bi-pencil"></i> Edit</a>
-        <a asp-action="Index" class="btn-na-outline">Back to List</a>
+        <a asp-controller="AdminContent" asp-action="Editor" asp-route-type="vocabulary" asp-route-mode="edit" asp-route-id="@Model.Id" class="btn-na-primary"><i class="bi bi-pencil"></i> Edit</a>
+        <a asp-controller="AdminContent" asp-action="Index" asp-route-type="vocabulary" class="btn-na-outline">Back to List</a>
     </div>
 </div>

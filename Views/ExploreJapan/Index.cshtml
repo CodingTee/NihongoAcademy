@@ -2,12 +2,26 @@
     ViewData["Title"] = "Interactive Japan Map";
 }
 
-<section class="container my-5" id="japan-map">
-    <div class="text-center mb-4">
-        <h2 class="mt-2">Interactive Japan Map</h2>
-        <p class="text-muted">Explore Japan's 9 regions &mdash; each one's capital, cuisine, festivals, dialects, and landmarks in one place.</p>
-    </div>
+@* ===== Page banner (full-bleed, same as Practice) ===== *@
+<section class="na-page-hero-v2" aria-label="Explore Japan">
+        <div class="na-hero-v2-deco" aria-hidden="true">
+            <span class="na-hero-v2-glyph na-hero-v2-glyph--a">地</span>
+            <span class="na-hero-v2-glyph na-hero-v2-glyph--b">図</span>
+            <span class="na-hero-v2-glyph na-hero-v2-glyph--c">に</span>
+            <span class="na-hero-v2-glyph na-hero-v2-glyph--d">ほ</span>
+            <span class="na-hero-v2-petal"></span>
+            <span class="na-hero-v2-petal"></span>
+            <span class="na-hero-v2-petal"></span>
+            <span class="na-hero-v2-petal"></span>
+        </div>
+        <div class="na-page-hero-v2-inner">
+            <span class="na-page-hero-v2-eyebrow"><i class="bi bi-geo-alt"></i> Discover Nine Regions</span>
+            <h1 class="na-page-hero-v2-title">Explore Japan <span>日本を知る</span></h1>
+            <p class="na-page-hero-v2-lead">Explore Japan's 9 regions &mdash; each one's capital, cuisine, festivals, dialects, and landmarks in one place.</p>
+        </div>
+    </section>
 
+<section class="container" id="japan-map">
     @* ===== Featured video: Watch & Learn ===== *@
     <div class="na-video-embed mb-4">
         <div class="na-video-embed-header na-video-embed-header--with-cta">
@@ -21,7 +35,7 @@
                     Fun Facts About Japan &mdash; a short preview of the culture waiting for you.
                 </p>
             </div>
-            <a asp-controller="ExploreJapan" asp-action="Regions" class="na-video-embed-cta">
+            <a asp-controller="ExploreJapan" asp-action="Browse" asp-route-type="regions" class="na-video-embed-cta">
                 <i class="bi bi-globe-asia-australia"></i>
                 <span>Regions</span>
             </a>

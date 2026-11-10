@@ -1,0 +1,29 @@
+@model List<NihongoAcademy.Models.ReadingLibraryItemViewModel>
+@{
+    ViewData["Title"] = "Graded Reading";
+    var level = ViewBag.Level as string;
+}
+
+<div class="d-flex flex-wrap justify-content-between gap-3 align-items-start mb-4">
+    <div><h2>📖 Graded Reading <span class="na-subtitle-jp">多読</span></h2><p class="text-muted mb-0">Read practical Japanese at the right stage of your course.</p></div>
+    <div class="d-flex gap-2"><a asp-action="ReadingLibrary" class="@(level == null ? "btn-na-primary" : "btn-na-outline") btn-sm">All</a><a asp-action="ReadingLibrary" asp-route-level="A1" class="@(level == "A1" ? "btn-na-primary" : "btn-na-outline") btn-sm">A1</a><a asp-action="ReadingLibrary" asp-route-level="A2" class="@(level == "A2" ? "btn-na-primary" : "btn-na-outline") btn-sm">A2</a></div>
+</div>
+
+<div class="alert alert-info"><i class="bi bi-info-circle"></i> A passage unlocks when you have stably mastered its prerequisite lessons. A warning appears when more than 20% of its linked vocabulary is still new.</div>
+<div class="row g-4">
+@foreach (var item in Model)
+{
+    <div class="col-md-6 col-xl-4">
+        <article class="na-card h-100 @(item.IsUnlocked ? "" : "opacity-50")">
+            <div class="d-flex justify-content-between"><span class="na-badge">@item.Passage.Level · @item.Passage.TextType</span><span class="@(item.IsMastered ? "text-success" : "text-muted")">@(item.IsMastered ? "✓ Stable mastery" : $"{item.Accuracy}%")</span></div>
+            <h4 class="mt-3 mb-1">@item.Passage.Title</h4><div lang="ja" class="text-na-primary">@item.Passage.JapaneseTitle</div>
+            <p class="small text-muted mt-3"><i class="bi bi-clock"></i> ~@item.Passage.EstimatedMinutes min · New linked words: @item.UnknownPercentage%</p>
+            @if (item.UnknownPercentage > 20 && item.IsUnlocked) { <p class="small text-warning"><i class="bi bi-exclamation-triangle"></i> This may feel challenging. Use the glossary.</p> }
+            @if (item.IsUnlocked) { <a asp-action="Workspace" asp-route-skill="reading" asp-route-id="@item.Passage.Id" class="btn-na-primary btn-sm">Read and answer</a> }
+            else { <span class="text-muted small"><i class="bi bi-lock-fill"></i> Complete the earlier lesson first</span> }
+        </article>
+    </div>
+}
+</div>
+
+<div class="mt-4"><a asp-action="Reading" class="na-link-soft"><i class="bi bi-arrow-left"></i> Reading modes</a></div>

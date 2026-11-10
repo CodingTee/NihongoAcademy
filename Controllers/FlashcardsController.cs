@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NihongoAcademy.Data;
 using NihongoAcademy.Models;
+using NihongoAcademy.Services;
 
 namespace NihongoAcademy.Controllers
 {
@@ -12,12 +13,19 @@ namespace NihongoAcademy.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly IAppClock _clock;
 
-        public FlashcardsController(ApplicationDbContext context, UserManager<IdentityUser> userManager)
+        public FlashcardsController(ApplicationDbContext context, UserManager<IdentityUser> userManager, IAppClock clock)
         {
             _context = context;
             _userManager = userManager;
+            _clock = clock;
         }
+
+        public async Task<IActionResult> Session(string mode = "browse", int? categoryId = null)
+            => mode.Equals("practice", StringComparison.OrdinalIgnoreCase)
+                ? await Practice(categoryId)
+                : await Index(categoryId);
 
         public async Task<IActionResult> Index(int? categoryId)
         {
@@ -32,7 +40,7 @@ namespace NihongoAcademy.Controllers
             }
 
             var cards = await query.OrderBy(v => v.DisplayOrder).ToListAsync();
-            return View(cards);
+            return View(nameof(Index), cards);
         }
 
         public async Task<IActionResult> Practice(int? categoryId)
@@ -49,12 +57,13 @@ namespace NihongoAcademy.Controllers
                     .FirstOrDefaultAsync();
             }
 
-            // Order by SRS: due cards first, then new cards
+            // Load all cards first; SRS due-first ordering is applied further below,
+            // after each card's progress is loaded.
             var cards = await query.OrderBy(v => v.DisplayOrder).ToListAsync();
 
             if (!cards.Any())
             {
-                TempData["Message"] = "No flashcards available for this category yet.";
+                TempData["Message"] = "No cards are due for this category right now. Great job! Come back later or pick another category.";
                 return RedirectToAction(nameof(Index));
             }
 
@@ -66,11 +75,33 @@ namespace NihongoAcademy.Controllers
                     .ToListAsync()
                 : new List<FlashcardProgress>();
 
-            ViewBag.Categories = await _context.Categories.OrderBy(c => c.DisplayOrder).ToListAsync();
-            ViewBag.SRSProgress = progress.ToDictionary(fp => fp.VocabularyId);
-            ViewBag.DueCount = progress.Count(fp => fp.NextReview <= DateTime.Now);
+            // SRS due-first ordering: include only cards that are due (NextReview <= now)
+            // or brand-new (no progress yet), then sort due cards ahead of new ones.
+            // Reviewed-but-not-due cards are excluded until they come due again.
+            var now = _clock.Now;
+            var progressMap = progress.ToDictionary(fp => fp.VocabularyId);
+            cards = cards
+                .Where(c => !progressMap.ContainsKey(c.Id) || progressMap[c.Id].NextReview <= now)
+                .OrderBy(c =>
+                {
+                    if (!progressMap.ContainsKey(c.Id)) return 1;          // new cards after due
+                    return progressMap[c.Id].NextReview <= now ? 0 : 2;    // due first
+                })
+                .ThenBy(c => progressMap.ContainsKey(c.Id) ? progressMap[c.Id].NextReview : DateTime.MinValue)
+                .ThenBy(c => c.DisplayOrder)
+                .ToList();
 
-            return View(cards);
+            if (!cards.Any())
+            {
+                TempData["Message"] = "All caught up! No cards are currently due for review in this category.";
+                return RedirectToAction(nameof(Index), new { categoryId });
+            }
+
+            ViewBag.Categories = await _context.Categories.OrderBy(c => c.DisplayOrder).ToListAsync();
+            ViewBag.SRSProgress = progressMap;
+            ViewBag.DueCount = progress.Count(fp => fp.NextReview <= now);
+
+            return View(nameof(Practice), cards);
         }
 
         /// <summary>
@@ -96,7 +127,7 @@ namespace NihongoAcademy.Controllers
                     State = 0, // New
                     EaseFactor = 2.5,
                     Repetitions = 0,
-                    CreatedDate = DateTime.Now
+                    CreatedDate = _clock.Now
                 };
                 _context.FlashcardProgress.Add(progress);
             }
@@ -109,7 +140,7 @@ namespace NihongoAcademy.Controllers
                 progress.IntervalDays = 0;
                 progress.State = 1; // Learning
                 progress.EaseFactor = Math.Max(1.3, progress.EaseFactor - 0.2);
-                progress.NextReview = DateTime.Now.AddMinutes(10);
+                progress.NextReview = _clock.Now.AddMinutes(10);
             }
             else if (quality == 2)
             {
@@ -118,7 +149,7 @@ namespace NihongoAcademy.Controllers
                 progress.EaseFactor = Math.Max(1.3, progress.EaseFactor - 0.15);
                 progress.Repetitions++;
                 progress.State = 2; // Review
-                progress.NextReview = DateTime.Now.AddDays(progress.IntervalDays);
+                progress.NextReview = _clock.Now.AddDays(progress.IntervalDays);
             }
             else if (quality == 3)
             {
@@ -132,7 +163,7 @@ namespace NihongoAcademy.Controllers
 
                 progress.Repetitions++;
                 progress.State = 2; // Review
-                progress.NextReview = DateTime.Now.AddDays(progress.IntervalDays);
+                progress.NextReview = _clock.Now.AddDays(progress.IntervalDays);
             }
             else
             {
@@ -143,14 +174,11 @@ namespace NihongoAcademy.Controllers
                 progress.EaseFactor += 0.15;
                 progress.Repetitions++;
                 progress.State = 2; // Review
-                progress.NextReview = DateTime.Now.AddDays(progress.IntervalDays);
+                progress.NextReview = _clock.Now.AddDays(progress.IntervalDays);
             }
 
-            progress.LastReview = DateTime.Now;
+            progress.LastReview = _clock.Now;
             await _context.SaveChangesAsync();
-
-            // Cross-link: bump related lesson progress when reviewing flashcards
-            await UpdateRelatedLessonProgress(userId, vocabularyId);
 
             return Json(new
             {
@@ -161,81 +189,10 @@ namespace NihongoAcademy.Controllers
             });
         }
 
-        /// <summary>
-        /// When a user reviews a flashcard, also update the related lesson's progress.
-        /// Flashcard practice counts toward lesson completion (~30% of total progress).
-        /// Reading the lesson = 70%, practicing flashcards = 30%.
-        /// </summary>
-        private async Task UpdateRelatedLessonProgress(string userId, int vocabularyId)
-        {
-            // Find the category of this vocabulary
-            var vocab = await _context.Vocabulary.FindAsync(vocabularyId);
-            if (vocab == null) return;
-
-            // Find all published lessons in the same category
-            var categoryLessons = await _context.Lessons
-                .Where(l => l.CategoryId == vocab.CategoryId && l.IsPublished)
-                .ToListAsync();
-
-            if (!categoryLessons.Any()) return;
-
-            // Count total vocabulary in this category and how many the user has reviewed
-            var totalVocabInCategory = await _context.Vocabulary
-                .CountAsync(v => v.CategoryId == vocab.CategoryId);
-
-            var reviewedVocabInCategory = await _context.FlashcardProgress
-                .CountAsync(fp => fp.UserId == userId &&
-                    fp.State >= 1 &&
-                    _context.Vocabulary.Any(v => v.Id == fp.VocabularyId && v.CategoryId == vocab.CategoryId));
-
-            // Flashcard mastery = how much of the category's vocab the user has learned
-            var flashcardMasteryPct = totalVocabInCategory > 0
-                ? (int)Math.Round((double)reviewedVocabInCategory / totalVocabInCategory * 100)
-                : 0;
-
-            // Cap flashcard contribution at 30% of total lesson progress
-            var flashcardContribution = (int)Math.Round(flashcardMasteryPct * 0.3);
-
-            foreach (var lesson in categoryLessons)
-            {
-                var lessonProgress = await _context.LessonProgress
-                    .FirstOrDefaultAsync(p => p.UserId == userId && p.LessonId == lesson.Id);
-
-                if (lessonProgress == null)
-                {
-                    // Create progress entry for this lesson
-                    lessonProgress = new LessonProgress
-                    {
-                        UserId = userId,
-                        LessonId = lesson.Id,
-                        StartedDate = DateTime.Now,
-                        CompletionPercentage = flashcardContribution,
-                        IsCompleted = flashcardContribution >= 100,
-                        CompletedDate = flashcardContribution >= 100 ? DateTime.Now : null
-                    };
-                    _context.LessonProgress.Add(lessonProgress);
-                }
-                else if (!lessonProgress.IsCompleted)
-                {
-                    // Reading progress (70% weight) + flashcard progress (30% weight)
-                    // The reading portion is tracked by scroll progress in Details.cshtml
-                    // We calculate: newPct = max(existing, flashcardContribution)
-                    // Since reading tracks its own portion separately, we take the max
-                    // to avoid overwriting reading progress
-                    var newPct = Math.Max(lessonProgress.CompletionPercentage, flashcardContribution);
-                    if (newPct > lessonProgress.CompletionPercentage)
-                    {
-                        lessonProgress.CompletionPercentage = Math.Min(100, newPct);
-                        if (lessonProgress.CompletionPercentage >= 100)
-                        {
-                            lessonProgress.IsCompleted = true;
-                            lessonProgress.CompletedDate = DateTime.Now;
-                        }
-                    }
-                }
-            }
-
-            await _context.SaveChangesAsync();
-        }
+        // Flashcard review no longer mutates LessonProgress.CompletionPercentage. Under the
+        // current mastery model, lesson completion is driven solely by LessonMasteryService
+        // (reading scroll caps at 70%, first pass at 90%, stable at 100%), and flashcards are
+        // tracked by their own SRS (FlashcardProgress). Writing a capped 30% baseline here only
+        // created phantom progress on lessons the user had not opened, so the cross-link is gone.
     }
 }

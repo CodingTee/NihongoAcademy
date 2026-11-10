@@ -1,0 +1,89 @@
+@model List<NihongoAcademy.Models.GrammarPracticeCardViewModel>
+@{
+    ViewData["Title"] = "Grammar Practice";
+}
+
+<div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <h2><span class="na-page-icon">文</span> Grammar Practice <span class="na-subtitle-jp">文法練習</span></h2>
+        <p class="text-muted mb-0">Master meaning, error correction and sentence order separately.</p>
+    </div>
+    <a asp-action="Index" class="btn-na-outline btn-sm"><i class="bi bi-arrow-left"></i> Practice Hub</a>
+</div>
+
+@Html.AntiForgeryToken()
+
+@if (!Model.Any())
+{
+    <div class="na-card text-center py-5">
+        <div class="display-5 mb-3">🔒</div>
+        <h4>Your first grammar set is still locked</h4>
+        <p class="text-muted">Complete the required kana lessons with stable mastery to unlock A1 grammar practice.</p>
+        <a asp-controller="Lessons" asp-action="Index" class="btn-na-primary">Continue Learning</a>
+    </div>
+}
+else
+{
+    <div class="row g-4">
+        @foreach (var card in Model)
+        {
+            var grammar = card.GrammarPoint;
+            <div class="col-xl-6">
+                <article class="na-card h-100 grammar-card" data-grammar-id="@grammar.Id">
+                    <div class="d-flex justify-content-between align-items-start gap-3">
+                        <div>
+                            <small class="text-muted">@card.LessonTitle</small>
+                            <h4 class="text-na-primary mb-1">@grammar.Pattern</h4>
+                        </div>
+                        <span class="na-badge grammar-status @(card.IsMastered ? "bg-success text-white" : "")">
+                            @(card.IsMastered ? "Mastered" : $"{card.Accuracy}%")
+                        </span>
+                    </div>
+                    <p class="small text-muted">Stable mastery: at least 6 attempts, all 3 skills passed, 80% accuracy, and a correct review on a later date.</p>
+
+                    <div class="grammar-task mb-3" data-type="grammar-meaning">
+                        <strong>1. Choose the meaning</strong>
+                        <div class="d-grid gap-2 mt-2">
+                            @foreach (var option in card.MeaningOptions)
+                            {
+                                <button type="button" class="btn-na-outline grammar-option" data-answer="@option">@option</button>
+                            }
+                        </div>
+                        <div class="grammar-feedback small mt-2" aria-live="polite"></div>
+                    </div>
+
+                    <div class="grammar-task mb-3" data-type="grammar-correction">
+                        <strong>2. Fix the error</strong>
+                        <p lang="ja" class="fs-5 my-2 text-danger">@card.IncorrectExample</p>
+                        <div class="input-group">
+                            <input class="form-control grammar-answer" aria-label="Correct Japanese sentence" placeholder="Type the corrected Japanese sentence" />
+                            <button type="button" class="btn-na-primary grammar-submit">Check</button>
+                        </div>
+                        <div class="grammar-feedback small mt-2" aria-live="polite"></div>
+                    </div>
+
+                    <div class="grammar-task" data-type="grammar-order">
+                        <strong>3. Build the sentence</strong>
+                        <p class="small text-muted mb-2">@grammar.ExampleEnglish</p>
+                        <div class="grammar-build-answer border rounded p-2 mb-2 min-vh-0" style="min-height:48px" aria-label="Sentence answer"></div>
+                        <div class="d-flex flex-wrap gap-2 grammar-parts">
+                            @foreach (var part in card.SentenceParts.OrderBy(part => part, StringComparer.Ordinal))
+                            {
+                                <button type="button" class="btn-na-outline btn-sm grammar-part" data-part="@part">@part</button>
+                            }
+                        </div>
+                        <div class="d-flex gap-2 mt-2">
+                            <button type="button" class="btn-na-primary btn-sm grammar-submit">Check order</button>
+                            <button type="button" class="btn-na-outline btn-sm grammar-clear">Clear</button>
+                        </div>
+                        <div class="grammar-feedback small mt-2" aria-live="polite"></div>
+                    </div>
+                </article>
+            </div>
+        }
+    </div>
+}
+
+@section Scripts {
+    <script src="~/js/grammar-practice.js" asp-append-version="true"></script>
+}

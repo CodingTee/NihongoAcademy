@@ -1,0 +1,65 @@
+@model NihongoAcademy.Models.AdminProgressTestingViewModel
+@{
+    ViewData["Title"] = "Progress Testing";
+}
+
+@await Html.PartialAsync("_AdminPageHeader", new NihongoAcademy.Models.AdminPageHeaderModel
+{
+    Trail =
+    {
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Admin", Url = Url.Action("Index", "Admin") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Progress Testing" }
+    },
+    Icon = "bi-signpost-split",
+    Title = "Progress Testing",
+    TitleJp = "進捗テスト",
+    Lead = "Temporarily unlock course stages for quality assurance without weakening real mastery rules."
+})
+
+@if (TempData["Success"] != null) { <div class="alert alert-success">@TempData["Success"]</div> }
+@if (TempData["Error"] != null) { <div class="alert alert-danger">@TempData["Error"]</div> }
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="na-card-flat">
+            <h5>1. Select test account</h5>
+            <form asp-action="ProgressTesting" method="get">
+                <label class="form-label" for="userId">Account</label>
+                <select id="userId" name="userId" asp-items="Model.Users" class="form-select" onchange="this.form.submit()"></select>
+            </form>
+            <hr />
+            <div class="d-flex justify-content-between"><span>Real mastered lessons</span><strong>@Model.RealLessonCount</strong></div>
+            <div class="d-flex justify-content-between mt-2"><span>Simulated lessons</span><strong>@Model.SimulatedLessonCount</strong></div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="na-card-flat mb-4">
+            <h5>2. Choose the furthest completed lesson</h5>
+            <p class="text-muted small">The selected lesson and every core lesson before it will receive simulated stable mastery. For safety, use a dedicated account with no genuine lesson progress.</p>
+            <form asp-action="SimulateProgress" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="userId" value="@Model.SelectedUserId" />
+                <select name="targetLessonId" class="form-select mb-3" required>
+                    <option value="">Select a course stage...</option>
+                    @foreach (var stage in Model.Stages)
+                    {
+                        <option value="@stage.LessonId">@stage.SequenceNumber. @stage.CategoryName — @stage.StageLabel</option>
+                    }
+                </select>
+                <button class="btn btn-na-primary" type="submit"><i class="bi bi-unlock"></i> Apply simulated mastery</button>
+            </form>
+        </div>
+
+        <div class="na-card-flat border-danger">
+            <h5>Clear test data</h5>
+            <p class="text-muted small">Only records created by this admin tool are removed. Genuine learner progress remains untouched.</p>
+            <form asp-action="ClearSimulatedProgress" method="post" onsubmit="return confirm('Remove all simulated progress for this account? Real progress will be preserved.');">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="userId" value="@Model.SelectedUserId" />
+                <button class="btn btn-outline-danger" type="submit" @(Model.SimulatedLessonCount == 0 ? "disabled" : null)>
+                    <i class="bi bi-trash3"></i> Clear simulated progress
+                </button>
+            </form>
+        </div>
+    </div>
+</div>

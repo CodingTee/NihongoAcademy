@@ -1,0 +1,68 @@
+@page
+@model ResendEmailConfirmationModel
+@{
+    ViewData["Title"] = "Resend email confirmation";
+}
+
+<div class="na-register-page">
+    <span class="na-register-tree" aria-hidden="true"></span>
+
+    <div class="na-login-card">
+        <div class="na-login-brand">
+            <img src="~/sakura logo.png" alt="NihongoAcademy" class="na-login-brand-mark" />
+            <div class="na-login-brand-text">
+                <span class="na-login-brand-name">NihongoAcademy</span>
+                <span class="na-login-brand-jp">日本語学院</span>
+            </div>
+        </div>
+
+        <div class="na-login-header">
+            <h1>Resend email confirmation</h1>
+            <p>
+                <span class="na-login-wa">確認メールを再送</span><span> — we'll send you a fresh confirmation link.</span>
+            </p>
+        </div>
+
+        @if (Model.Sent)
+        {
+            <div class="na-fp-sent" role="status">
+                <i class="bi bi-envelope-check"></i>
+                <div class="na-fp-sent-body">
+                    <strong>Confirmation link sent</strong>
+                    <span>We emailed a new confirmation link to <b>@Model.Input.Email</b> — please also check your spam folder.</span>
+                </div>
+            </div>
+        }
+        else if (Model.AlreadyConfirmed)
+        {
+            <div class="na-fp-sent" role="status">
+                <i class="bi bi-patch-check"></i>
+                <div class="na-fp-sent-body">
+                    <strong>Nothing to do — you're all set</strong>
+                    <span>This account is already confirmed. You can <a asp-page="./Login">sign in right away</a>.</span>
+                </div>
+            </div>
+        }
+
+        <form method="post" class="na-login-form">
+            <div asp-validation-summary="ModelOnly" class="na-login-validation text-danger" role="alert"></div>
+
+            <div class="na-login-field">
+                <label asp-for="Input.Email">Email address</label>
+                <div class="na-login-input-wrap">
+                    <i class="bi bi-envelope"></i>
+                    <input asp-for="Input.Email" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                </div>
+                <span asp-validation-for="Input.Email" class="text-danger"></span>
+            </div>
+
+            <button type="submit" class="na-login-submit">Resend confirmation <i class="bi bi-envelope-paper"></i></button>
+
+            <p class="na-login-help">Remembered it? <a asp-page="./Login">Back to sign in</a></p>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

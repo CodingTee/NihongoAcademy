@@ -1,152 +1,861 @@
 @{
     ViewData["Title"] = "Sentence Builder";
+    var userTotalXp = ViewBag.TotalXp ?? 0;
+    var userWeeklyXp = ViewBag.WeeklyXp ?? 0;
+    var isAuthenticated = ViewBag.IsAuthenticated ?? false;
 }
 
-<nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
-        <li class="breadcrumb-item"><a asp-action="Index">Practice</a></li>
-        <li class="breadcrumb-item"><a asp-action="Challenges">Challenges</a></li>
-        <li class="breadcrumb-item active">Sentence Builder</li>
-    </ol>
-</nav>
+<div class="na-scramble-wrapper">
+    @* ===== Top Navigation & Session Stats Bar ===== *@
+    <div class="na-scramble-header d-flex justify-content-between align-items-center mb-4">
+        <a asp-action="Index" class="na-btn-circle-back" title="Exit to Practice Hub">
+            <i class="bi bi-x-lg"></i>
+        </a>
 
-<div class="mb-4">
-    <h2><span class="me-2">🧩</span> Sentence Builder</h2>
-    <p class="text-muted">Arrange the words into a correct Japanese sentence.</p>
-</div>
+        @* Progress bar *@
+        <div class="na-scramble-progress-track mx-3 flex-grow-1">
+            <div class="na-scramble-progress-fill" id="progress-bar" style="width: 10%;"></div>
+        </div>
 
-<div class="na-card-flat p-4" id="sentence-area">
-    @* Target answer area *@
-    <div class="mb-3">
-        <small class="text-muted d-block mb-2">Your sentence:</small>
-        <div id="sentence-target" class="na-sentence-slot p-3 rounded" style="min-height:60px;border:2px dashed var(--na-border);background:var(--na-bg);"></div>
+        @* Gamification Badges *@
+        <div class="d-flex align-items-center gap-2">
+            <div class="na-stat-pill na-stat-streak" id="streak-pill" title="Current streak combo">
+                <span class="na-fire-icon">🔥</span> <span id="streak-count">0</span>
+            </div>
+            <div class="na-stat-pill na-stat-xp" id="xp-pill" title="Weekly Sakura XP">
+                <span class="na-petal-icon">🌸</span> <span id="current-xp-display">@userWeeklyXp</span> XP
+            </div>
+        </div>
     </div>
 
-    @* Word tiles *@
-    <div class="mb-3">
-        <small class="text-muted d-block mb-2">Available words:</small>
-        <div id="sentence-words" class="d-flex flex-wrap gap-2"></div>
+    @* ===== Main Exercise Card ===== *@
+    <div class="na-card na-scramble-card position-relative p-4 p-md-5" id="exercise-card">
+        @* Floating XP Award Animation Container *@
+        <div id="floating-xp-container" class="position-absolute top-0 end-0 pe-4 pt-3" style="pointer-events:none;"></div>
+
+        @* Exercise Step Header *@
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <span class="badge rounded-pill px-3 py-1" style="background:#FFF0F3;color:#ee96a4;font-weight:700;font-size:0.8rem;border:1px solid #FFD6DE;">
+                <i class="bi bi-puzzle-fill me-1"></i> SENTENCE PUZZLE #<span id="question-number">1</span>
+            </span>
+            <span class="text-muted small" id="level-badge" style="font-weight:600;">JLPT A1 · Foundations</span>
+        </div>
+
+        @* Target English Prompt with Speaker Button *@
+        <div class="na-scramble-prompt d-flex align-items-center gap-3 mb-4 p-3 rounded-4" style="background:#FAF8F9;border:1px solid #F1E9EC;">
+            <button type="button" class="btn btn-na-audio na-btn-speaker" id="btn-audio-prompt" title="Listen to Japanese pronunciation">
+                <i class="bi bi-volume-up-fill fs-4"></i>
+            </button>
+            <div class="flex-grow-1">
+                <small class="text-muted text-uppercase fw-bold" style="font-size:0.75rem;letter-spacing:0.5px;">Translate into Japanese</small>
+                <h3 class="mb-0 fw-bold" id="english-prompt" style="color:var(--na-text);font-size:1.35rem;">
+                    Loading prompt...
+                </h3>
+            </div>
+        </div>
+
+        @* Slot Assembly Area (Where tiles land) *@
+        <div class="mb-4">
+            <label class="form-label text-muted small fw-semibold mb-2">
+                <i class="bi bi-arrow-down-short"></i> Your sentence assembly:
+            </label>
+            <div id="sentence-target" class="na-scramble-target p-3 rounded-4 d-flex flex-wrap align-items-center gap-2" style="min-height:76px;">
+                <span class="text-muted na-target-placeholder" id="target-placeholder">
+                    Tap the word blocks below to assemble your sentence...
+                </span>
+            </div>
+        </div>
+
+        @* Word Bank Tile Grid *@
+        <div class="mb-4">
+            <label class="form-label text-muted small fw-semibold mb-2">
+                <i class="bi bi-grid-fill"></i> Word bank:
+            </label>
+            <div id="sentence-bank" class="d-flex flex-wrap gap-2 justify-content-center p-3 rounded-4" style="background:#FDFCFD;min-height:100px;">
+                <!-- Word tiles dynamically injected here -->
+            </div>
+        </div>
+
+        @* Bottom Action Controls *@
+        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+            <button type="button" class="btn btn-na-outline btn-sm px-3" id="btn-reset" title="Return all tiles to bank">
+                <i class="bi bi-arrow-counterclockwise"></i> Reset Tiles
+            </button>
+            <button type="button" class="btn btn-na-primary px-4 py-2 fw-bold" id="btn-check" disabled>
+                <i class="bi bi-check-circle-fill me-1"></i> Check Answer
+            </button>
+        </div>
     </div>
 
-    <div class="d-flex gap-2">
-        <button class="btn-na-primary btn-sm" id="sentence-check"><i class="bi bi-check-lg"></i> Check</button>
-        <button class="btn-na-outline btn-sm" id="sentence-clear"><i class="bi bi-arrow-counterclockwise"></i> Reset</button>
-        <button class="btn-na-outline btn-sm" id="sentence-next" style="display:none;">Next</button>
+    @* ===== Bottom Result Drawer (Duolingo Style) ===== *@
+    <div id="feedback-drawer" class="na-scramble-drawer shadow-lg" style="display:none;">
+        <div class="container na-scramble-drawer-content py-3 px-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div id="drawer-icon" class="na-drawer-icon-bubble">
+                    <i class="bi bi-check-lg"></i>
+                </div>
+                <div>
+                    <h5 class="mb-1 fw-bold" id="drawer-title">Excellent!</h5>
+                    <div id="drawer-body" class="small"></div>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-na-speaker-sm btn-outline-secondary btn-sm" id="btn-drawer-audio" title="Replay Audio">
+                    <i class="bi bi-volume-up-fill"></i>
+                </button>
+                <button type="button" class="btn btn-lg fw-bold px-4" id="btn-drawer-next">
+                    Continue <i class="bi bi-arrow-right"></i>
+                </button>
+            </div>
+        </div>
     </div>
 
-    <div id="sentence-feedback" class="mt-3" style="display:none;"></div>
+    @* ===== Session Summary / Victory Screen ===== *@
+    <div id="victory-modal" class="na-card text-center p-5 shadow-lg mx-auto" style="display:none;max-width:580px;border-radius:24px;">
+        <div class="mb-3">
+            <span style="font-size:3.5rem;">🎉</span>
+        </div>
+        <h2 class="fw-bold mb-2">Lesson Completed!</h2>
+        <p class="text-muted mb-4">You've successfully solved all Japanese sentence puzzles in this round.</p>
+
+        <div class="row g-3 mb-4">
+            <div class="col-4">
+                <div class="p-3 rounded-4" style="background:#FFF0F3;border:1px solid #FFD6DE;">
+                    <div class="fs-3 fw-bold" style="color:#ee96a4;">+<span id="summary-xp">120</span></div>
+                    <small class="text-muted fw-semibold">XP Earned</small>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="p-3 rounded-4" style="background:#F0FDF4;border:1px solid #DCFCE7;">
+                    <div class="fs-3 fw-bold text-success"><span id="summary-accuracy">100</span>%</div>
+                    <small class="text-muted fw-semibold">Accuracy</small>
+                </div>
+            </div>
+            <div class="col-4">
+                <div class="p-3 rounded-4" style="background:#FFF7ED;border:1px solid #FFEDD5;">
+                    <div class="fs-3 fw-bold text-warning">🔥 <span id="summary-streak">8</span></div>
+                    <small class="text-muted fw-semibold">Max Combo</small>
+                </div>
+            </div>
+        </div>
+
+        @if (!isAuthenticated)
+        {
+            <div class="alert alert-warning text-start mb-4 small">
+                <i class="bi bi-info-circle-fill me-1"></i>
+                <strong>Playing as Guest:</strong> <a asp-area="Identity" asp-page="/Account/Login" class="alert-link">Log in or create an account</a> to save your XP and compete on the Weekly Leaderboard!
+            </div>
+        }
+
+        <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
+            <button type="button" class="btn btn-na-primary px-4 py-2" id="btn-replay">
+                <i class="bi bi-arrow-repeat me-1"></i> Play Next Round
+            </button>
+            <a asp-controller="Community" asp-action="Leaderboard" class="btn btn-na-outline px-4 py-2">
+                <i class="bi bi-trophy-fill me-1 text-warning"></i> View Leaderboard
+            </a>
+            <a asp-action="Index" class="btn btn-light px-3 py-2 text-muted">
+                Practice Hub
+            </a>
+        </div>
+    </div>
 </div>
 
-<div class="mt-4">
-    <a asp-action="Challenges" class="na-link-soft"><i class="bi bi-arrow-left"></i> Back to Challenges</a>
-</div>
+@* ===== Confetti Canvas for Victory ===== *@
+<canvas id="confetti-canvas" style="position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:9999;display:none;"></canvas>
+
+<style>
+/* Scramble Engine Aesthetic */
+.na-scramble-wrapper {
+    max-width: 820px;
+    margin: 0 auto;
+    padding-bottom: 90px;
+}
+
+.na-btn-circle-back {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    color: var(--na-text);
+    border: 1px solid var(--na-border);
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+.na-btn-circle-back:hover {
+    background: #FFF0F3;
+    color: var(--na-primary);
+    border-color: #FFD6DE;
+}
+
+.na-scramble-progress-track {
+    height: 14px;
+    background: #EFE8EC;
+    border-radius: 10px;
+    overflow: hidden;
+}
+.na-scramble-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ee96a4 0%, #d47b8c 100%);
+    border-radius: 10px;
+    transition: width 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.na-stat-pill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border: 1px solid var(--na-border);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+}
+.na-stat-streak {
+    color: #EA580C;
+    border-color: #FED7AA;
+    background: #FFF7ED;
+}
+.na-stat-xp {
+    color: #d47b8c;
+    border-color: #FFD6DE;
+    background: #FFF0F3;
+}
+
+/* 3D Duolingo-style Word Block Buttons */
+.na-word-tile {
+    font-family: inherit;
+    font-size: 1.15rem;
+    font-weight: 600;
+    padding: 10px 18px;
+    border-radius: 14px;
+    background: #FFFFFF;
+    color: #2D3748;
+    border: 2px solid #E2E8F0;
+    border-bottom: 4px solid #CBD5E1;
+    cursor: pointer;
+    user-select: none;
+    transition: transform 0.1s ease, box-shadow 0.1s ease, opacity 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+.na-word-tile:hover:not(:disabled) {
+    background: #F8FAFC;
+    border-color: #CBD5E1;
+    transform: translateY(-2px);
+}
+.na-word-tile:active:not(:disabled) {
+    transform: translateY(2px);
+    border-bottom-width: 2px;
+}
+.na-word-tile.placed {
+    background: #FFF0F3;
+    border-color: #FFD6DE;
+    border-bottom-color: #ee96a4;
+    color: #8C4050;
+}
+.na-word-tile.ghosted {
+    opacity: 0.22;
+    background: #E2E8F0;
+    border-color: #CBD5E1;
+    border-bottom-color: #CBD5E1;
+    cursor: default;
+    pointer-events: none;
+}
+
+/* Slot Target Box */
+.na-scramble-target {
+    background: #FAF8FA;
+    border: 2px dashed #E2D8DE;
+    transition: all 0.2s ease;
+}
+.na-scramble-target.has-items {
+    border-style: solid;
+    border-color: #EADCE2;
+    background: #FFFDFC;
+}
+
+/* Speaker Buttons */
+.na-btn-speaker {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #FFF0F3;
+    color: #ee96a4;
+    border: 1px solid #FFD6DE;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+.na-btn-speaker:hover {
+    background: #ee96a4;
+    color: #fff;
+    transform: scale(1.06);
+}
+
+/* Floating XP Award Animation */
+.na-floating-xp {
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #ee96a4;
+    animation: floatUpFade 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@@keyframes floatUpFade {
+    0% { opacity: 0; transform: translateY(15px) scale(0.8); }
+    30% { opacity: 1; transform: translateY(-5px) scale(1.15); }
+    100% { opacity: 0; transform: translateY(-40px) scale(1); }
+}
+
+/* Bottom Duolingo Result Drawer */
+.na-scramble-drawer {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1050;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.na-scramble-drawer.drawer-success {
+    background: #F0FDF4;
+    border-top: 3px solid #86EFAC;
+    color: #14532D;
+}
+.na-scramble-drawer.drawer-danger {
+    background: #FEF2F2;
+    border-top: 3px solid #FCA5A5;
+    color: #7F1D1D;
+}
+.na-drawer-icon-bubble {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    flex-shrink: 0;
+}
+.drawer-success .na-drawer-icon-bubble {
+    background: #22C55E;
+    color: #fff;
+}
+.drawer-danger .na-drawer-icon-bubble {
+    background: #EF4444;
+    color: #fff;
+}
+.drawer-success #btn-drawer-next {
+    background: #22C55E;
+    color: #fff;
+    border: none;
+    border-bottom: 4px solid #16A34A;
+}
+.drawer-success #btn-drawer-next:hover {
+    background: #16A34A;
+}
+.drawer-danger #btn-drawer-next {
+    background: #EF4444;
+    color: #fff;
+    border: none;
+    border-bottom: 4px solid #DC2626;
+}
+.drawer-danger #btn-drawer-next:hover {
+    background: #DC2626;
+}
+</style>
 
 @section Scripts {
-    <script>
-    (function() {
-        const sentences = [
-            { parts: ["わたし", "は", "学生", "です"], answer: "わたしは学生です" },
-            { parts: ["今日", "は", "いい", "天気", "ですね"], answer: "今日はいい天気ですね" },
-            { parts: ["お名前", "は", "何", "です", "か"], answer: "お名前は何ですか" },
-            { parts: ["日本語", "を", "勉強", "しています"], answer: "日本語を勉強しています" },
-            { parts: ["朝ご飯", "を", "食べました"], answer: "朝ご飯を食べました" },
-            { parts: ["友達", "と", "映画", "を", "見ます"], answer: "友達と映画を見ます" },
-            { parts: ["毎日", "日本語", "を", "練習", "します"], answer: "毎日日本語を練習します" },
-            { parts: ["東京", "へ", "行きたい", "です"], answer: "東京へ行きたいです" },
-        ];
-
-        let currentIdx = 0;
-        let placed = [];
-
-        function shuffle(arr) {
-            const a = [...arr];
-            for (let i = a.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [a[i], a[j]] = [a[j], a[i]];
-            }
-            return a;
+<script>
+(function() {
+    // ===== Question Bank (Rich JLPT A1 & A2 sentences with authentic distractors) =====
+    const questionBank = [
+        {
+            english: "I am a college student.",
+            parts: ["わたしは", "大学生", "です"],
+            distractors: ["先生", "でした", "を"],
+            fullJapanese: "わたしは大学生です",
+            level: "A1 · Self Introduction"
+        },
+        {
+            english: "Nice to meet you. My name is Ken.",
+            parts: ["はじめまして、", "ケンと", "申します"],
+            distractors: ["さようなら、", "昨日", "でした"],
+            fullJapanese: "はじめまして、ケンと申します",
+            level: "A1 · Greetings"
+        },
+        {
+            english: "I drink hot green tea every morning.",
+            parts: ["毎朝、", "温かい", "お茶を", "飲みます"],
+            distractors: ["コーヒーを", "食べます", "夜"],
+            fullJapanese: "毎朝、温かいお茶を飲みます",
+            level: "A1 · Daily Routine"
+        },
+        {
+            english: "I eat ramen with chopsticks.",
+            parts: ["はしで", "ラーメンを", "食べます"],
+            distractors: ["スプーンに", "行きます", "本"],
+            fullJapanese: "はしでラーメンを食べます",
+            level: "A1 · Food & Dining"
+        },
+        {
+            english: "I go to school by train.",
+            parts: ["電車で", "学校に", "行きます"],
+            distractors: ["バスを", "歩いて", "帰ります"],
+            fullJapanese: "電車で学校に行きます",
+            level: "A1 · Transportation"
+        },
+        {
+            english: "Excuse me, where is the train station?",
+            parts: ["すみません、", "駅は", "どこに", "ありますか"],
+            distractors: ["誰が", "いますか", "明日"],
+            fullJapanese: "すみません、駅はどこにありますか",
+            level: "A1 · Asking Directions"
+        },
+        {
+            english: "I want to go to Tokyo next year.",
+            parts: ["来年、", "東京へ", "行きたい", "です"],
+            distractors: ["行きました", "昨日", "映画"],
+            fullJapanese: "来年、東京へ行きたいです",
+            level: "A2 · Wishes & Plans"
+        },
+        {
+            english: "May I take a photo here?",
+            parts: ["ここで", "写真を", "撮っても", "いいですか"],
+            distractors: ["見ても", "だめです", "読んでも"],
+            fullJapanese: "ここで写真を撮ってもいいですか",
+            level: "A2 · Polite Requests"
+        },
+        {
+            english: "Kyoto was very quiet and beautiful.",
+            parts: ["京都は", "とても", "静かで", "綺麗でした"],
+            distractors: ["賑やかで", "です", "町を"],
+            fullJapanese: "京都はとても静かで綺麗でした",
+            level: "A2 · Describing Places"
+        },
+        {
+            english: "Have you ever climbed Mt. Fuji?",
+            parts: ["富士山に", "登ったことが", "ありますか"],
+            distractors: ["行った", "ありません", "川に"],
+            fullJapanese: "富士山に登ったことがありますか",
+            level: "A2 · Past Experience"
+        },
+        {
+            english: "Please speak a little more slowly.",
+            parts: ["もう少し", "ゆっくり", "話して", "ください"],
+            distractors: ["早く", "聞いて", "です"],
+            fullJapanese: "もう少しゆっくり話してください",
+            level: "A1 · Useful Phrases"
+        },
+        {
+            english: "I study Japanese for two hours every day.",
+            parts: ["毎日、", "二時間", "日本語を", "勉強します"],
+            distractors: ["英語を", "三日", "見ます"],
+            fullJapanese: "毎日、二時間日本語を勉強します",
+            level: "A1 · Daily Habits"
         }
+    ];
+
+    // ===== Web Audio API Sound Synthesizer =====
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function playTone(freq, type, duration, delay = 0) {
+        try {
+            if (!audioCtx) audioCtx = new AudioContext();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            setTimeout(() => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            }, delay);
+        } catch (e) {}
+    }
+
+    function playPop() {
+        playTone(520, 'sine', 0.08);
+    }
+
+    function playSuccessChord() {
+        playTone(523.25, 'triangle', 0.25, 0);   // C5
+        playTone(659.25, 'triangle', 0.25, 70);  // E5
+        playTone(783.99, 'triangle', 0.35, 140); // G5
+        playTone(1046.50, 'sine', 0.5, 210);     // C6
+    }
+
+    function playErrorBuzz() {
+        playTone(220, 'sawtooth', 0.2, 0);
+        playTone(196, 'sawtooth', 0.3, 100);
+    }
+
+    // ===== Speech Synthesis for Japanese =====
+    function speakJapanese(text) {
+        if (!window.speechSynthesis) return;
+        try {
+            window.speechSynthesis.cancel();
+            const cleanText = text.replace(/[、。！？]/g, '');
+            const utter = new SpeechSynthesisUtterance(cleanText);
+            utter.lang = 'ja-JP';
+            utter.rate = 0.88; // slightly slower for learners
+            window.speechSynthesis.speak(utter);
+        } catch (e) {}
+    }
+
+    // ===== Game Session State =====
+    let sessionQuestions = [];
+    let currentIdx = 0;
+    let placedTokens = [];
+    let currentStreak = 0;
+    let maxStreak = 0;
+    let correctCount = 0;
+    let totalXpEarned = 0;
+    const questionsPerSession = 8;
+
+    function shuffle(arr) {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    }
+
+    function initSession() {
+        sessionQuestions = shuffle(questionBank).slice(0, questionsPerSession);
+        currentIdx = 0;
+        currentStreak = 0;
+        maxStreak = 0;
+        correctCount = 0;
+        totalXpEarned = 0;
+        updateStats();
+
+        document.getElementById('exercise-card').style.display = 'block';
+        document.getElementById('victory-modal').style.display = 'none';
+        document.getElementById('confetti-canvas').style.display = 'none';
+
+        loadQuestion(currentIdx);
+    }
+
+    function updateStats() {
+        document.getElementById('streak-count').textContent = currentStreak;
+        const streakPill = document.getElementById('streak-pill');
+        if (currentStreak >= 3) {
+            streakPill.style.background = '#FFEDD5';
+            streakPill.style.borderColor = '#F97316';
+        } else {
+            streakPill.style.background = '#FFF7ED';
+            streakPill.style.borderColor = '#FED7AA';
+        }
+
+        const pct = Math.round(((currentIdx) / questionsPerSession) * 100);
+        document.getElementById('progress-bar').style.width = Math.max(10, pct) + '%';
+    }
+
+    function loadQuestion(idx) {
+        if (idx >= sessionQuestions.length) {
+            finishSession();
+            return;
+        }
+
+        const q = sessionQuestions[idx];
+        placedTokens = [];
+
+        document.getElementById('question-number').textContent = (idx + 1) + " of " + questionsPerSession;
+        document.getElementById('level-badge').textContent = q.level;
+        document.getElementById('english-prompt').textContent = q.english;
+
+        // Reset check button & target area
+        document.getElementById('btn-check').disabled = true;
+        hideDrawer();
+
+        const targetEl = document.getElementById('sentence-target');
+        targetEl.innerHTML = '<span class="text-muted na-target-placeholder" id="target-placeholder">Tap the word blocks below to assemble your sentence...</span>';
+        targetEl.classList.remove('has-items');
+
+        // Setup Word Bank (Combine correct parts + distractors, then shuffle)
+        const allPieces = [...q.parts.map(p => ({ text: p, isCorrect: true })), ...q.distractors.map(d => ({ text: d, isCorrect: false }))];
+        const shuffledPieces = shuffle(allPieces);
+
+        const bankEl = document.getElementById('sentence-bank');
+        bankEl.innerHTML = '';
+
+        shuffledPieces.forEach((piece, i) => {
+            const tile = document.createElement('button');
+            tile.type = 'button';
+            tile.className = 'na-word-tile';
+            tile.textContent = piece.text;
+            tile.dataset.bankId = 'tile-' + i;
+            tile.onclick = () => onBankTileClick(piece.text, tile);
+            bankEl.appendChild(tile);
+        });
+
+        // Set audio button
+        document.getElementById('btn-audio-prompt').onclick = () => speakJapanese(q.fullJapanese);
+        updateStats();
+    }
+
+    function onBankTileClick(text, tileEl) {
+        playPop();
+        tileEl.classList.add('ghosted');
+
+        placedTokens.push({ text: text, tileEl: tileEl });
+        renderPlacedTokens();
+    }
+
+    function onPlacedTileClick(tokenObj) {
+        playPop();
+        // Return tile to bank
+        tokenObj.tileEl.classList.remove('ghosted');
+        placedTokens = placedTokens.filter(t => t !== tokenObj);
+        renderPlacedTokens();
+    }
+
+    function renderPlacedTokens() {
+        const targetEl = document.getElementById('sentence-target');
+        targetEl.innerHTML = '';
+
+        if (placedTokens.length === 0) {
+            targetEl.innerHTML = '<span class="text-muted na-target-placeholder" id="target-placeholder">Tap the word blocks below to assemble your sentence...</span>';
+            targetEl.classList.remove('has-items');
+            document.getElementById('btn-check').disabled = true;
+        } else {
+            targetEl.classList.add('has-items');
+            document.getElementById('btn-check').disabled = false;
+
+            placedTokens.forEach(t => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'na-word-tile placed';
+                btn.textContent = t.text;
+                btn.onclick = () => onPlacedTileClick(t);
+                targetEl.appendChild(btn);
+            });
+        }
+    }
+
+    function resetTiles() {
+        playPop();
+        placedTokens.forEach(t => t.tileEl.classList.remove('ghosted'));
+        placedTokens = [];
+        renderPlacedTokens();
+    }
+
+    document.getElementById('btn-reset').onclick = resetTiles;
+
+    // ===== Check Answer Logic =====
+    document.getElementById('btn-check').onclick = checkAnswer;
+
+    function checkAnswer() {
+        const q = sessionQuestions[currentIdx];
+        const cleanTarget = q.fullJapanese.replace(/[、。！？\s]/g, '');
+        const userAnswer = placedTokens.map(t => t.text).join('').replace(/[、。！？\s]/g, '');
+
+        const isCorrect = (userAnswer === cleanTarget);
+
+        if (isCorrect) {
+            handleCorrect(q);
+        } else {
+            handleIncorrect(q);
+        }
+    }
+
+    function handleCorrect(q) {
+        playSuccessChord();
+        speakJapanese(q.fullJapanese);
+
+        currentStreak++;
+        if (currentStreak > maxStreak) maxStreak = currentStreak;
+        correctCount++;
+
+        // Bonus XP calculation
+        let xpGained = 15;
+        if (currentStreak >= 5) xpGained += 10;
+        else if (currentStreak >= 3) xpGained += 5;
+
+        totalXpEarned += xpGained;
+
+        // Show floating animation
+        triggerFloatingXp('+' + xpGained + ' XP');
+
+        // Award XP on server via AJAX
+        sendXpToServer(xpGained, q.fullJapanese, currentStreak);
+
+        // Show success drawer
+        const drawer = document.getElementById('feedback-drawer');
+        drawer.className = 'na-scramble-drawer shadow-lg drawer-success';
+        document.getElementById('drawer-icon').innerHTML = '<i class="bi bi-check-lg"></i>';
+        document.getElementById('drawer-title').textContent = currentStreak >= 3 ? 'Combo Streak! (+' + xpGained + ' XP)' : 'Correct! (+' + xpGained + ' XP)';
+        document.getElementById('drawer-body').innerHTML = `
+            <div class="fw-bold fs-6 mb-1">${q.fullJapanese}</div>
+            <div class="text-muted">${q.english}</div>
+        `;
+        document.getElementById('btn-drawer-audio').onclick = () => speakJapanese(q.fullJapanese);
+        drawer.style.display = 'block';
+
+        updateStats();
+    }
+
+    function handleIncorrect(q) {
+        playErrorBuzz();
+        currentStreak = 0;
+
+        const drawer = document.getElementById('feedback-drawer');
+        drawer.className = 'na-scramble-drawer shadow-lg drawer-danger';
+        document.getElementById('drawer-icon').innerHTML = '<i class="bi bi-x-lg"></i>';
+        document.getElementById('drawer-title').textContent = 'Not quite right';
+        document.getElementById('drawer-body').innerHTML = `
+            <div class="mb-1 text-muted">Correct answer:</div>
+            <div class="fw-bold fs-6 text-dark">${q.fullJapanese}</div>
+        `;
+        document.getElementById('btn-drawer-audio').onclick = () => speakJapanese(q.fullJapanese);
+        drawer.style.display = 'block';
+
+        updateStats();
+    }
+
+    function hideDrawer() {
+        document.getElementById('feedback-drawer').style.display = 'none';
+    }
+
+    document.getElementById('btn-drawer-next').onclick = () => {
+        hideDrawer();
+        currentIdx++;
+        loadQuestion(currentIdx);
+    };
+
+    function triggerFloatingXp(text) {
+        const container = document.getElementById('floating-xp-container');
+        const el = document.createElement('div');
+        el.className = 'na-floating-xp';
+        el.textContent = text;
+        container.appendChild(el);
+        setTimeout(() => el.remove(), 1200);
+    }
+
+    // ===== AJAX to Server =====
+    function sendXpToServer(amount, answer, streak) {
+        const tokenInput = document.querySelector('#na-global-antiforgery input[name="__RequestVerificationToken"]');
+        const token = tokenInput ? tokenInput.value : '';
+
+        fetch('/Practice/AwardSentenceXp', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'RequestVerificationToken': token
+            },
+            body: JSON.stringify({
+                amount: amount,
+                sentenceAnswer: answer,
+                streak: streak
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.weeklyXp) {
+                document.getElementById('current-xp-display').textContent = data.weeklyXp;
+            }
+        })
+        .catch(err => console.log('XP sync note:', err));
+    }
+
+    // ===== Victory Screen & Confetti =====
+    function finishSession() {
+        document.getElementById('exercise-card').style.display = 'none';
+        hideDrawer();
+
+        const modal = document.getElementById('victory-modal');
+        modal.style.display = 'block';
+
+        document.getElementById('summary-xp').textContent = totalXpEarned;
+        const acc = Math.round((correctCount / questionsPerSession) * 100);
+        document.getElementById('summary-accuracy').textContent = acc;
+        document.getElementById('summary-streak').textContent = maxStreak;
+
+        document.getElementById('progress-bar').style.width = '100%';
+
+        startConfetti();
+    }
+
+    document.getElementById('btn-replay').onclick = initSession;
+
+    // Simple canvas confetti
+    function startConfetti() {
+        const canvas = document.getElementById('confetti-canvas');
+        canvas.style.display = 'block';
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const petals = [];
+        const colors = ['#ee96a4', '#f7b2bd', '#fbd1d7', '#ffccd5', '#ffe5ec'];
+
+        for (let i = 0; i < 60; i++) {
+            petals.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * -canvas.height,
+                size: Math.random() * 8 + 8,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                vx: Math.random() * 2 - 1,
+                vy: Math.random() * 3 + 2,
+                angle: Math.random() * 360,
+                spin: Math.random() * 4 - 2
+            });
+        }
+
+        let animationFrame;
+        let elapsed = 0;
 
         function render() {
-            const s = sentences[currentIdx];
-            const target = document.getElementById('sentence-target');
-            const wordsContainer = document.getElementById('sentence-words');
-            placed = [];
-            target.innerHTML = '<span class="text-muted" style="font-size:0.85rem;">Click words below to build the sentence...</span>';
-            wordsContainer.innerHTML = '';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            petals.forEach(p => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.angle += p.spin;
 
-            const shuffled = shuffle(s.parts);
-            shuffled.forEach((word, i) => {
-                const chip = document.createElement('button');
-                chip.className = 'na-chip na-chip--clickable';
-                chip.textContent = word;
-                chip.dataset.index = i;
-                chip.onclick = () => addWord(word, chip);
-                wordsContainer.appendChild(chip);
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate((p.angle * Math.PI) / 180);
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, p.size, p.size * 0.6, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+
+                if (p.y > canvas.height) {
+                    p.y = -20;
+                    p.x = Math.random() * canvas.width;
+                }
             });
 
-            document.getElementById('sentence-feedback').style.display = 'none';
-            document.getElementById('sentence-next').style.display = 'none';
-        }
-
-        function addWord(word, chipEl) {
-            chipEl.style.opacity = '0.3';
-            chipEl.style.pointerEvents = 'none';
-            placed.push({ word, chipEl });
-
-            const target = document.getElementById('sentence-target');
-            target.innerHTML = '';
-            placed.forEach(p => {
-                const span = document.createElement('span');
-                span.className = 'na-sentence-word';
-                span.textContent = p.word;
-                span.onclick = () => removeWord(p);
-                target.appendChild(span);
-            });
-        }
-
-        function removeWord(item) {
-            placed = placed.filter(p => p !== item);
-            item.chipEl.style.opacity = '1';
-            item.chipEl.style.pointerEvents = 'auto';
-
-            const target = document.getElementById('sentence-target');
-            target.innerHTML = '';
-            if (placed.length === 0) {
-                target.innerHTML = '<span class="text-muted" style="font-size:0.85rem;">Click words below to build the sentence...</span>';
+            elapsed++;
+            if (elapsed < 200) {
+                animationFrame = requestAnimationFrame(render);
             } else {
-                placed.forEach(p => {
-                    const span = document.createElement('span');
-                    span.className = 'na-sentence-word';
-                    span.textContent = p.word;
-                    span.onclick = () => removeWord(p);
-                    target.appendChild(span);
-                });
+                canvas.style.display = 'none';
             }
         }
-
-        document.getElementById('sentence-check').onclick = () => {
-            const s = sentences[currentIdx];
-            const userAnswer = placed.map(p => p.word).join('');
-            const fb = document.getElementById('sentence-feedback');
-            fb.style.display = 'block';
-
-            if (userAnswer === s.answer) {
-                fb.innerHTML = '<div class="p-2 rounded" style="background:#E5F8E5;color:#2C5F2D;"><i class="bi bi-check-circle-fill"></i> Correct! <strong>' + s.answer + '</strong></div>';
-                document.getElementById('sentence-next').style.display = 'inline-block';
-            } else {
-                fb.innerHTML = '<div class="p-2 rounded" style="background:#FFE5E5;color:#D44;"><i class="bi bi-x-circle-fill"></i> Not quite. Try again or reset.</div>';
-            }
-        };
-
-        document.getElementById('sentence-clear').onclick = render;
-        document.getElementById('sentence-next').onclick = () => {
-            currentIdx = (currentIdx + 1) % sentences.length;
-            render();
-        };
-
         render();
-    })();
-    </script>
+    }
+
+    // Start on page load
+    initSession();
+})();
+</script>
 }

@@ -1,4 +1,4 @@
-﻿@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Identity
 @inject SignInManager<IdentityUser> SignInManager
 @inject UserManager<IdentityUser> UserManager
 
@@ -8,18 +8,23 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - NihongoAcademy</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/lib/bootstrap-icons/bootstrap-icons.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/bi-emoji.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/region-music.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/keyboard-shortcuts.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/NihongoAcademy.styles.css" asp-append-version="true" />
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="icon" type="image/x-icon" href="~/favicon.ico" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/noto-sans-jp.css" asp-append-version="true" />
+    <link rel="icon" type="image/png" href="~/sakura logo.png" asp-append-version="true" />
 </head>
 <body class="na-app">
+    <a class="na-skip-link" href="#@((Convert.ToString(ViewContext.RouteData.Values["controller"]) ?? "").StartsWith("Admin") ? "naAdminPane" : "main-content")">Skip to main content</a>
+    <div id="na-speech-status" class="visually-hidden" role="status" aria-live="polite"></div>
     <div class="sakura-decoration"></div>
 
-    <header class="sticky-top na-app-header">
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm na-navbar">
+    @* Single floating capsule navbar used on every page (matches the reference screenshot) *@
+    <header class="na-app-header na-app-header--floating">
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm na-navbar na-navbar--floating">
             <div class="container">
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
@@ -33,41 +38,50 @@
                             </a>
                         </div>
                         <div class="na-navbar-cell na-navbar-cell--center">
+                            @{
+                                var currentController = Convert.ToString(ViewContext.RouteData.Values["controller"]) ?? "";
+                                string NavActive(string controller) => currentController == controller ? "active" : "";
+                            }
                             <ul class="navbar-nav na-nav-primary">
                                 <li class="nav-item">
-                                    <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+                                    <a class="nav-link @NavActive("Home")" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" asp-area="" asp-controller="Lessons" asp-action="Index">Learn</a>
+                                    <a class="nav-link @NavActive("Lessons")" data-tour="nav-learn" asp-area="" asp-controller="Lessons" asp-action="Index">Learn</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" asp-area="" asp-controller="Practice" asp-action="Index">Practice</a>
+                                    <a class="nav-link @NavActive("Practice")" data-tour="nav-practice" asp-area="" asp-controller="Practice" asp-action="Index">Practice</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link" asp-area="" asp-controller="Community" asp-action="Index">Community</a>
+                                    <a class="nav-link @NavActive("Community")" data-tour="nav-community" asp-area="" asp-controller="Community" asp-action="Index">Community</a>
                                 </li>
-                                <li class="nav-item">
-                                    <a class="nav-link" asp-area="" asp-controller="Dashboard" asp-action="Index">Progress</a>
-                                </li>
+                                @if (User.Identity?.IsAuthenticated == true)
+                                {
+                                    <li class="nav-item">
+                                        <a class="nav-link @NavActive("Dashboard")" data-tour="nav-progress" asp-area="" asp-controller="Dashboard" asp-action="Index">Progress</a>
+                                    </li>
+                                }
                             </ul>
-                            <form class="na-nav-search" asp-controller="Lessons" asp-action="Index" method="get" role="search">
-                                <i class="bi bi-search na-nav-search-icon"></i>
-                                <input type="search"
-                                       name="searchString"
-                                       class="na-nav-search-input"
-                                       placeholder="Search Japanese… 日本語を検索"
-                                       aria-label="Search Japanese words"
-                                       value="@(ViewContext.HttpContext.Request.Query["searchString"].ToString())"
-                                       autocomplete="off" />
-                                <button type="submit" class="na-nav-search-btn" aria-label="Search">
-                                    <i class="bi bi-arrow-right"></i>
-                                </button>
-                            </form>
+                            @* Search is hidden in the floating capsule layout; lessons page retains its own search *@
                         </div>
                         <div class="na-navbar-cell na-navbar-cell--right">
-                            <a asp-controller="ExploreJapan" asp-action="Index" class="na-nav-icon-btn" title="Explore Japan 日本を探索">
-                                <i class="bi bi-geo-alt"></i>
-                            </a>
+                            @if (User.Identity?.IsAuthenticated == true)
+                            {
+                                @* Skipped for in-pane admin fetches: the header is not re-rendered,
+                                   so the streak DB query would be wasted work on every click. *@
+                                @if (Context.Request.Headers["X-Requested-With"] != "XMLHttpRequest")
+                                {
+                                    @await Component.InvokeAsync("StreakBadge")
+                                }
+                            }
+                            <div class="na-nav-quick-actions">
+                                <a asp-controller="Community" asp-action="Leaderboard" class="na-nav-icon-btn" title="Weekly Leaderboard ランキング">
+                                    <i class="bi bi-trophy"></i>
+                                </a>
+                                <a asp-controller="ExploreJapan" asp-action="Index" class="na-nav-icon-btn" title="Explore Japan 日本を探索">
+                                    <i class="bi bi-geo-alt"></i>
+                                </a>
+                            </div>
                             <partial name="_LoginPartial" />
                         </div>
                     </div>
@@ -76,32 +90,40 @@
         </nav>
     </header>
 
-    <div class="container mt-3" style="position: relative; z-index: 1;">
-        <main role="main" class="pb-3">
-            @if (TempData["Success"] != null)
-            {
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    <i class="bi bi-check-circle"></i> @TempData["Success"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    @{
+        // Admin workbench: every Admin* controller renders inside a persistent
+        // sidebar + content-pane shell (in-pane navigation, see wwwroot/js/admin-shell.js).
+        var __adminCtrl = Convert.ToString(ViewContext.RouteData.Values["controller"]) ?? "";
+        var __isAdminShell = __adminCtrl.StartsWith("Admin");
+    }
+    @if (__isAdminShell)
+    {
+        <div class="na-admin-shell" id="naAdminShell" style="position: relative; z-index: 1;">
+            <partial name="_AdminSidebar" />
+            <div class="na-admin-resizer" id="naAdminResizer" role="separator" aria-orientation="vertical" aria-label="Resize sidebar"></div>
+            <div class="na-admin-progress" id="naAdminProgress" aria-hidden="true"><span></span></div>
+            <main id="naAdminPane" role="main" class="na-admin-pane pb-3" tabindex="-1">
+                <div class="na-admin-pane-inner">
+                    <partial name="_TempDataAlerts" />
+                    @RenderBody()
                 </div>
-            }
-            @if (TempData["Error"] != null)
-            {
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="bi bi-exclamation-circle"></i> @TempData["Error"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            }
-            @if (TempData["Message"] != null)
-            {
-                <div class="alert alert-info alert-dismissible fade show" role="status">
-                    <i class="bi bi-info-circle"></i> @TempData["Message"]
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            }
-            @RenderBody()
-        </main>
-    </div>
+            </main>
+        </div>
+        <script src="~/js/admin-shell.js" asp-append-version="true"></script>
+        <script src="~/js/na-rich-editor.js" asp-append-version="true"></script>
+        @* Admin workbench: the cursor petal trail and 30s notification polling are
+           user-site features — disable them here to keep pane navigation smooth. *@
+        <script>window.naDisableSakuraCursor = true; window.naDisableNotificationPolling = true;</script>
+    }
+    else
+    {
+        <div class="container mt-3" style="position: relative; z-index: 1;">
+            <main id="main-content" role="main" class="pb-3" tabindex="-1">
+                <partial name="_TempDataAlerts" />
+                @RenderBody()
+            </main>
+        </div>
+    }
 
     <footer class="na-footer">
         <div class="container">
@@ -112,8 +134,8 @@
                 </div>
                 <div class="col-md-6 text-md-end">
                     &copy; 2026 NihongoAcademy &mdash;
-                    <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a> &mdash;
-                    <a asp-area="" asp-controller="Home" asp-action="About">About</a>
+                    <a asp-area="" asp-controller="Home" asp-action="Info" asp-route-section="privacy">Privacy</a> &mdash;
+                    <a asp-area="" asp-controller="Home" asp-action="Info" asp-route-section="about">About</a>
                 </div>
             </div>
         </div>
@@ -121,33 +143,139 @@
 
     @* Mobile bottom tab bar *@
     <nav class="na-mobile-nav d-md-none" aria-label="Mobile navigation">
-        <a asp-area="" asp-controller="Home" asp-action="Index" class="na-mobile-nav-item">
-            <i class="bi bi-house"></i>
-            <span>Home</span>
-        </a>
-        <a asp-area="" asp-controller="Lessons" asp-action="Index" class="na-mobile-nav-item">
+        <a asp-area="" asp-controller="Lessons" asp-action="Index" class="na-mobile-nav-item @(currentController == "Lessons" ? "na-mobile-nav-item--active" : "")">
             <i class="bi bi-book"></i>
             <span>Learn</span>
         </a>
-        <a asp-area="" asp-controller="Practice" asp-action="Index" class="na-mobile-nav-item">
+        <a asp-area="" asp-controller="Practice" asp-action="Index" class="na-mobile-nav-item @(currentController == "Practice" ? "na-mobile-nav-item--active" : "")">
             <i class="bi bi-pencil-square"></i>
             <span>Practice</span>
         </a>
-        <a asp-area="" asp-controller="Community" asp-action="Index" class="na-mobile-nav-item">
+        <a asp-area="" asp-controller="Community" asp-action="Index" class="na-mobile-nav-item @(currentController == "Community" ? "na-mobile-nav-item--active" : "")">
             <i class="bi bi-people"></i>
             <span>Community</span>
         </a>
-        <a asp-area="" asp-controller="Dashboard" asp-action="Index" class="na-mobile-nav-item">
-            <i class="bi bi-graph-up"></i>
-            <span>Progress</span>
-        </a>
+        @if (SignInManager.IsSignedIn(User))
+        {
+            <a asp-area="" asp-controller="Dashboard" asp-action="Index" class="na-mobile-nav-item @(currentController == "Dashboard" ? "na-mobile-nav-item--active" : "")">
+                <i class="bi bi-graph-up"></i>
+                <span>Progress</span>
+            </a>
+            <a asp-area="Identity" asp-page="/Account/Manage/Index" class="na-mobile-nav-item @(ViewContext.RouteData.Values["area"]?.ToString() == "Identity" ? "na-mobile-nav-item--active" : "")">
+                <i class="bi bi-person"></i>
+                <span>Profile</span>
+            </a>
+        }
+        else
+        {
+            <a asp-area="Identity" asp-page="/Account/Login" class="na-mobile-nav-item">
+                <i class="bi bi-box-arrow-in-right"></i>
+                <span>Sign in</span>
+            </a>
+        }
     </nav>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js" asp-append-version="true"></script>
+    <script src="~/js/avatar-builder.js" asp-append-version="true"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/sakura-cursor.js" asp-append-version="true"></script>
     <script src="~/js/translate-popup.js" asp-append-version="true"></script>
+    <script src="~/js/app-tour.js" asp-append-version="true"></script>
+    <script src="~/js/notifications.js" asp-append-version="true"></script>
+    <!-- the keyboard layer: one registry, every page can add its own keys -->
+    <script src="~/js/na-shortcuts.js" asp-append-version="true"></script>
+    @* site-keys.js teaches every page the G-chords, /, S, I/E and J/K —
+       page scripts register later and still win (engine priority). *@
+    <script src="~/js/site-keys.js" asp-append-version="true"></script>
+    @if (TempData["TriggerAppTour"] != null)
+    {
+        <script>window.naTriggerAppTour = true;</script>
+    }
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!window.AvatarBuilder) return;
+            document.querySelectorAll('.na-avatar-inline').forEach(function (el) {
+                try {
+                    var json = el.dataset.avatarJson || '{}';
+                    var config = JSON.parse(json);
+                    var size = parseInt(el.dataset.size, 10) || 36;
+                    var merged = Object.assign({}, AvatarBuilder.defaults, config);
+                    AvatarBuilder.renderAvatar(merged, el);
+                    el.style.width = size + 'px';
+                    el.style.height = size + 'px';
+                    el.style.overflow = 'hidden';
+                    el.style.borderRadius = '50%';
+                    el.style.flexShrink = '0';
+                    el.style.display = 'inline-flex';
+                    el.style.alignItems = 'center';
+                    el.style.justifyContent = 'center';
+                } catch (e) {}
+            });
+        });
+    </script>
+
+    @if (SignInManager.IsSignedIn(User))
+    {
+        @* ===== Global Floating Study Chat Box ===== *@
+        <div id="globalStudyChatBox" style="display:none;position:fixed;bottom:24px;right:24px;width:380px;max-width:92vw;background:#fff;border-radius:20px;box-shadow:0 18px 48px rgba(0,0,0,0.18);border:1px solid #FFD6DE;z-index:1070;overflow:hidden;flex-direction:column;">
+            @* Header *@
+            <div class="p-3 d-flex justify-content-between align-items-center" style="background:linear-gradient(135deg, #FFF0F3 0%, #FFE4E9 100%);border-bottom:1px solid #FFD6DE;">
+                <div class="d-flex align-items-center gap-2 min-w-0">
+                    <div id="globalChatAvatar" style="width:34px;height:34px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#ee96a4;color:#fff;font-weight:bold;font-size:0.85rem;flex-shrink:0;">
+                        🌸
+                    </div>
+                    <div class="min-w-0">
+                        <h6 class="mb-0 text-dark fw-bold text-truncate" id="globalChatTitle" style="font-size:0.92rem;">Study Chat</h6>
+                        <small class="text-muted d-block text-truncate" id="globalChatSubtitle" style="font-size:0.75rem;">Direct Message</small>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                    <a id="globalChatProfileLink" href="#" class="btn btn-sm btn-link text-muted p-1" title="View profile" style="font-size:0.85rem;">
+                        <i class="bi bi-box-arrow-up-right"></i>
+                    </a>
+                    <button type="button" class="btn-close" style="font-size:0.8rem;" onclick="window.GlobalStudyChat && window.GlobalStudyChat.close()" aria-label="Close"></button>
+                </div>
+            </div>
+
+            @* Thread List *@
+            <div id="globalChatThread" style="height:270px;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;background:#FAFBFD;">
+                <div class="text-center text-muted small py-4" id="globalChatEmpty">
+                    <i class="bi bi-chat-heart text-na-primary d-block fs-3 mb-1"></i>
+                    Start a study conversation!
+                </div>
+            </div>
+
+            @* Icebreaker Quick Japanese Chips *@
+            <div class="p-2 border-top bg-white" style="border-color:#F1F5F9 !important;">
+                <div class="d-flex align-items-center gap-1 mb-1 px-1">
+                    <i class="bi bi-lightbulb-fill text-warning" style="font-size:0.75rem;"></i>
+                    <span class="text-muted fw-semibold" style="font-size:0.72rem;">Japanese Icebreakers (Click to send):</span>
+                </div>
+                <div class="d-flex gap-1 overflow-auto pb-1" style="white-space:nowrap;scrollbar-width:none;">
+                    <button type="button" class="btn btn-sm btn-light border py-0 px-2 rounded-pill text-nowrap" style="font-size:0.75rem;" onclick="window.GlobalStudyChat && window.GlobalStudyChat.useIcebreaker('こんにちは！一緒に勉強しましょう！')">
+                        こんにちは！一緒に勉強しましょう！
+                    </button>
+                    <button type="button" class="btn btn-sm btn-light border py-0 px-2 rounded-pill text-nowrap" style="font-size:0.75rem;" onclick="window.GlobalStudyChat && window.GlobalStudyChat.useIcebreaker('日本語の勉強、頑張りましょう！')">
+                        日本語の勉強、頑張りましょう！
+                    </button>
+                    <button type="button" class="btn btn-sm btn-light border py-0 px-2 rounded-pill text-nowrap" style="font-size:0.75rem;" onclick="window.GlobalStudyChat && window.GlobalStudyChat.useIcebreaker('おすすめの勉強法はありますか？')">
+                        おすすめの勉強法はありますか？
+                    </button>
+                    <button type="button" class="btn btn-sm btn-light border py-0 px-2 rounded-pill text-nowrap" style="font-size:0.75rem;" onclick="window.GlobalStudyChat && window.GlobalStudyChat.useIcebreaker('JLPTの準備はどうですか？')">
+                        JLPTの準備はどうですか？
+                    </button>
+                </div>
+            </div>
+
+            @* Input Footer *@
+            <div class="p-2 border-top d-flex gap-2 bg-white" style="border-color:#F1F5F9 !important;">
+                <input type="text" id="globalChatInput" class="form-control form-control-sm" placeholder="Write message in Japanese or English..." autocomplete="off" onkeydown="if(event.key==='Enter') window.GlobalStudyChat && window.GlobalStudyChat.send();" />
+                <button type="button" class="btn btn-na-primary btn-sm px-3" onclick="window.GlobalStudyChat && window.GlobalStudyChat.send()">
+                    <i class="bi bi-send-fill"></i>
+                </button>
+            </div>
+        </div>
+    }
 
     @* Global anti-forgery token for AJAX POST requests (Fix #1: CSRF) *@
     <form id="na-global-antiforgery" style="display:none;">
@@ -155,5 +283,23 @@
     </form>
 
     @await RenderSectionAsync("Scripts", required: false)
+
+    @* ===== Site-wide background music =====
+         One loop track for the whole site (it used to live only on the
+         Explore Japan region pages). The pill is the switch, the B key does
+         the same thing, through window.naRegionMusic. *@
+    @{
+        // The track's file name is Korean and holds a comma, so it has to be
+        // percent-encoded before it can go in a URL — raw characters fail to
+        // resolve on disk.
+        var musicSrc = "/music/" + Uri.EscapeDataString("봄날, 벚꽃 그리고너.mp3");
+    }
+    <audio id="na-region-music" data-na-music loop preload="none" src="@musicSrc"></audio>
+    <button id="na-region-music-btn" class="na-music-btn" type="button"
+            data-na-music-toggle aria-pressed="false" aria-label="Background music">
+        <i class="bi bi-music-note-beamed"></i>
+        <span class="na-music-label">Music off</span>
+    </button>
+    <script src="~/js/region-music.js" asp-append-version="true"></script>
 </body>
 </html>

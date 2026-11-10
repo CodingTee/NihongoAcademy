@@ -1,14 +1,14 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;
-using System.Text;
-using System.Text.Encodings.Web;
+using System.Security.Claims;
+using NihongoAcademy.Data;
+using NihongoAcademy.Models;
+using NihongoAcademy.Services;
 
 namespace NihongoAcademy.Areas.Identity.Pages.Account
 {
@@ -20,21 +20,21 @@ namespace NihongoAcademy.Areas.Identity.Pages.Account
         private readonly IUserStore<IdentityUser> _userStore;
         private readonly IUserEmailStore<IdentityUser> _emailStore;
         private readonly ILogger<RegisterModel> _logger;
-        private readonly IEmailSender _emailSender;
+        private readonly ApplicationDbContext _context;
 
         public RegisterModel(
             UserManager<IdentityUser> userManager,
             IUserStore<IdentityUser> userStore,
             SignInManager<IdentityUser> signInManager,
             ILogger<RegisterModel> logger,
-            IEmailSender emailSender)
+            ApplicationDbContext context)
         {
             _userManager = userManager;
             _userStore = userStore;
             _emailStore = GetEmailStore();
             _signInManager = signInManager;
             _logger = logger;
-            _emailSender = emailSender;
+            _context = context;
         }
 
         [BindProperty]
@@ -43,6 +43,17 @@ namespace NihongoAcademy.Areas.Identity.Pages.Account
         public string ReturnUrl { get; set; } = string.Empty;
 
         public IList<AuthenticationScheme>? ExternalLogins { get; set; }
+
+        /// <summary>
+        /// Fixed security questions offered in the registration dropdown. The posted
+        /// value must match one of these exactly (server-side whitelist check).
+        /// </summary>
+        public static readonly string[] AllowedSecurityQuestions = new[]
+        {
+            "What is your mother's name?",
+            "What was your first pet's name?",
+            "What city were you born in?"
+        };
 
         public class InputModel
         {
@@ -61,6 +72,15 @@ namespace NihongoAcademy.Areas.Identity.Pages.Account
             [Display(Name = "Confirm password")]
             [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
             public string ConfirmPassword { get; set; } = string.Empty;
+
+            [Required(ErrorMessage = "Please set a security question.")]
+            [Display(Name = "Security question")]
+            public string SecurityQuestion { get; set; } = string.Empty;
+
+            [Required(ErrorMessage = "Please provide an answer to your security question.")]
+            [Display(Name = "Security answer")]
+            public string SecurityAnswer { get; set; } = string.Empty;
+
         }
 
         public async Task OnGetAsync(string? returnUrl = null)
@@ -75,10 +95,22 @@ namespace NihongoAcademy.Areas.Identity.Pages.Account
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
             if (ModelState.IsValid)
             {
+                // Server-side whitelist: the posted question must be one of the fixed
+                // dropdown options (a malicious client could post anything otherwise).
+                if (!AllowedSecurityQuestions.Contains(Input.SecurityQuestion))
+                {
+                    ModelState.AddModelError("Input.SecurityQuestion", "Please choose one of the listed security questions.");
+                    return Page();
+                }
+
                 var user = CreateUser();
 
                 await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
                 await _emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+                // Accounts are confirmed automatically at registration (the email
+                // verification-code step was removed), so the new account is created
+                // already confirmed - no separate confirmation email is needed.
+                user.EmailConfirmed = true;
                 var result = await _userManager.CreateAsync(user, Input.Password);
 
                 if (result.Succeeded)
@@ -86,31 +118,29 @@ namespace NihongoAcademy.Areas.Identity.Pages.Account
                     _logger.LogInformation("User created a new account with password.");
 
                     var userId = await _userManager.GetUserIdAsync(user);
-                    var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                    code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
-                    var callbackUrl = Url.Page(
-                        "/Account/ConfirmEmail",
-                        pageHandler: null,
-                        values: new { area = "Identity", userId = userId, code = code },
-                        protocol: Request.Scheme);
-
-                    if (callbackUrl == null)
+                    var roleResult = await _userManager.AddToRoleAsync(user, "Student");
+                    if (!roleResult.Succeeded)
                     {
-                        throw new InvalidOperationException("Unable to generate the email confirmation URL.");
+                        await _userManager.DeleteAsync(user);
+                        foreach (var error in roleResult.Errors)
+                            ModelState.AddModelError(string.Empty, error.Description);
+                        return Page();
                     }
-
-                    await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
-                        $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
-
-                    if (_userManager.Options.SignIn.RequireConfirmedAccount)
+                    _context.UserProfiles.Add(new UserProfile
                     {
-                        return RedirectToPage("RegisterConfirmation", new { email = Input.Email });
-                    }
-                    else
-                    {
-                        await _signInManager.SignInAsync(user, isPersistent: false);
-                        return LocalRedirect(returnUrl ?? "~/");
-                    }
+                        UserId = userId
+                    });
+                    await _context.SaveChangesAsync();
+
+                    // Store the security question + a hashed answer as claims. The forgot-password
+                    // flow reads these back to verify the person really owns the account before
+                    // resetting the password (replacing the removed email verification-code system).
+                    await _userManager.AddClaimAsync(user, new Claim("SecurityQuestion", Input.SecurityQuestion));
+                    await _userManager.AddClaimAsync(user, new Claim("SecurityAnswerHash", SecurityAnswerHasher.Hash(Input.SecurityAnswer)));
+
+                    // Account created and confirmed, so sign in directly and go to onboarding.
+                    await _signInManager.SignInAsync(user, isPersistent: false);
+                    return RedirectToPage("Onboarding", new { returnUrl });
                 }
                 foreach (var error in result.Errors)
                 {

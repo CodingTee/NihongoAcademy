@@ -1,5 +1,9 @@
 /* ===== NihongoAcademy — Subtle Sakura Cursor Trail (Global) ===== */
 (function () {
+    // Disabled on the admin workbench (see _Layout admin branch) — the petal trail
+    // adds constant DOM churn while moving the mouse.
+    if (window.naDisableSakuraCursor) return;
+
     var lastTime = 0;
     var throttle = 80; // ms between particles
     var particles = [];
@@ -9,6 +13,9 @@
     function createPetal(x, y) {
         var el = document.createElement('div');
         el.className = 'na-sakura-petal';
+        // Cycle through the four petal images so the cursor trail varies.
+        var petalImg = 1 + Math.floor(Math.random() * 4);
+        el.style.backgroundImage = "url('/images/petal" + petalImg + ".png')";
         el.style.left = x + 'px';
         el.style.top = y + 'px';
         // Slight random offset

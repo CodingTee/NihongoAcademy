@@ -1,21 +1,26 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using NihongoAcademy.Models;
+using System.Security.Cryptography;
 
 namespace NihongoAcademy.Data
 {
     public static partial class DataSeeder
     {
-        public static async Task SeedAsync(IServiceProvider serviceProvider)
+        public static async Task SeedAsync(IServiceProvider serviceProvider, bool validateCurriculum = true)
         {
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
             var userManager = serviceProvider.GetRequiredService<UserManager<IdentityUser>>();
             var context = serviceProvider.GetRequiredService<ApplicationDbContext>();
+            var environment = serviceProvider.GetRequiredService<IHostEnvironment>();
+            var configuration = serviceProvider.GetRequiredService<IConfiguration>();
 
             // Note: db.Database.Migrate() is already called in Program.cs, no need here
 
             await SeedRolesAsync(roleManager);
-            await SeedAdminUserAsync(userManager);
+            if (environment.IsDevelopment())
+                await SeedAdminUserAsync(userManager, configuration);
             await SeedCategoriesAsync(context);
             await SeedLessonsAsync(context);
             await SeedVocabularyAsync(context);
@@ -26,14 +31,46 @@ namespace NihongoAcademy.Data
             await SeedA1IntroductionUnitAsync(context);
             await SeedA1FamilyUnitAsync(context);
             await SeedRemainingA1CurriculumAsync(context);
-                       await SeedA1FoundationActivitiesAsync(context);
-                       await SeedKanjiFoundationCurriculumAsync(context);
-                       await SeedA2CurriculumAsync(context);
+            await SeedA1FoundationActivitiesAsync(context);
+            await SeedA1GrammarPointsAsync(context);
+            await SeedKanjiFoundationCurriculumAsync(context);
+            await SeedVocabularyExampleReadingsAsync(context);
+            await SeedA2CurriculumAsync(context);
+            await SeedA2GrammarPointsAsync(context);
+            await SeedReadingCurriculumAsync(context);
+            await SeedWritingCurriculumAsync(context);
+            await SeedSpeakingCurriculumAsync(context);
+            await SeedListeningCurriculumAsync(context);
             await SeedLessonPrerequisitesAsync(context);
-            await ValidateHiraganaCurriculumAsync(context);
+            if (environment.IsDevelopment())
+                await SeedDemoProgressAsync(userManager, context);
             await SeedQuizzesAsync(context);
-            await SeedCommunityUsersAsync(userManager, context);
-            await SeedCommunityPostsAsync(context);
+            await SeedA1FinalAssessmentAsync(context);
+            await SeedKanjiFinalAssessmentAsync(context);
+            await SeedA2FinalAssessmentAsync(context);
+
+            if (validateCurriculum)
+            {
+                await ValidateHiraganaCurriculumAsync(context);
+                await ValidateKatakanaCurriculumAsync(context);
+                await ValidateA1CurriculumAsync(context);
+                await ValidateKanjiCurriculumAsync(context);
+                await ValidateA2CurriculumAsync(context);
+                await ValidateGrammarCurriculumAsync(context);
+                await ValidateIntegratedSkillsCurriculumAsync(context);
+                await ValidateCompleteLearningPathAsync(context);
+                await ValidateContentQualityAsync(context);
+            }
+            // Demo community accounts/posts are dev-only AND opt-in via
+            // DatabaseStartup:SeedCommunityActivity. Production never seeds them
+            // (IsDevelopment is false), and a developer can flip the flag to keep
+            // their local DB clean. The same flag already gates the XP top-up in
+            // XpService, so it is a single switch for all seed-community behaviour.
+            if (environment.IsDevelopment() && configuration.GetValue("DatabaseStartup:SeedCommunityActivity", true))
+            {
+                await SeedCommunityUsersAsync(userManager, context);
+                await SeedCommunityPostsAsync(context);
+            }
         }
 
         private static async Task SeedLessonPrerequisitesAsync(ApplicationDbContext context)
@@ -55,7 +92,10 @@ namespace NihongoAcademy.Data
                 .ToList();
             var coreLessonIds = ordered.Select(l => l.Id).ToHashSet();
             var stale = await context.LessonPrerequisites
-                .Where(p => coreLessonIds.Contains(p.LessonId) && coreLessonIds.Contains(p.PrerequisiteLessonId))
+                // The guided path owns every prerequisite attached to a core
+                // lesson. Remove legacy links even when their prerequisite is
+                // an unpublished/retired lesson outside the current path.
+                .Where(p => coreLessonIds.Contains(p.LessonId))
                 .ToListAsync();
             context.LessonPrerequisites.RemoveRange(stale.Where(p =>
                 !desiredPairs.Any(pair => pair.LessonId == p.LessonId && pair.PrerequisiteId == p.PrerequisiteLessonId)));
@@ -78,9 +118,9 @@ namespace NihongoAcademy.Data
             await context.SaveChangesAsync();
         }
 
-        private static async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager)
+        public static async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager)
         {
-            string[] roles = { "Admin", "Student" };
+            string[] roles = { "SuperAdmin", "Admin", "Student" };
             foreach (var role in roles)
             {
                 if (!await roleManager.RoleExistsAsync(role))
@@ -90,8 +130,25 @@ namespace NihongoAcademy.Data
             }
         }
 
-        private static async Task SeedAdminUserAsync(UserManager<IdentityUser> userManager)
+        public static async Task SeedAdminUserAsync(UserManager<IdentityUser> userManager, IConfiguration configuration)
         {
+            // Seed-account passwords resolve from configuration (user-secrets / env / appsettings)
+            // under "AdminSeed:*". No backdoor password travels with the source code. If a value is
+            // not configured, a strong random password is generated and printed to the console once,
+            // so a fresh developer still gets working accounts without a shared, guessable password.
+            string ResolvePassword(string configKey, string accountLabel)
+            {
+                var configured = configuration[configKey];
+                if (!string.IsNullOrWhiteSpace(configured))
+                    return configured;
+
+                var generated = GenerateStrongPassword();
+                Console.WriteLine(
+                    $"[DataSeeder] WARNING: '{configKey}' is not configured. " +
+                    $"Generated a one-time random password for the '{accountLabel}' seed account: {generated}");
+                return generated;
+            }
+
             var adminEmail = "admin@nihongoacademy.com";
             var admin = await userManager.FindByEmailAsync(adminEmail);
 
@@ -105,14 +162,15 @@ namespace NihongoAcademy.Data
                     PhoneNumber = "+60123456789",
                     PhoneNumberConfirmed = true
                 };
-                await userManager.CreateAsync(admin, "Admin@123456");
+                await userManager.CreateAsync(admin, ResolvePassword("AdminSeed:AdminPassword", "admin"));
             }
 
-            // 始终确保管理员账号拥有 Admin 角色，避免历史数据中账号存在但角色缺失，
-            // 导致 admin 登录后看不到管理面板（/Admin 受 [Authorize(Roles="Admin")] 保护）
-            if (!await userManager.IsInRoleAsync(admin, "Admin"))
+            // 始终确保管理员账号拥有 SuperAdmin 角色（可管理角色账号的最高权限），
+            // 避免历史数据中账号存在但角色缺失，导致登录后看不到管理面板
+            // （/Admin 受 [Authorize(Roles="Admin,SuperAdmin")] 保护）。
+            if (!await userManager.IsInRoleAsync(admin, "SuperAdmin"))
             {
-                await userManager.AddToRoleAsync(admin, "Admin");
+                await userManager.AddToRoleAsync(admin, "SuperAdmin");
             }
 
             var studentEmail = "student@nihongoacademy.com";
@@ -125,12 +183,110 @@ namespace NihongoAcademy.Data
                     Email = studentEmail,
                     EmailConfirmed = true
                 };
-                await userManager.CreateAsync(student, "Student@123456");
+                await userManager.CreateAsync(student, ResolvePassword("AdminSeed:StudentPassword", "student"));
             }
             if (!await userManager.IsInRoleAsync(student, "Student"))
             {
                 await userManager.AddToRoleAsync(student, "Student");
             }
+
+            const string demoEmail = "demo@nihongoacademy.com";
+            var demo = await userManager.FindByEmailAsync(demoEmail);
+            if (demo == null)
+            {
+                demo = new IdentityUser { UserName = demoEmail, Email = demoEmail, EmailConfirmed = true };
+                await userManager.CreateAsync(demo, ResolvePassword("AdminSeed:DemoPassword", "demo"));
+            }
+            if (!await userManager.IsInRoleAsync(demo, "Student"))
+                await userManager.AddToRoleAsync(demo, "Student");
+        }
+
+        /// <summary>
+        /// Generates a 16-character password satisfying ASP.NET Identity's default requirements
+        /// (digit + lowercase + uppercase + non-alphanumeric). Used only as a fallback when a
+        /// seed-account password is not explicitly configured.
+        /// </summary>
+        private static string GenerateStrongPassword()
+        {
+            const string lower = "abcdefghijkmnopqrstuvwxyz";
+            const string upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+            const string digit = "23456789";
+            const string special = "!@#$%&*?";
+            var all = lower + upper + digit + special;
+
+            using var rng = RandomNumberGenerator.Create();
+            int NextIndex(string set)
+            {
+                var bytes = new byte[4];
+                rng.GetBytes(bytes);
+                return Math.Abs(BitConverter.ToInt32(bytes, 0)) % set.Length;
+            }
+
+            var chars = new List<char>
+            {
+                lower[NextIndex(lower)],
+                upper[NextIndex(upper)],
+                digit[NextIndex(digit)],
+                special[NextIndex(special)]
+            };
+            for (var i = 0; i < 12; i++)
+                chars.Add(all[NextIndex(all)]);
+
+            // Fisher-Yates shuffle so the required characters are not always at the front.
+            for (var i = chars.Count - 1; i > 0; i--)
+            {
+                var bytes = new byte[4];
+                rng.GetBytes(bytes);
+                var j = Math.Abs(BitConverter.ToInt32(bytes, 0)) % (i + 1);
+                (chars[i], chars[j]) = (chars[j], chars[i]);
+            }
+
+            return new string(chars.ToArray());
+        }
+
+        private static async Task SeedDemoProgressAsync(UserManager<IdentityUser> userManager, ApplicationDbContext context)
+        {
+            var demo = await userManager.FindByEmailAsync("demo@nihongoacademy.com");
+            if (demo == null) return;
+
+            if (!await context.UserProfiles.AnyAsync(profile => profile.UserId == demo.Id))
+            {
+                context.UserProfiles.Add(new UserProfile
+                {
+                    UserId = demo.Id,
+                    CurrentLevel = "A1",
+                    LearningGoal = "Everyday conversation",
+                    AgeGroup = "18-24"
+                });
+            }
+
+            var categoryOrder = new[] { "Hiragana", "Katakana", "A1 Course", "Kanji", "A2 Course" };
+            var lessons = await context.Lessons.Include(lesson => lesson.Category)
+                .Where(lesson => lesson.IsPublished && categoryOrder.Contains(lesson.Category!.Name)).ToListAsync();
+            var ordered = lessons.OrderBy(lesson => Array.IndexOf(categoryOrder, lesson.Category!.Name))
+                .ThenBy(lesson => lesson.DisplayOrder).ThenBy(lesson => lesson.Id).ToList();
+            var targetIndex = ordered.FindIndex(lesson => lesson.Title == "A1: Shop for an item");
+            if (targetIndex < 0) return;
+
+            var selectedIds = ordered.Take(targetIndex + 1).Select(lesson => lesson.Id).ToHashSet();
+            var existing = await context.LessonProgress.Where(progress => progress.UserId == demo.Id)
+                .ToDictionaryAsync(progress => progress.LessonId);
+            var now = DateTime.UtcNow;
+            foreach (var lessonId in selectedIds)
+            {
+                if (existing.TryGetValue(lessonId, out var progress) && !progress.IsAdminSimulated) continue;
+                var item = existing.GetValueOrDefault(lessonId) ?? new LessonProgress { UserId = demo.Id, LessonId = lessonId };
+                item.IsCompleted = true;
+                item.CompletionPercentage = 100;
+                item.StartedDate = now.AddDays(-14);
+                item.FirstMasteryPassedDate = now.AddDays(-10);
+                item.MasteryReviewDueDate = now.AddDays(-9);
+                item.CompletedDate = now.AddDays(-8);
+                item.StableMasteryDate = now.AddDays(-8);
+                item.IsAdminSimulated = true;
+                if (!existing.ContainsKey(lessonId)) context.LessonProgress.Add(item);
+            }
+            await context.SaveChangesAsync();
         }
 
         private static async Task SeedCategoriesAsync(ApplicationDbContext context)
@@ -292,10 +448,13 @@ namespace NihongoAcademy.Data
             var lesson = await context.Lessons.FirstOrDefaultAsync(l => l.Title == "Hiragana Foundations: A-row");
             if (lesson == null) return;
 
-            var items = await context.Vocabulary
-                .Where(v => v.Category!.Name == "Hiragana" && new[] { "あ", "い", "う", "え", "お" }.Contains(v.Japanese))
-                .OrderBy(v => v.DisplayOrder)
+            string[] vowelOrder = { "あ", "い", "う", "え", "お" };
+            var vowels = await context.Vocabulary
+                .Where(v => v.Category!.Name == "Hiragana" && vowelOrder.Contains(v.Japanese))
                 .ToListAsync();
+            var items = vowelOrder
+                .Select(kana => vowels.Single(v => v.Japanese == kana))
+                .ToList();
             await SyncLessonItems(context, lesson, items);
         }
 
@@ -382,6 +541,20 @@ namespace NihongoAcademy.Data
                 ["れ"] = "the right stroke travels outward without closing a loop", ["ろ"] = "one open curve; contrast the ending with る",
                 ["わ"] = "the right curve stays open and flowing", ["を"] = "three strokes; it is mainly used as the object particle", ["ん"] = "one continuous nasal-sign curve; contrast it with そ"
             };
+            var katakanaGuidance = new Dictionary<string, string>
+            {
+                ["ア"]="three strokes; the final diagonal sweeps down left", ["イ"]="two separate diagonal strokes", ["ウ"]="three strokes; retain the short top mark", ["エ"]="three strokes; keep the middle vertical centred", ["オ"]="three strokes; the last stroke sweeps left",
+                ["カ"]="two strokes; keep the right stroke separate", ["キ"]="three strokes; two horizontals cross the long diagonal", ["ク"]="two strokes forming an open angle", ["ケ"]="three strokes; the extra short left stroke distinguishes it from ク", ["コ"]="two parallel cornered strokes",
+                ["サ"]="three strokes; two upper strokes precede the long diagonal", ["シ"]="three strokes; two short marks descend vertically before the rising sweep", ["ス"]="two strokes; the second bends and finishes outward", ["セ"]="two crossing strokes with an angular turn", ["ソ"]="two strokes; the short mark and long stroke descend from above",
+                ["タ"]="three strokes; build the top before the inner diagonal", ["チ"]="three strokes; two upper marks precede the curved lower stroke", ["ツ"]="three strokes; two short marks spread horizontally before the downward sweep", ["テ"]="three strokes; the lower stroke begins below two horizontals", ["ト"]="two strokes; place the short mark beside the vertical",
+                ["ナ"]="two crossing strokes", ["ニ"]="two horizontal strokes", ["ヌ"]="two strokes; the final stroke crosses the curved first stroke", ["ネ"]="four strokes with a central crossing and finishing sweep", ["ノ"]="one clean diagonal stroke",
+                ["ハ"]="two separated strokes that open downward", ["ヒ"]="two strokes; the long stroke bends beneath the short one", ["フ"]="one angular sweeping stroke", ["ヘ"]="one peaked stroke with unequal slopes", ["ホ"]="four strokes; centre the vertical through the two horizontals",
+                ["マ"]="two strokes; the second diagonal cuts through the angled first stroke", ["ミ"]="three parallel strokes", ["ム"]="two strokes; the second creates the lower angled form", ["メ"]="two crossing diagonals", ["モ"]="three strokes; the long final stroke crosses two horizontals",
+                ["ヤ"]="two strokes with a short upper mark", ["ユ"]="two strokes forming an open rectangular shape", ["ヨ"]="three strokes forming two interior spaces",
+                ["ラ"]="two strokes; a short top line sits above the bent lower stroke", ["リ"]="two vertical strokes; the right descends farther", ["ル"]="two strokes with a hooked right finish", ["レ"]="one descending stroke that turns upward", ["ロ"]="three strokes forming a clean square",
+                ["ワ"]="two strokes; unlike ウ, it has no separate short top mark", ["ヲ"]="three strokes with two horizontals and a final curve", ["ン"]="two strokes; the short mark begins low and the long stroke rises"
+            };
+            foreach (var (character, guidance) in katakanaGuidance) handwriting[character] = guidance;
             var formItems = string.Join("", kana.Select(k => $"<li><strong>{k}</strong>: {handwriting.GetValueOrDefault(k, "preserve the standard stroke direction and overall balance")}.</li>"));
             return $"<h2>Can-do goal</h2><p>You can hear, read and type <strong>{string.Join("・", kana)}</strong> without answer choices.</p>" +
                 $"<h2>{title}</h2><div class='kana-chart'>{cells}</div><p>Click each character, listen, and imitate the sound. Then cover the romaji and retrieve it from memory.</p>" +
@@ -406,8 +579,8 @@ namespace NihongoAcademy.Data
                 },
                 new {
                     Title = "Hiragana: Contracted sounds", JapaneseTitle = "拗音",
-                    Items = new[] { "きゃ", "きゅ", "きょ", "しゃ", "しゅ", "しょ", "ちゃ", "ちゅ", "ちょ", "にゃ", "にゅ", "にょ", "ひゃ", "ひゅ", "ひょ", "みゃ", "みゅ", "みょ", "りゃ", "りゅ", "りょ", "ぎゃ", "じゃ", "びょ", "ぴょ" },
-                    Readings = new[] { "kya", "kyu", "kyo", "sha", "shu", "sho", "cha", "chu", "cho", "nya", "nyu", "nyo", "hya", "hyu", "hyo", "mya", "myu", "myo", "rya", "ryu", "ryo", "gya", "ja", "byo", "pyo" },
+                    Items = new[] { "きゃ", "きゅ", "きょ", "しゃ", "しゅ", "しょ", "ちゃ", "ちゅ", "ちょ", "にゃ", "にゅ", "にょ", "ひゃ", "ひゅ", "ひょ", "みゃ", "みゅ", "みょ", "りゃ", "りゅ", "りょ", "ぎゃ", "ぎゅ", "ぎょ", "じゃ", "じゅ", "じょ", "びゃ", "びゅ", "びょ", "ぴゃ", "ぴゅ", "ぴょ" },
+                    Readings = new[] { "kya", "kyu", "kyo", "sha", "shu", "sho", "cha", "chu", "cho", "nya", "nyu", "nyo", "hya", "hyu", "hyo", "mya", "myu", "myo", "rya", "ryu", "ryo", "gya", "gyu", "gyo", "ja", "ju", "jo", "bya", "byu", "byo", "pya", "pyu", "pyo" },
                     Order = 9,
                     Intro = "A small ゃ, ゅ or ょ combines with an i-row kana to form one contracted beat. きゃ is kya, not ki-ya.",
                     Contrast = "Character size changes rhythm and meaning. Compare きや (ki-ya, two beats) with きゃ (kya, one beat)."
@@ -422,8 +595,8 @@ namespace NihongoAcademy.Data
                 },
                 new {
                     Title = "Hiragana: Long vowels", JapaneseTitle = "長音",
-                    Items = new[] { "おばさん", "おばあさん", "おじさん", "おじいさん", "ここ", "こうこう", "ゆき", "ゆうき", "え", "えい" },
-                    Readings = new[] { "obasan", "obaasan", "ojisan", "ojiisan", "koko", "koukou", "yuki", "yuuki", "e", "ei" },
+                    Items = new[] { "おばさん", "おばあさん", "おじさん", "おじいさん", "ここ", "こうこう", "ゆき", "ゆうき", "え", "ええ" },
+                    Readings = new[] { "obasan", "obaasan", "ojisan", "ojiisan", "koko", "koukou", "yuki", "yuuki", "e", "ee" },
                     Order = 11,
                     Intro = "A long vowel lasts two beats. In hiragana, long a/i/u often add the same vowel; long e commonly uses い and long o commonly uses う.",
                     Contrast = "Length can change meaning: おばさん is aunt or middle-aged woman; おばあさん is grandmother or elderly woman. Count beats rather than stretching randomly."
@@ -462,7 +635,7 @@ namespace NihongoAcademy.Data
                     ["きて"] = "come; wear (te-form)", ["きって"] = "postage stamp; cut (te-form)", ["さか"] = "slope", ["さっか"] = "author",
                     ["かこ"] = "past", ["かっこ"] = "appearance; parentheses", ["もっと"] = "more", ["ちょっと"] = "a little",
                     ["おばさん"] = "aunt; middle-aged woman", ["おばあさん"] = "grandmother; elderly woman", ["おじさん"] = "uncle; middle-aged man", ["おじいさん"] = "grandfather; elderly man",
-                    ["ここ"] = "here", ["こうこう"] = "high school", ["ゆき"] = "snow", ["ゆうき"] = "courage", ["え"] = "picture", ["えい"] = "ray fish",
+                    ["ここ"] = "here", ["こうこう"] = "high school", ["ゆき"] = "snow", ["ゆうき"] = "courage", ["え"] = "picture", ["ええ"] = "yes",
                     ["あさ"] = "morning", ["いえ"] = "house", ["うえ"] = "above", ["えき"] = "station", ["おと"] = "sound", ["かさ"] = "umbrella",
                     ["すし"] = "sushi", ["ねこ"] = "cat", ["いぬ"] = "dog", ["みず"] = "water", ["やま"] = "mountain", ["くるま"] = "car",
                     ["さかな"] = "fish", ["たまご"] = "egg", ["ひらがな"] = "hiragana"
@@ -477,10 +650,17 @@ namespace NihongoAcademy.Data
                         context.Vocabulary.Add(item);
                         await context.SaveChangesAsync();
                     }
-                    item.Romaji = module.Readings[i];
-                    item.English = meanings.GetValueOrDefault(text, item.English);
-                    item.PartOfSpeech = "Hiragana pattern";
-                    item.DisplayOrder = module.Order * 100 + i;
+                    // Basic single kana (e.g. え in the long-vowel module) already exist as foundation
+                    // vocabulary; never overwrite their identity fields or ordering.
+                    const string BasicKana = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん";
+                    var reusedBasicCharacter = text.Length == 1 && BasicKana.Contains(text);
+                    if (!reusedBasicCharacter)
+                    {
+                        item.Romaji = module.Readings[i];
+                        item.English = meanings.GetValueOrDefault(text, item.English);
+                        item.PartOfSpeech = "Hiragana pattern";
+                        item.DisplayOrder = module.Order * 100 + i;
+                    }
                     lessonItems.Add(item);
                 }
                 await SyncLessonItems(context, lesson, lessonItems);
@@ -540,11 +720,12 @@ namespace NihongoAcademy.Data
 
             var advanced = new[]
             {
-                new { Title = "Katakana: Voiced and contracted sounds", Jp = "濁音・半濁音・拗音", Items = new[] { "ガ", "ギ", "グ", "ゲ", "ゴ", "ザ", "ジ", "ズ", "ゼ", "ゾ", "ダ", "デ", "ド", "バ", "ビ", "ブ", "ベ", "ボ", "パ", "ピ", "プ", "ペ", "ポ", "キャ", "シュ", "チョ", "ジャ" }, Readings = new[] { "ga", "gi", "gu", "ge", "go", "za", "ji", "zu", "ze", "zo", "da", "de", "do", "ba", "bi", "bu", "be", "bo", "pa", "pi", "pu", "pe", "po", "kya", "shu", "cho", "ja" }, Order = 8, Note = "Dakuten and handakuten work like hiragana. Small ャ・ュ・ョ form one contracted beat with an i-row character." },
-                new { Title = "Katakana: Long vowels and small tsu", Jp = "長音符号・促音", Items = new[] { "コート", "コットン", "ビル", "ビール", "サッカー", "ベッド", "ケーキ", "カップ", "ノート", "メール" }, Readings = new[] { "kooto", "kotton", "biru", "biiru", "sakkaa", "beddo", "keeki", "kappu", "nooto", "meeru" }, Order = 9, Note = "The mark ー extends the previous vowel by one beat. Small ッ creates a silent beat before a doubled consonant. Both can change what word is understood." },
-                new { Title = "Katakana: Extended foreign sounds", Jp = "外来音", Items = new[] { "ティ", "ディ", "ファ", "フィ", "フェ", "フォ", "ウィ", "ウェ", "ウォ", "チェ", "ジェ", "シェ", "ヴァ", "ヴィ", "ヴ", "ヴェ", "ヴォ" }, Readings = new[] { "ti", "di", "fa", "fi", "fe", "fo", "wi", "we", "wo", "che", "je", "she", "va", "vi", "vu", "ve", "vo" }, Order = 10, Note = "Modern loanwords use small vowel characters to approximate sounds not found in the traditional kana table. Pronunciation is adapted to Japanese rhythm." },
-                new { Title = "Katakana: Real-world loanwords", Jp = "外来語を読む", Items = new[] { "コーヒー", "テレビ", "ホテル", "レストラン", "スーパー", "カメラ", "タクシー", "コンピューター", "スマートフォン", "インターネット", "メニュー", "チョコレート" }, Readings = new[] { "koohii", "terebi", "hoteru", "resutoran", "suupaa", "kamera", "takushii", "konpyuutaa", "sumaatofon", "intaanetto", "menyuu", "chokoreeto" }, Order = 11, Note = "Read by Japanese sound and rhythm rather than reconstructing the English spelling. Loanword meaning and pronunciation may differ from the source language." },
-                new { Title = "Katakana: Look-alike mastery", Jp = "似ている文字", Items = new[] { "シ", "ツ", "ソ", "ン", "ク", "ケ", "ウ", "ワ", "フ", "ヌ", "ス", "マ", "ム" }, Readings = new[] { "shi", "tsu", "so", "n", "ku", "ke", "u", "wa", "fu", "nu", "su", "ma", "mu" }, Order = 12, Note = "Printed typefaces change thickness and corner style, but stroke direction and structure remain reliable. Practise the contrasts in random order, not as fixed pairs." }
+                new { Title = "Katakana: Voiced and semi-voiced sounds", Jp = "濁音・半濁音", Items = new[] { "ガ", "ギ", "グ", "ゲ", "ゴ", "ザ", "ジ", "ズ", "ゼ", "ゾ", "ダ", "ヂ", "ヅ", "デ", "ド", "バ", "ビ", "ブ", "ベ", "ボ", "パ", "ピ", "プ", "ペ", "ポ" }, Readings = new[] { "ga", "gi", "gu", "ge", "go", "za", "ji", "zu", "ze", "zo", "da", "ji", "zu", "de", "do", "ba", "bi", "bu", "be", "bo", "pa", "pi", "pu", "pe", "po" }, Order = 8, Note = "Dakuten changes k→g, s→z, t→d and h→b; handakuten changes h→p. ヂ and ヅ are uncommon and usually sound like ジ and ズ in standard Japanese." },
+                new { Title = "Katakana: Contracted sounds", Jp = "拗音", Items = new[] { "キャ", "キュ", "キョ", "シャ", "シュ", "ショ", "チャ", "チュ", "チョ", "ニャ", "ニュ", "ニョ", "ヒャ", "ヒュ", "ヒョ", "ミャ", "ミュ", "ミョ", "リャ", "リュ", "リョ", "ギャ", "ギュ", "ギョ", "ジャ", "ジュ", "ジョ", "ビャ", "ビュ", "ビョ", "ピャ", "ピュ", "ピョ" }, Readings = new[] { "kya", "kyu", "kyo", "sha", "shu", "sho", "cha", "chu", "cho", "nya", "nyu", "nyo", "hya", "hyu", "hyo", "mya", "myu", "myo", "rya", "ryu", "ryo", "gya", "gyu", "gyo", "ja", "ju", "jo", "bya", "byu", "byo", "pya", "pyu", "pyo" }, Order = 9, Note = "A small ャ・ュ・ョ combines with an i-row character into one beat. Character size matters: キヤ is ki-ya, while キャ is kya." },
+                new { Title = "Katakana: Long vowels and small tsu", Jp = "長音符号・促音", Items = new[] { "コート", "コットン", "ビル", "ビール", "サッカー", "ベッド", "ケーキ", "カップ", "ノート", "メール" }, Readings = new[] { "kooto", "kotton", "biru", "biiru", "sakkaa", "beddo", "keeki", "kappu", "nooto", "meeru" }, Order = 10, Note = "The mark ー extends the previous vowel by one beat. Small ッ creates a silent beat before a doubled consonant. Both can change what word is understood." },
+                new { Title = "Katakana: Extended foreign sounds", Jp = "外来音", Items = new[] { "ティ", "ディ", "ファ", "フィ", "フェ", "フォ", "ウィ", "ウェ", "ウォ", "チェ", "ジェ", "シェ", "ヴァ", "ヴィ", "ヴ", "ヴェ", "ヴォ" }, Readings = new[] { "ti", "di", "fa", "fi", "fe", "fo", "wi", "we", "wo", "che", "je", "she", "va", "vi", "vu", "ve", "vo" }, Order = 11, Note = "Modern loanwords use small vowel characters to approximate sounds not found in the traditional kana table. Pronunciation is adapted to Japanese rhythm." },
+                new { Title = "Katakana: Real-world loanwords", Jp = "外来語を読む", Items = new[] { "コーヒー", "テレビ", "ホテル", "レストラン", "スーパー", "カメラ", "タクシー", "コンピューター", "スマートフォン", "インターネット", "メニュー", "チョコレート" }, Readings = new[] { "koohii", "terebi", "hoteru", "resutoran", "suupaa", "kamera", "takushii", "konpyuutaa", "sumaatofon", "intaanetto", "menyuu", "chokoreeto" }, Order = 12, Note = "Read by Japanese sound and rhythm rather than reconstructing the English spelling. Loanword meaning and pronunciation may differ from the source language." },
+                new { Title = "Katakana: Look-alike mastery", Jp = "似ている文字", Items = new[] { "シ", "ツ", "ソ", "ン", "ク", "ケ", "ウ", "ワ", "フ", "ヌ", "ス", "マ", "ム" }, Readings = new[] { "shi", "tsu", "so", "n", "ku", "ke", "u", "wa", "fu", "nu", "su", "ma", "mu" }, Order = 13, Note = "Printed typefaces change thickness and corner style, but stroke direction and structure remain reliable. Practise the contrasts in random order, not as fixed pairs." }
             };
 
             foreach (var module in advanced)
@@ -552,6 +733,8 @@ namespace NihongoAcademy.Data
 
             var legacy = await context.Lessons.FirstOrDefaultAsync(l => l.Title == "Introduction to Katakana");
             if (legacy != null) { legacy.IsPublished = false; await context.SaveChangesAsync(); }
+            var combinedLegacy = await context.Lessons.FirstOrDefaultAsync(l => l.Title == "Katakana: Voiced and contracted sounds");
+            if (combinedLegacy != null) { combinedLegacy.IsPublished = false; await context.SaveChangesAsync(); }
         }
 
         private static async Task UpsertKanaModule(ApplicationDbContext context, int categoryId, string title, string japaneseTitle, string[] items, string[] readings, int order, string note, bool advanced)
@@ -591,14 +774,19 @@ namespace NihongoAcademy.Data
                     context.Vocabulary.Add(vocab);
                     await context.SaveChangesAsync();
                 }
-                else if (meanings.TryGetValue(text, out var meaning))
+                vocab.Romaji = readings[i];
+                var reusedBasicCharacter = advanced && vocab.PartOfSpeech == "Katakana";
+                if (!reusedBasicCharacter)
                 {
-                    vocab.English = meaning;
+                    vocab.English = meanings.GetValueOrDefault(text, advanced ? $"katakana pattern: {readings[i]}" : $"katakana {readings[i]}");
+                    vocab.PartOfSpeech = advanced ? "Katakana pattern" : "Katakana";
+                    vocab.DisplayOrder = order * 100 + i;
                 }
-                if (!await context.LessonVocabulary.AnyAsync(x => x.LessonId == lesson.Id && x.VocabularyId == vocab.Id))
-                    context.LessonVocabulary.Add(new LessonVocabulary { LessonId = lesson.Id, VocabularyId = vocab.Id, DisplayOrder = i });
             }
             await context.SaveChangesAsync();
+            var lessonItems = await context.Vocabulary.Where(v => v.CategoryId == categoryId && items.Contains(v.Japanese))
+                .OrderBy(v => v.DisplayOrder).ToListAsync();
+            await SyncLessonItems(context, lesson, items.Select(item => lessonItems.Single(v => v.Japanese == item)).ToList());
         }
 
         private static async Task SeedA1IntroductionUnitAsync(ApplicationDbContext context)
@@ -732,7 +920,8 @@ namespace NihongoAcademy.Data
                 new { Japanese = "だれ", Romaji = "dare", English = "who", Kind = "Question word" },
                 new { Japanese = "ひと", Romaji = "hito", English = "person", Kind = "Noun" },
                 new { Japanese = "やさしい", Romaji = "yasashii", English = "kind / gentle", Kind = "I-adjective" },
-                new { Japanese = "げんき", Romaji = "genki", English = "healthy / energetic", Kind = "Na-adjective" }
+                new { Japanese = "げんき", Romaji = "genki", English = "healthy / energetic", Kind = "Na-adjective" },
+                new { Japanese = "しずか", Romaji = "shizuka", English = "quiet", Kind = "Na-adjective" }
             };
 
             var items = new List<Vocabulary>();
@@ -768,7 +957,7 @@ namespace NihongoAcademy.Data
                 "<h2>Output task</h2><p>Introduce one person with their relationship or name, role, and one quality. Then ask your partner このひとは だれですか。</p>");
 
             await MapLessonItems(context, familyTerms, items.Where(v => v.PartOfSpeech == "Family" || new[] { "かぞく", "だれ", "ひと" }.Contains(v.Japanese)).ToList());
-            await MapLessonItems(context, describePeople, items.Where(v => new[] { "ともだち", "だれ", "ひと", "やさしい", "げんき" }.Contains(v.Japanese)).Concat(items.Where(v => v.PartOfSpeech == "Family").Take(4)).ToList());
+            await MapLessonItems(context, describePeople, items.Where(v => new[] { "ともだち", "だれ", "ひと", "やさしい", "げんき", "しずか" }.Contains(v.Japanese)).Concat(items.Where(v => v.PartOfSpeech == "Family").Take(4)).ToList());
             await context.SaveChangesAsync();
         }
 

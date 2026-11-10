@@ -40,3 +40,23 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Local working files and tool state
+_trash_*/
+.workbuddy/
+
+# Runtime uploads; the app creates these directories on demand
+wwwroot/uploads/
+
+# UI test artifacts (Playwright / NUnit)
+playwright-report/
+test-results/
+*.trace
+*.webm
+
+# Publish profiles, certificates and local packages
+*.pubxml
+*.publishsettings
+*.pfx
+*.snk
+*.nupkg
+

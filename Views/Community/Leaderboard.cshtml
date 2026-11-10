@@ -1,0 +1,340 @@
+@model NihongoAcademy.Services.LeaderboardPageViewModel
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
+
+@{
+    ViewData["Title"] = "Weekly Leaderboard";
+    var daysLeft = Math.Max(0, (int)(Model.WeekEndsAt - DateTime.UtcNow).TotalDays);
+    var hoursLeft = Math.Max(0, (int)(Model.WeekEndsAt - DateTime.UtcNow).TotalHours % 24);
+
+    string GetUserInitial(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "U";
+        return name.Trim().Substring(0, 1).ToUpperInvariant();
+    }
+}
+
+@* ===== Page Hero ===== *@
+<section class="na-page-hero-v2 mb-4" aria-label="Weekly Leaderboard">
+    <div class="na-hero-v2-deco" aria-hidden="true">
+        <span class="na-hero-v2-glyph na-hero-v2-glyph--a">順</span>
+        <span class="na-hero-v2-glyph na-hero-v2-glyph--b">位</span>
+        <span class="na-hero-v2-glyph na-hero-v2-glyph--c">桜</span>
+        <span class="na-hero-v2-glyph na-hero-v2-glyph--d">勝</span>
+        <span class="na-hero-v2-petal"></span>
+        <span class="na-hero-v2-petal"></span>
+        <span class="na-hero-v2-petal"></span>
+        <span class="na-hero-v2-petal"></span>
+    </div>
+    <div class="na-page-hero-v2-inner">
+        <span class="na-page-hero-v2-eyebrow"><i class="bi bi-trophy-fill text-warning"></i> Sakura Weekly League</span>
+        <h1 class="na-page-hero-v2-title">Weekly Leaderboard <span>学友ランキング</span></h1>
+        <p class="na-page-hero-v2-lead">Climb the ranks by practicing daily! Complete lessons, quizzes, and word builder puzzles to earn Sakura XP.</p>
+        <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill mt-2" style="background:rgba(255,255,255,0.85);font-size:0.85rem;color:var(--na-primary-dark);font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+            <i class="bi bi-clock-history"></i> Current League ends in: <span>@daysLeft days @hoursLeft hrs</span> (Resets Mondays 00:00 UTC)
+        </div>
+    </div>
+</section>
+
+<div class="row g-4 mb-4">
+    @* ===== Current User Standing Card ===== *@
+    <div class="col-12">
+        <div class="na-card p-4" style="background: linear-gradient(135deg, #FFF9FA 0%, #FFFFFF 100%); border-left: 5px solid var(--na-primary);">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="p-3 rounded-circle" style="background:#FFF0F3;color:var(--na-primary);font-size:1.8rem;width:60px;height:60px;display:flex;align-items:center;justify-content:center;">
+                        <i class="bi bi-lightning-charge-fill"></i>
+                    </div>
+                    <div>
+                        @if (SignInManager.IsSignedIn(User))
+                        {
+                            <h5 class="mb-1">
+                                Your Standing: 
+                                <span class="badge" style="background:var(--na-primary);color:#fff;font-size:0.95rem;">
+                                    Rank #@(Model.UserSummary.CurrentRank)
+                                </span>
+                            </h5>
+                            <p class="text-muted mb-0 small">
+                                You have earned <strong class="text-dark">@Model.UserSummary.WeeklyXp XP</strong> this week (@Model.UserSummary.TotalXp total XP).
+                                @if (Model.UserSummary.XpToNextRank > 0)
+                                {
+                                    <span>Only <strong class="text-na-primary">+@Model.UserSummary.XpToNextRank XP</strong> needed to overtake the next rank!</span>
+                                }
+                            </p>
+                        }
+                        else
+                        {
+                            <h5 class="mb-1">Join the Weekly League!</h5>
+                            <p class="text-muted mb-0 small">Sign in to track your weekly Sakura XP and earn achievements alongside fellow learners.</p>
+                        }
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <a asp-controller="Practice" asp-action="SentenceBuilder" class="btn btn-na-primary text-nowrap">
+                        <i class="bi bi-puzzle-fill"></i> Play Sentence Builder (+15 XP)
+                    </a>
+                    <a asp-controller="Practice" asp-action="Index" class="btn btn-na-outline text-nowrap">
+                        <i class="bi bi-mortarboard"></i> Practice Drills
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ===== Top 3 Podium ===== *@
+    @if (Model.TopEntries.Count >= 1)
+    {
+        var first = Model.TopEntries.ElementAtOrDefault(0);
+        var second = Model.TopEntries.ElementAtOrDefault(1);
+        var third = Model.TopEntries.ElementAtOrDefault(2);
+
+        <div class="col-12">
+            <div class="row g-3 align-items-end justify-content-center text-center my-2">
+                @* 2nd Place (Silver) *@
+                @if (second != null)
+                {
+                    <div class="col-12 col-md-4 order-2 order-md-1">
+                        <div class="na-card p-4 position-relative" style="background:#FAFBFD;border:2px solid #E1E8ED;border-radius:18px;">
+                            <div class="badge rounded-pill px-3 py-1 position-absolute top-0 start-50 translate-middle" style="background:#94A3B8;color:#fff;font-weight:700;">
+                                🥈 2nd Place
+                            </div>
+                            <div class="mt-3 mb-2 d-flex justify-content-center">
+                                @if (second.AvatarMode == "uploaded" && !string.IsNullOrWhiteSpace(second.AvatarImagePath))
+                                {
+                                    <img src="@second.AvatarImagePath" alt="" class="rounded-circle" style="width:72px;height:72px;object-fit:cover;border:3px solid #CBD5E1;" />
+                                }
+                                else
+                                {
+                                    <div class="na-avatar-inline rounded-circle" data-size="72" data-avatar-json="@(second.AvatarJson ?? "{}")" style="width:72px;height:72px;border:3px solid #CBD5E1;font-size:1.6rem;">
+                                        @GetUserInitial(second.UserName)
+                                    </div>
+                                }
+                            </div>
+                            <h6 class="mb-1 text-truncate">
+                                <a asp-action="UserProfile" asp-route-id="@second.UserId" class="text-decoration-none text-dark fw-bold">
+                                    @second.DisplayName
+                                </a>
+                            </h6>
+                            <span class="text-muted small d-block mb-2">@@@second.UserName</span>
+                            <div class="p-2 rounded" style="background:#F1F5F9;">
+                                <span class="fw-bold fs-5 text-dark">@second.WeeklyXp</span> <span class="text-muted small">XP this week</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @* 1st Place (Gold Champion) *@
+                @if (first != null)
+                {
+                    <div class="col-12 col-md-4 order-1 order-md-2">
+                        <div class="na-card p-4 position-relative shadow-sm" style="background:linear-gradient(180deg, #FFFDF0 0%, #FFFFFF 100%);border:2px solid #F6D860;border-radius:20px;transform:scale(1.04);z-index:2;">
+                            <div class="badge rounded-pill px-3 py-1 position-absolute top-0 start-50 translate-middle shadow-sm" style="background:linear-gradient(135deg, #F6B100, #E0A800);color:#fff;font-weight:800;font-size:0.88rem;">
+                                👑 1st Champion
+                            </div>
+                            <div class="mt-3 mb-2 d-flex justify-content-center">
+                                @if (first.AvatarMode == "uploaded" && !string.IsNullOrWhiteSpace(first.AvatarImagePath))
+                                {
+                                    <img src="@first.AvatarImagePath" alt="" class="rounded-circle shadow-sm" style="width:84px;height:84px;object-fit:cover;border:4px solid #FCD34D;" />
+                                }
+                                else
+                                {
+                                    <div class="na-avatar-inline rounded-circle shadow-sm" data-size="84" data-avatar-json="@(first.AvatarJson ?? "{}")" style="width:84px;height:84px;border:4px solid #FCD34D;font-size:2rem;">
+                                        @GetUserInitial(first.UserName)
+                                    </div>
+                                }
+                            </div>
+                            <h5 class="mb-1 text-truncate">
+                                <a asp-action="UserProfile" asp-route-id="@first.UserId" class="text-decoration-none text-dark fw-bold">
+                                    @first.DisplayName
+                                </a>
+                            </h5>
+                            <span class="text-muted small d-block mb-2">@@@first.UserName</span>
+                            <div class="p-2 rounded" style="background:#FEF9C3;">
+                                <span class="fw-bold fs-4 text-warning-emphasis">@first.WeeklyXp</span> <span class="text-muted small">XP this week</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                @* 3rd Place (Bronze) *@
+                @if (third != null)
+                {
+                    <div class="col-12 col-md-4 order-3 order-md-3">
+                        <div class="na-card p-4 position-relative" style="background:#FAF8F5;border:2px solid #E8DFD8;border-radius:18px;">
+                            <div class="badge rounded-pill px-3 py-1 position-absolute top-0 start-50 translate-middle" style="background:#B47D52;color:#fff;font-weight:700;">
+                                🥉 3rd Place
+                            </div>
+                            <div class="mt-3 mb-2 d-flex justify-content-center">
+                                @if (third.AvatarMode == "uploaded" && !string.IsNullOrWhiteSpace(third.AvatarImagePath))
+                                {
+                                    <img src="@third.AvatarImagePath" alt="" class="rounded-circle" style="width:72px;height:72px;object-fit:cover;border:3px solid #D7C4B7;" />
+                                }
+                                else
+                                {
+                                    <div class="na-avatar-inline rounded-circle" data-size="72" data-avatar-json="@(third.AvatarJson ?? "{}")" style="width:72px;height:72px;border:3px solid #D7C4B7;font-size:1.6rem;">
+                                        @GetUserInitial(third.UserName)
+                                    </div>
+                                }
+                            </div>
+                            <h6 class="mb-1 text-truncate">
+                                <a asp-action="UserProfile" asp-route-id="@third.UserId" class="text-decoration-none text-dark fw-bold">
+                                    @third.DisplayName
+                                </a>
+                            </h6>
+                            <span class="text-muted small d-block mb-2">@@@third.UserName</span>
+                            <div class="p-2 rounded" style="background:#F7F1EC;">
+                                <span class="fw-bold fs-5 text-dark">@third.WeeklyXp</span> <span class="text-muted small">XP this week</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @* ===== Full Rankings Table ===== *@
+    <div class="col-12">
+        <div class="na-card p-0 overflow-hidden">
+            <div class="p-4 border-bottom d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-0"><i class="bi bi-list-ol"></i> League Standings</h5>
+                    <small class="text-muted">Top 50 learners ranked by active practice XP</small>
+                </div>
+                <span class="badge rounded-pill px-3 py-2" style="background:#FFF0F3;color:#ee96a4;font-size:0.85rem;font-weight:600;">
+                    @Model.TopEntries.Count Participants
+                </span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" style="min-width:600px;">
+                    <thead class="table-light text-muted small text-uppercase">
+                        <tr>
+                            <th class="ps-4" style="width: 80px;">Rank</th>
+                            <th>Learner</th>
+                            <th>Level & Goal</th>
+                            <th class="text-end pe-4">Weekly XP</th>
+                            <th class="text-end pe-4">Total XP</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!Model.TopEntries.Any())
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <i class="bi bi-flower1 fs-1 text-muted d-block mb-2"></i>
+                                    No XP recorded this week yet. Be the first to practice and claim #1!
+                                </td>
+                            </tr>
+                        }
+                        else
+                        {
+                            @foreach (var entry in Model.TopEntries)
+                            {
+                                var isRowActive = entry.IsCurrentUser;
+                                <tr style="@(isRowActive ? "background-color: #FFF5F7; font-weight:600;" : "")">
+                                    <td class="ps-4">
+                                        @if (entry.Rank == 1)
+                                        {
+                                            <span style="font-size:1.3rem;">🥇</span>
+                                        }
+                                        else if (entry.Rank == 2)
+                                        {
+                                            <span style="font-size:1.3rem;">🥈</span>
+                                        }
+                                        else if (entry.Rank == 3)
+                                        {
+                                            <span style="font-size:1.3rem;">🥉</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge rounded-pill @(entry.Rank <= 10 ? "bg-light text-dark border" : "text-muted")" style="font-size:0.9rem;min-width:32px;">
+                                                #@entry.Rank
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <a asp-action="UserProfile" asp-route-id="@entry.UserId" class="text-decoration-none">
+                                                @if (entry.AvatarMode == "uploaded" && !string.IsNullOrWhiteSpace(entry.AvatarImagePath))
+                                                {
+                                                    <img src="@entry.AvatarImagePath" alt="" class="rounded-circle" style="width:40px;height:40px;object-fit:cover;" />
+                                                }
+                                                else
+                                                {
+                                                    <div class="na-avatar-inline rounded-circle" data-size="40" data-avatar-json="@(entry.AvatarJson ?? "{}")">
+                                                        @GetUserInitial(entry.UserName)
+                                                    </div>
+                                                }
+                                            </a>
+                                            <div>
+                                                <a asp-action="UserProfile" asp-route-id="@entry.UserId" class="text-decoration-none text-dark d-block">
+                                                    @entry.DisplayName
+                                                    @if (entry.IsCurrentUser)
+                                                    {
+                                                        <span class="badge ms-1" style="background:#ee96a4;color:#fff;font-size:0.7rem;">YOU</span>
+                                                    }
+                                                </a>
+                                                <small class="text-muted">@@@entry.UserName</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-secondary border me-1">
+                                            @(string.IsNullOrWhiteSpace(entry.CurrentLevel) ? "Beginner" : entry.CurrentLevel)
+                                        </span>
+                                        @if (!string.IsNullOrWhiteSpace(entry.LearningGoal))
+                                        {
+                                            <span class="badge" style="background:#F0F7FF;color:#3B82F6;">
+                                                @entry.LearningGoal
+                                            </span>
+                                        }
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <span class="badge rounded-pill px-3 py-2" style="background:#FFF0F3;color:#ee96a4;font-size:0.92rem;font-weight:700;border:1px solid #FFD6DE;">
+                                            <i class="bi bi-stars"></i> @entry.WeeklyXp XP
+                                        </span>
+                                    </td>
+                                    <td class="text-end pe-4 text-muted">
+                                        @entry.TotalXp XP
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a asp-action="Index" class="na-link-soft"><i class="bi bi-arrow-left"></i> Back to Community Hub</a>
+</div>
+
+@section Scripts {
+    <script src="~/js/avatar-builder.js" asp-append-version="true"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (!window.AvatarBuilder) return;
+            document.querySelectorAll('.na-avatar-inline').forEach(function (el) {
+                try {
+                    var json = el.dataset.avatarJson || '{}';
+                    var config = JSON.parse(json);
+                    var size = parseInt(el.dataset.size, 10) || 40;
+                    var merged = Object.assign({}, AvatarBuilder.defaults, config);
+                    AvatarBuilder.renderAvatar(merged, el);
+                    el.style.width = size + 'px';
+                    el.style.height = size + 'px';
+                    el.style.overflow = 'hidden';
+                    el.style.borderRadius = '50%';
+                    el.style.flexShrink = '0';
+                    el.style.display = 'inline-flex';
+                    el.style.alignItems = 'center';
+                    el.style.justifyContent = 'center';
+                } catch (e) {}
+            });
+        });
+    </script>
+}

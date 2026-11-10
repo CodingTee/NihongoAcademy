@@ -1,0 +1,43 @@
+@model NihongoAcademy.Controllers.ReportViewModel
+@{
+    ViewData["Title"] = "Report content";
+}
+
+<div class="na-community" style="max-width:620px;margin:0 auto;">
+    <a asp-action="Index" class="na-link-soft mb-3 d-inline-block">
+        <i class="bi bi-arrow-left"></i> Back to Community
+    </a>
+
+    <div class="na-card">
+        <h4><i class="bi bi-flag"></i> Report @Model.TargetType.ToString().ToLower()</h4>
+        <p class="text-muted small">Help us keep NihongoAcademy safe. A moderator will review your report.</p>
+        <hr />
+        <form asp-action="Report" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="targetType" value="@Model.TargetType" />
+            <input type="hidden" name="targetId" value="@Model.TargetId" />
+
+            <div class="mb-3">
+                <label class="form-label">Reason</label>
+                <select name="reason" class="form-select na-input" required>
+                    <option value="" selected="@(string.IsNullOrEmpty(Model.Reason))">Choose a reason…</option>
+                    <option value="Spam" selected="@(Model.Reason == "Spam")">Spam or advertising</option>
+                    <option value="Harassment" selected="@(Model.Reason == "Harassment")">Harassment or bullying</option>
+                    <option value="Inappropriate" selected="@(Model.Reason == "Inappropriate")">Inappropriate or offensive content</option>
+                    <option value="Misinformation" selected="@(Model.Reason == "Misinformation")">False or misleading information</option>
+                    <option value="Copyright" selected="@(Model.Reason == "Copyright")">Copyright violation</option>
+                    <option value="Other" selected="@(Model.Reason == "Other")">Other</option>
+                </select>
+                <span asp-validation-for="Reason" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Details <span class="text-muted">(optional)</span></label>
+                <textarea name="detail" class="form-control na-input" rows="4" maxlength="1000" placeholder="Add any context that helps the moderator…">@Model.Detail</textarea>
+            </div>
+
+            <button type="submit" class="btn btn-na-primary"><i class="bi bi-send"></i> Submit report</button>
+            <a asp-action="Details" asp-route-id="@(Model.TargetType == NihongoAcademy.Models.ReportTargetType.Post ? Model.TargetId : -1)" class="btn btn-na-outline">Cancel</a>
+        </form>
+    </div>
+</div>

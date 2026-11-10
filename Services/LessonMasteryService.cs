@@ -9,17 +9,24 @@ namespace NihongoAcademy.Services
         bool FirstPassComplete,
         bool AwaitingDelayedReview,
         DateTime? ReviewDueDate,
-        Dictionary<string, ExerciseMasteryResult> Results);
+        Dictionary<string, ExerciseMasteryResult> Results,
+        int ActivitiesComplete = 0,
+        int ActivitiesTotal = 0);
 
     public class LessonMasteryService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IAppClock _clock;
 
-        public LessonMasteryService(ApplicationDbContext context) => _context = context;
+        public LessonMasteryService(ApplicationDbContext context, IAppClock clock)
+        {
+            _context = context;
+            _clock = clock;
+        }
 
         public async Task<MasteryEvaluation> EvaluateAsync(string userId, int lessonId, DateTime? evaluatedAt = null)
         {
-            var now = evaluatedAt ?? DateTime.Now;
+            var now = evaluatedAt ?? _clock.Now;
             var lesson = await _context.Lessons
                 .Where(l => l.Id == lessonId)
                 .Select(l => new { l.Title })
@@ -54,13 +61,15 @@ namespace NihongoAcademy.Services
                 .ToListAsync();
             var activitiesComplete = requiredActivityIds.All(activityId => attempts.Any(a =>
                 a.LessonActivityId == activityId && a.IsCorrect));
+            var activitiesCompleteCount = requiredActivityIds.Count(activityId => attempts.Any(a =>
+                a.LessonActivityId == activityId && a.IsCorrect));
             var firstPassComplete = LessonMasteryPolicy.HasPassedFirstCheck(
                 results, vocabularyIds.Count, activitiesComplete);
 
             var progress = await _context.LessonProgress
                 .FirstOrDefaultAsync(p => p.UserId == userId && p.LessonId == lessonId);
             if (progress?.IsCompleted == true)
-                return new MasteryEvaluation(true, true, false, progress.MasteryReviewDueDate, results);
+                return new MasteryEvaluation(true, true, false, progress.MasteryReviewDueDate, results, activitiesCompleteCount, requiredActivityIds.Count);
 
             var awaitingReview = false;
             DateTime? reviewDue = progress?.MasteryReviewDueDate;
@@ -103,7 +112,7 @@ namespace NihongoAcademy.Services
                 await _context.SaveChangesAsync();
             }
 
-            return new MasteryEvaluation(progress?.IsCompleted == true, firstPassComplete, awaitingReview, reviewDue, results);
+            return new MasteryEvaluation(progress?.IsCompleted == true, firstPassComplete, awaitingReview, reviewDue, results, activitiesCompleteCount, requiredActivityIds.Count);
         }
     }
 }

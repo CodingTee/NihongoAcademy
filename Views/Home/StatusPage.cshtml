@@ -1,0 +1,45 @@
+@model int
+@{
+    var title = Model switch
+    {
+        400 => "That request needs another look",
+        401 => "Please sign in to continue",
+        403 => "This area is not available",
+        408 => "The request took too long",
+        429 => "Let's take a short pause",
+        _ => "This page wandered away"
+    };
+    var japanese = Model switch
+    {
+        401 => "ログインしてください",
+        403 => "アクセスできません",
+        404 => "ページが見つかりません",
+        _ => "もう一度お試しください"
+    };
+    var message = Model switch
+    {
+        401 => "Sign in and we'll bring you back to your Japanese learning journey.",
+        403 => "You don't have permission to view this page. Your lessons and progress are still available.",
+        408 => "The connection paused before the page was ready. Please try again.",
+        429 => "There have been several requests in a short time. Wait a moment, then try again.",
+        400 => "The link or information sent to the site was not valid. Try returning to the previous page.",
+        _ => "The lesson or page you followed may have moved, but your learning path is still here."
+    };
+    ViewData["Title"] = $"{Model} - {title}";
+}
+
+<section class="na-error-page" aria-labelledby="status-title">
+    <div class="na-error-petals" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+    <div class="na-error-code" aria-hidden="true">@Model</div>
+    <p class="na-error-kicker">LOST AMONG THE BLOSSOMS · 道案内</p>
+    <h1 id="status-title">@title</h1>
+    <p class="na-error-ja">@japanese</p>
+    <p class="na-error-copy">@message</p>
+    <div class="na-error-actions">
+        <a asp-controller="Home" asp-action="Index" class="btn-na-primary"><i class="bi bi-house-door"></i> Go home</a>
+        <a asp-controller="Lessons" asp-action="Index" class="btn-na-outline"><i class="bi bi-book"></i> Browse lessons</a>
+    </div>
+    <button type="button" class="na-error-back" onclick="history.back()"><i class="bi bi-arrow-left"></i> Return to the previous page</button>
+</section>
+
+<partial name="_ErrorPageStyles" />

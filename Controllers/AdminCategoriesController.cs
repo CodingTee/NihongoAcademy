@@ -3,18 +3,23 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NihongoAcademy.Data;
+using NihongoAcademy.Services;
 using System.Linq;
 
 namespace NihongoAcademy.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,SuperAdmin")]
     public class AdminCategoriesController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly IAppClock _clock;
+        private readonly AuditLogService _audit;
 
-        public AdminCategoriesController(ApplicationDbContext context)
+        public AdminCategoriesController(ApplicationDbContext context, IAppClock clock, AuditLogService audit)
         {
             _context = context;
+            _clock = clock;
+            _audit = audit;
         }
 
         public async Task<IActionResult> Index()
@@ -41,11 +46,12 @@ namespace NihongoAcademy.Controllers
                 ModelState.AddModelError(nameof(category.Name), "A category with this name already exists.");
             if (ModelState.IsValid)
             {
-                category.CreatedDate = DateTime.Now;
+                category.CreatedDate = _clock.Now;
                 _context.Add(category);
                 await _context.SaveChangesAsync();
+                await _audit.RecordOperationAsync("CreateCategory", "Category", category.Id.ToString(), $"Created category '{category.Name}'.");
                 TempData["Success"] = "Category created successfully.";
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction("Index", "AdminContent", new { type = "category" });
             }
             return View(category);
         }
@@ -76,6 +82,7 @@ namespace NihongoAcademy.Controllers
                     existing.IconClass = category.IconClass;
                     existing.DisplayOrder = category.DisplayOrder;
                     await _context.SaveChangesAsync();
+                    await _audit.RecordOperationAsync("EditCategory", "Category", existing.Id.ToString(), $"Updated category '{existing.Name}'.");
                     TempData["Success"] = "Category updated successfully.";
                 }
                 catch (DbUpdateConcurrencyException)
@@ -83,7 +90,7 @@ namespace NihongoAcademy.Controllers
                     if (!_context.Categories.Any(e => e.Id == id)) return NotFound();
                     throw;
                 }
-                return RedirectToAction(nameof(Index));
+                return RedirectToAction("Index", "AdminContent", new { type = "category" });
             }
             return View(category);
         }
@@ -110,14 +117,15 @@ namespace NihongoAcademy.Controllers
                 if (hasLessons || hasVocab || hasQuizzes)
                 {
                     TempData["Error"] = "Cannot delete category that contains lessons, vocabulary, or quizzes. Please remove or reassign them first.";
-                    return RedirectToAction(nameof(Index));
+                    return RedirectToAction("Index", "AdminContent", new { type = "category" });
                 }
 
                 _context.Categories.Remove(category);
                 await _context.SaveChangesAsync();
+                await _audit.RecordOperationAsync("DeleteCategory", "Category", id.ToString(), $"Deleted category '{category.Name}'.");
                 TempData["Success"] = "Category deleted successfully.";
             }
-            return RedirectToAction(nameof(Index));
+            return RedirectToAction("Index", "AdminContent", new { type = "category" });
         }
     }
 }

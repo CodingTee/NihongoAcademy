@@ -12,6 +12,21 @@ namespace NihongoAcademy.Controllers
             return View();
         }
 
+        // Canonical dynamic routes: every cultural collection shares Browse,
+        // while individual regions share Details.
+        public IActionResult Browse(string type = "regions")
+            => type.ToLowerInvariant() switch
+            {
+                "food" => Food(),
+                "festivals" => Festivals(),
+                "dialects" => Dialects(),
+                "landmarks" => Landmarks(),
+                "culture" => Culture(),
+                _ => Regions()
+            };
+
+        public IActionResult Details(string slug) => RegionDetail(slug);
+
         // ---- Category pages ---------------------------------------------------
 
         public IActionResult Regions()

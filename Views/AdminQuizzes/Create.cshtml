@@ -4,12 +4,27 @@
     ViewData["Title"] = "Create Quiz";
 }
 
-<h2><i class="bi bi-plus-circle"></i> Create New Quiz</h2>
+@await Html.PartialAsync("_AdminPageHeader", new NihongoAcademy.Models.AdminPageHeaderModel
+{
+    Trail =
+    {
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Admin", Url = Url.Action("Index", "Admin") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Quizzes", Url = Url.Action("Index", "AdminContent", new { type = "quiz" }) },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Create Quiz" }
+    },
+    Icon = "bi-plus-circle",
+    Title = "Create New Quiz",
+    TitleJp = "クイズ作成",
+    Actions =
+    {
+        new NihongoAcademy.Models.AdminPageHeaderAction { Text = "Back to Quizzes", Url = Url.Action("Index", "AdminContent", new { type = "quiz" }), Icon = "bi-arrow-left", Outline = true }
+    }
+})
 
 <div class="row">
-    <div class="col-md-8">
+    <div class="col-12">
         <div class="na-card-flat">
-            <form asp-action="Create">
+            <form asp-controller="AdminQuizzes" asp-action="Create">
                 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
                 <div class="mb-3">
@@ -60,7 +75,7 @@
 
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn-na-primary"><i class="bi bi-check-circle"></i> Create &amp; Add Questions</button>
-                    <a asp-action="Index" class="btn-na-outline">Cancel</a>
+                    <a asp-controller="AdminContent" asp-action="Index" asp-route-type="quiz" class="btn-na-outline">Cancel</a>
                 </div>
             </form>
         </div>

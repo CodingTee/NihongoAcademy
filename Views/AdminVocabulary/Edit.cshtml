@@ -4,12 +4,28 @@
     ViewData["Title"] = "Edit Vocabulary";
 }
 
-<h2><i class="bi bi-pencil"></i> Edit Vocabulary Card</h2>
+@await Html.PartialAsync("_AdminPageHeader", new NihongoAcademy.Models.AdminPageHeaderModel
+{
+    Trail =
+    {
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Admin", Url = Url.Action("Index", "Admin") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Vocabulary", Url = Url.Action("Index", "AdminContent", new { type = "vocabulary" }) },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Edit Word" }
+    },
+    Icon = "bi-pencil",
+    Title = "Edit Vocabulary Card",
+    TitleJp = "単語編集",
+    Lead = Model.Japanese,
+    Actions =
+    {
+        new NihongoAcademy.Models.AdminPageHeaderAction { Text = "Back to Vocabulary", Url = Url.Action("Index", "AdminContent", new { type = "vocabulary" }), Icon = "bi-arrow-left", Outline = true }
+    }
+})
 
 <div class="row">
-    <div class="col-md-8">
+    <div class="col-12">
         <div class="na-card-flat">
-            <form asp-action="Edit">
+            <form asp-controller="AdminVocabulary" asp-action="Edit">
                 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                 <input type="hidden" asp-for="Id" />
 
@@ -49,6 +65,8 @@
                 <div class="mb-3">
                     <label asp-for="ExampleJapanese" class="form-label"></label>
                     <input asp-for="ExampleJapanese" class="form-control" />
+                    <label asp-for="ExampleReading" class="form-label mt-2"></label>
+                    <input asp-for="ExampleReading" class="form-control" />
                 </div>
 
                 <div class="mb-3">
@@ -75,7 +93,7 @@
 
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn-na-primary"><i class="bi bi-check-circle"></i> Save</button>
-                    <a asp-action="Index" class="btn-na-outline">Cancel</a>
+                    <a asp-controller="AdminContent" asp-action="Index" asp-route-type="vocabulary" class="btn-na-outline">Cancel</a>
                 </div>
             </form>
         </div>

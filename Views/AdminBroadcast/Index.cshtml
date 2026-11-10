@@ -1,0 +1,50 @@
+@{
+    ViewData["Title"] = "Announcements";
+}
+
+@await Html.PartialAsync("_AdminPageHeader", new NihongoAcademy.Models.AdminPageHeaderModel
+{
+    Trail =
+    {
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Admin", Url = Url.Action("Index", "Admin") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Announcements" }
+    },
+    Icon = "bi-megaphone",
+    Title = "Announcements",
+    TitleJp = "お知らせ",
+    Lead = "Send a site-wide or role-targeted notification. Recipients see it in their notification bell, reusing the same system as moderation notices."
+})
+
+<div class="na-card-flat">
+    <form asp-action="Send" method="post">
+        @Html.AntiForgeryToken()
+        <div class="row g-3">
+            <div class="col-md-8">
+                <label class="form-label">Title</label>
+                <input type="text" name="title" maxlength="100" class="form-control na-input" placeholder="e.g. Scheduled maintenance this Sunday" required />
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Audience</label>
+                <select name="audience" class="form-select na-input">
+                    <option value="All">Everyone</option>
+                    <option value="Students">Students only</option>
+                    <option value="Admins">Admins only</option>
+                </select>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Message</label>
+                <textarea name="message" rows="5" maxlength="300" class="form-control na-input" placeholder="Write your announcement…" required></textarea>
+                <div class="form-text">Up to 300 characters. This is shown verbatim in each recipient's notification.</div>
+            </div>
+            <div class="col-12">
+                <label class="form-label">Link (optional)</label>
+                <input type="text" name="link" class="form-control na-input" placeholder="/Community  (where the bell opens)" />
+            </div>
+        </div>
+        <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-na-primary" onclick="return confirm('Send this announcement to the selected audience?')">
+                <i class="bi bi-send"></i> Send announcement
+            </button>
+        </div>
+    </form>
+</div>

@@ -8,6 +8,19 @@ namespace NihongoAcademy.Helpers
     /// </summary>
     public static class TextHelper
     {
+        /// <summary>
+        /// Renders learner-authored plain text for display: HTML-encodes everything,
+        /// then turns newlines into &lt;br/&gt;. Encoding first guarantees no user-supplied
+        /// tag can survive, because the only tags present are the ones we add here.
+        /// </summary>
+        public static string ToSafeHtmlLines(string? text)
+        {
+            if (string.IsNullOrEmpty(text)) return string.Empty;
+
+            var normalized = text.Replace("\r\n", "\n").Replace("\r", "\n");
+            return System.Net.WebUtility.HtmlEncode(normalized).Replace("\n", "<br/>");
+        }
+
         public static string TruncateHtml(string? html, int maxLength)
         {
             if (string.IsNullOrEmpty(html)) return string.Empty;

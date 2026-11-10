@@ -42,7 +42,7 @@ else
                 @foreach (var attempt in Model)
                 {
                     <tr>
-                        <td>@attempt.AttemptDate.ToString("MMM dd, yyyy HH:mm")</td>
+                        <td>@attempt.AttemptDate.ToString("MMM dd, yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture)</td>
                         <td>@attempt.Quiz?.Title</td>
                         <td>
                             <span class="na-badge na-badge-@(attempt.Quiz?.Category?.Name?.ToLower())">
@@ -50,7 +50,7 @@ else
                             </span>
                         </td>
                         <td>
-                            <strong style="color: @(attempt.IsPassed ? "var(--na-secondary)" : "#D44");">
+                            <strong style="color: @(attempt.IsPassed ? "var(--na-secondary)" : "#ee96a4");">
                                 @attempt.ScorePercentage%
                             </strong>
                         </td>
@@ -59,13 +59,13 @@ else
                         <td>
                             @if (attempt.IsPassed)
                             {
-                                <span class="na-badge" style="background: #E5F8E5; color: #2C5F2D;">
+                                <span class="na-badge" style="background: #EDE8F8; color: #9A7BC4;">
                                     <i class="bi bi-check-circle"></i> Passed
                                 </span>
                             }
                             else
                             {
-                                <span class="na-badge" style="background: #FFE5E5; color: #D44;">
+                                <span class="na-badge" style="background: #E1E4E7; color: #ee96a4;">
                                     <i class="bi bi-x-circle"></i> Failed
                                 </span>
                             }

@@ -4,7 +4,23 @@
     ViewData["Title"] = "Lesson Details";
 }
 
-<h2><i class="bi bi-eye"></i> Lesson Details</h2>
+@await Html.PartialAsync("_AdminPageHeader", new NihongoAcademy.Models.AdminPageHeaderModel
+{
+    Trail =
+    {
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Admin", Url = Url.Action("Index", "Admin") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Lessons", Url = Url.Action("Index", "AdminContent", new { type = "lesson" }) },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Details" }
+    },
+    Icon = "bi-eye",
+    Title = "Lesson Details",
+    TitleJp = "レッスン詳細",
+    Lead = Model.Title,
+    Actions =
+    {
+        new NihongoAcademy.Models.AdminPageHeaderAction { Text = "Back to Lessons", Url = Url.Action("Index", "AdminContent", new { type = "lesson" }), Icon = "bi-arrow-left", Outline = true }
+    }
+})
 
 <div class="na-card-flat">
     <dl class="row">
@@ -33,7 +49,7 @@
         <dd class="col-sm-9">@Model.DisplayOrder</dd>
 
         <dt class="col-sm-3">@Html.DisplayNameFor(m => m.CreatedDate)</dt>
-        <dd class="col-sm-9">@Model.CreatedDate.ToString("MMM dd, yyyy")</dd>
+        <dd class="col-sm-9">@Model.CreatedDate.ToString("MMM dd, yyyy", System.Globalization.CultureInfo.InvariantCulture)</dd>
     </dl>
 
     <hr />
@@ -43,7 +59,7 @@
     </div>
 
     <div class="mt-3">
-        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-na-primary"><i class="bi bi-pencil"></i> Edit</a>
-        <a asp-action="Index" class="btn-na-outline">Back to List</a>
+        <a asp-controller="AdminContent" asp-action="Editor" asp-route-type="lesson" asp-route-mode="edit" asp-route-id="@Model.Id" class="btn-na-primary"><i class="bi bi-pencil"></i> Edit</a>
+        <a asp-controller="AdminContent" asp-action="Index" asp-route-type="lesson" class="btn-na-outline">Back to List</a>
     </div>
 </div>

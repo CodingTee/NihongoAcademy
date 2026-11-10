@@ -1,364 +1,114 @@
 @page
 @model RegisterModel
 @{
-    ViewData["Title"] = "Register";
+    ViewData["Title"] = "Create account";
 }
 
-@* ===== Onboarding Wizard (re-used from Home page) ===== *@
-<section class="na-onboarding" id="naOnboarding" aria-label="Personalized study plan">
-    <div class="na-onboarding-card">
-        <div class="na-onboarding-header">
-            <span class="na-onboarding-eyebrow">
-                <i class="bi bi-stars"></i> Personalized Plan
-            </span>
-            <h2 class="na-onboarding-title">Craft Your Study Plan</h2>
-            <p class="na-onboarding-subtitle">
-                Answer 3 quick questions and we'll match you with lessons, drills, and a pace that fits your goals.
-            </p>
-        </div>
+<div class="na-register-page">
+    <span class="na-register-tree" aria-hidden="true"></span>
 
-        <div class="na-onboarding-steps" role="tablist" aria-label="Step indicator">
-            <span class="na-onboarding-step is-active" data-step="1"><span class="na-onboarding-step-dot">1</span><span class="na-onboarding-step-label">Start</span></span>
-            <span class="na-onboarding-step" data-step="2"><span class="na-onboarding-step-dot">2</span><span class="na-onboarding-step-label">Goal</span></span>
-            <span class="na-onboarding-step" data-step="3"><span class="na-onboarding-step-dot">3</span><span class="na-onboarding-step-label">Level</span></span>
-            <span class="na-onboarding-step" data-step="4"><span class="na-onboarding-step-dot">4</span><span class="na-onboarding-step-label">Age</span></span>
-            <span class="na-onboarding-step" data-step="5"><span class="na-onboarding-step-dot">5</span><span class="na-onboarding-step-label">Plan</span></span>
-        </div>
-
-        <div class="na-onboarding-panels">
-            <div class="na-onboarding-panel is-active" data-panel="1">
-                <div class="na-onboarding-panel-icon">
-                    <i class="bi bi-rocket-takeoff"></i>
-                </div>
-                <h3 class="na-onboarding-panel-title">Ready to start?</h3>
-                <p class="na-onboarding-panel-lead">
-                    Pick your goal, current level, and age — we'll match you with the right lessons and a pace you can actually keep up.
-                </p>
-                <div class="na-onboarding-actions na-onboarding-actions--center">
-                    <button type="button" class="na-onboarding-btn na-onboarding-btn--primary" data-action="next">
-                        Get Started <i class="bi bi-arrow-right"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="na-onboarding-panel" data-panel="2">
-                <span class="na-onboarding-panel-tag">Question 1 of 3</span>
-                <h3 class="na-onboarding-panel-title">Why are you learning Japanese?</h3>
-                <div class="na-onboarding-options">
-                    <label class="na-onboarding-option">
-                        <input type="radio" name="goal" value="Travel & culture" />
-                        <span class="na-onboarding-option-bullet"><i class="bi bi-airplane"></i></span>
-                        <span class="na-onboarding-option-text">Travel & culture</span>
-                    </label>
-                    <label class="na-onboarding-option">
-                        <input type="radio" name="goal" value="Work & career" />
-                        <span class="na-onboarding-option-bullet"><i class="bi bi-briefcase"></i></span>
-                        <span class="na-onboarding-option-text">Work & career</span>
-                    </label>
-                    <label class="na-onboarding-option">
-                        <input type="radio" name="goal" value="Study & exams" />
-                        <span class="na-onboarding-option-bullet"><i class="bi bi-mortarboard"></i></span>
-                        <span class="na-onboarding-option-text">Study & exams</span>
-                    </label>
-                    <label class="na-onboarding-option">
-                        <input type="radio" name="goal" value="Anime & entertainment" />
-                        <span class="na-onboarding-option-bullet"><i class="bi bi-controller"></i></span>
-                        <span class="na-onboarding-option-text">Anime & entertainment</span>
-                    </label>
-                </div>
-                <div class="na-onboarding-actions">
-                    <button type="button" class="na-onboarding-btn na-onboarding-btn--ghost" data-action="prev">
-                        <i class="bi bi-arrow-left"></i> Back
-                    </button>
-                    <button type="button" class="na-onboarding-btn na-onboarding-btn--primary" data-action="next" disabled>
-                        Next <i class="bi bi-arrow-right"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="na-onboarding-panel" data-panel="3">
-                <span class="na-onboarding-panel-tag">Question 2 of 3</span>
-                <h3 class="na-onboarding-panel-title">What's your current level?</h3>
-                <div class="na-onboarding-options">
-                    <label class="na-onboarding-option">
-                        <input type="radio" name="level" value="Absolute beginner" />
-                        <span class="na-onboarding-option-bullet"><i class="bi bi-1-circle"></i></span>
-                        <span class="na-onboarding-option-text">Absolute beginner</span>
-                    </label>
-                    <label class="na-onboarding-option">
-                        <input type="radio" name="level" value="Knows hiragana" />
-                        <span class="na-onboarding-option-bullet"><i class="bi bi-2-circle"></i></span>
-                        <span class="na-onboarding-option-text">I know hiragana</span>
-                    </label>
-                    <label class="na-onboarding-option">
-                        <input type="radio" name="level" value="Conversational basics" />
-                        <span class="na-onboarding-option-bullet"><i class="bi bi-3-circle"></i></span>
-                        <span class="na-onboarding-option-text">Conversational basics</span>
-                    </label>
-                    <label class="na-onboarding-option">
-                        <input type="radio" name="level" value="Intermediate or above" />
-                        <span class="na-onboarding-option-bullet"><i class="bi bi-4-circle"></i></span>
-                        <span class="na-onboarding-option-text">Intermediate or above</span>
-                    </label>
-                </div>
-                <div class="na-onboarding-actions">
-                    <button type="button" class="na-onboarding-btn na-onboarding-btn--ghost" data-action="prev">
-                        <i class="bi bi-arrow-left"></i> Back
-                    </button>
-                    <button type="button" class="na-onboarding-btn na-onboarding-btn--primary" data-action="next" disabled>
-                        Next <i class="bi bi-arrow-right"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="na-onboarding-panel" data-panel="4">
-                <span class="na-onboarding-panel-tag">Question 3 of 3</span>
-                <h3 class="na-onboarding-panel-title">How old are you?</h3>
-                <div class="na-onboarding-options">
-                    <label class="na-onboarding-option">
-                        <input type="radio" name="age" value="Under 18" />
-                        <span class="na-onboarding-option-bullet"><i class="bi bi-emoji-smile"></i></span>
-                        <span class="na-onboarding-option-text">Under 18</span>
-                    </label>
-                    <label class="na-onboarding-option">
-                        <input type="radio" name="age" value="18 – 24" />
-                        <span class="na-onboarding-option-bullet"><i class="bi bi-mortarboard"></i></span>
-                        <span class="na-onboarding-option-text">18 – 24</span>
-                    </label>
-                    <label class="na-onboarding-option">
-                        <input type="radio" name="age" value="25 – 34" />
-                        <span class="na-onboarding-option-bullet"><i class="bi bi-briefcase"></i></span>
-                        <span class="na-onboarding-option-text">25 – 34</span>
-                    </label>
-                    <label class="na-onboarding-option">
-                        <input type="radio" name="age" value="35 or older" />
-                        <span class="na-onboarding-option-bullet"><i class="bi bi-emoji-laughing"></i></span>
-                        <span class="na-onboarding-option-text">35 or older</span>
-                    </label>
-                </div>
-                <div class="na-onboarding-actions">
-                    <button type="button" class="na-onboarding-btn na-onboarding-btn--ghost" data-action="prev">
-                        <i class="bi bi-arrow-left"></i> Back
-                    </button>
-                    <button type="button" class="na-onboarding-btn na-onboarding-btn--primary" data-action="next" disabled>
-                        See My Plan <i class="bi bi-arrow-right"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="na-onboarding-panel" data-panel="5">
-                <div class="na-onboarding-panel-icon na-onboarding-panel-icon--success">
-                    <i class="bi bi-check2-circle"></i>
-                </div>
-                <h3 class="na-onboarding-panel-title">Your personalized plan is ready</h3>
-                <p class="na-onboarding-panel-lead">
-                    Based on your answers, here's the path we'll recommend. You can change anything later in Settings.
-                </p>
-                <div class="na-onboarding-summary">
-                    <div class="na-onboarding-summary-item">
-                        <span class="na-onboarding-summary-label">Goal</span>
-                        <span class="na-onboarding-summary-value" data-result="goal">—</span>
-                    </div>
-                    <div class="na-onboarding-summary-item">
-                        <span class="na-onboarding-summary-label">Level</span>
-                        <span class="na-onboarding-summary-value" data-result="level">—</span>
-                    </div>
-                    <div class="na-onboarding-summary-item">
-                        <span class="na-onboarding-summary-label">Age</span>
-                        <span class="na-onboarding-summary-value" data-result="age">—</span>
-                    </div>
-                </div>
-                <div class="na-onboarding-actions na-onboarding-actions--center">
-                    <button type="button" class="na-onboarding-btn na-onboarding-btn--ghost" data-action="restart">
-                        Restart
-                    </button>
-                    <a href="#register-form" class="na-onboarding-btn na-onboarding-btn--primary">
-                        Continue to Register <i class="bi bi-arrow-right"></i>
-                    </a>
-                </div>
+    <div class="na-login-card">
+        <div class="na-login-brand">
+            <img src="~/sakura logo.png" alt="NihongoAcademy" class="na-login-brand-mark" />
+            <div class="na-login-brand-text">
+                <span class="na-login-brand-name">NihongoAcademy</span>
+                <span class="na-login-brand-jp">日本語学院</span>
             </div>
         </div>
-    </div>
-</section>
 
-<div id="register-form" class="row na-register-locked">
-    <div class="col-md-6">
-        <h1>@ViewData["Title"]</h1>
-        <h2>Create a new account.</h2>
-        <hr />
-        <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post">
-            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
-            <div class="form-floating mb-3">
-                <input asp-for="Input.Email" class="form-control" autocomplete="username" aria-required="true" placeholder="name@example.com" />
-                <label asp-for="Input.Email" class="form-label">Email</label>
+        <div class="na-login-header">
+            <h1>Create your account</h1>
+            <p><span class="na-login-wa">はじめまして</span> &mdash; sign up to start your Japanese journey.</p>
+        </div>
+
+        <form id="registerForm" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="na-login-form">
+            <div asp-validation-summary="ModelOnly" class="na-login-validation text-danger" role="alert"></div>
+
+            <div class="na-login-field">
+                <label asp-for="Input.Email">Email address</label>
+                <div class="na-login-input-wrap">
+                    <i class="bi bi-envelope"></i>
+                    <input asp-for="Input.Email" id="Input_Email" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                </div>
                 <span asp-validation-for="Input.Email" class="text-danger"></span>
             </div>
-            <div class="form-floating mb-3">
-                <input asp-for="Input.Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label asp-for="Input.Password" class="form-label">Password</label>
+
+            <div class="na-login-field">
+                <label asp-for="Input.Password">Password</label>
+                <div class="na-login-input-wrap">
+                    <i class="bi bi-lock"></i>
+                    <input asp-for="Input.Password" autocomplete="new-password" aria-required="true" placeholder="Create a password" />
+                    <button type="button" class="na-password-toggle" aria-label="Show password" aria-pressed="false">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </div>
                 <span asp-validation-for="Input.Password" class="text-danger"></span>
             </div>
-            <div class="form-floating mb-3">
-                <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
-                <label asp-for="Input.ConfirmPassword" class="form-label">Confirm Password</label>
+
+            <div class="na-login-field">
+                <label asp-for="Input.ConfirmPassword">Confirm password</label>
+                <div class="na-login-input-wrap">
+                    <i class="bi bi-lock-fill"></i>
+                    <input asp-for="Input.ConfirmPassword" autocomplete="new-password" aria-required="true" placeholder="Confirm your password" />
+                    <button type="button" class="na-password-toggle" aria-label="Show password" aria-pressed="false">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </div>
                 <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
             </div>
-            <button id="registerSubmit" type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
+
+            <div class="na-login-field">
+                <label asp-for="Input.SecurityQuestion">Security question</label>
+                <div class="na-login-input-wrap">
+                    <i class="bi bi-patch-question"></i>
+                    <select asp-for="Input.SecurityQuestion" id="Input_SecurityQuestion" aria-required="true" required>
+                        <option value="" selected disabled>Choose a question&hellip;</option>
+                        <option value="What is your mother's name?">What is your mother's name?</option>
+                        <option value="What was your first pet's name?">What was your first pet's name?</option>
+                        <option value="What city were you born in?">What city were you born in?</option>
+                    </select>
+                </div>
+                <span class="na-login-hint">Used to verify your identity if you forget your password.</span>
+                <span asp-validation-for="Input.SecurityQuestion" class="text-danger"></span>
+            </div>
+
+            <div class="na-login-field">
+                <label asp-for="Input.SecurityAnswer">Security answer</label>
+                <div class="na-login-input-wrap">
+                    <i class="bi bi-shield-check"></i>
+                    <input asp-for="Input.SecurityAnswer" id="Input_SecurityAnswer" autocomplete="off" aria-required="true" placeholder="Your answer (not case-sensitive)" />
+                </div>
+                <span asp-validation-for="Input.SecurityAnswer" class="text-danger"></span>
+            </div>
+
+            <button id="registerSubmit" type="submit" class="na-login-submit">
+                Create account <i class="bi bi-arrow-right"></i>
+            </button>
         </form>
-    </div>
-    <div class="col-md-6 col-md-offset-2">
-        <section>
-            <h3>Use another service to register.</h3>
-            <hr />
-            @{
-                if ((Model.ExternalLogins?.Count ?? 0) == 0)
-                {
-                    <div>
-                        <p>
-                            There are no external authentication services configured. See this <a href="https://go.microsoft.com/fwlink/?LinkID=532715">article
-                            about setting up this ASP.NET application to support logging in via external services</a>.
-                        </p>
-                    </div>
-                }
-                else
-                {
-                    <form id="external-account" asp-page="./ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="form-horizontal">
-                        <div>
-                            <p>
-                                @foreach (var provider in Model.ExternalLogins!)
-                                {
-                                    <button type="submit" class="btn btn-primary" name="provider" value="@provider.Name" title="Log in using your @provider.DisplayName account">@provider.DisplayName</button>
-                                }
-                            </p>
-                        </div>
-                    </form>
-                }
-            }
-        </section>
+
+        <p class="na-login-help">
+            Already have an account? <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">Log in</a>
+        </p>
     </div>
 </div>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-    (function() {
-        var onboarding = document.getElementById('naOnboarding');
-        if (!onboarding) return;
-
-        var panels = onboarding.querySelectorAll('.na-onboarding-panel');
-        var steps = onboarding.querySelectorAll('.na-onboarding-step');
-        var actions = onboarding.querySelectorAll('[data-action]');
-        if (!panels.length) return;
-
-        var current = 1;
-        var answers = { goal: null, level: null, age: null };
-
-        function goTo(step) {
-            current = Math.max(1, Math.min(panels.length, step));
-            panels.forEach(function(p) {
-                p.classList.toggle('is-active', parseInt(p.dataset.panel, 10) === current);
-            });
-            steps.forEach(function(s) {
-                var sn = parseInt(s.dataset.step, 10);
-                s.classList.toggle('is-active', sn === current);
-                s.classList.toggle('is-done', sn < current);
+        (function () {
+            document.querySelectorAll('.na-password-toggle').forEach(function (button) {
+                var input = button.parentElement.querySelector('input');
+                if (!button || !input) return;
+                button.addEventListener('click', function () {
+                    var show = input.type === 'password';
+                    input.type = show ? 'text' : 'password';
+                    button.setAttribute('aria-pressed', show ? 'true' : 'false');
+                    button.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+                    button.innerHTML = '<i class="bi ' + (show ? 'bi-eye-slash' : 'bi-eye') + '"></i>';
+                    input.focus();
+                });
             });
 
-            if (current === panels.length) {
-                fillResult();
-            }
-        }
-
-        function fillResult() {
-            Object.keys(answers).forEach(function(key) {
-                var el = onboarding.querySelector('[data-result="' + key + '"]');
-                if (el) el.textContent = answers[key] || '—';
-            });
-        }
-
-        function completeOnboarding() {
-            onboarding.classList.add('is-completed');
-            var form = document.getElementById('register-form');
-            if (form) {
-                form.classList.remove('na-register-locked');
-                form.classList.add('is-revealed');
-            }
-            setTimeout(function() {
-                if (form) {
-                    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            }, 350);
-        }
-
-        function nextButtonFor(panel) {
-            var next = null;
-            panel.querySelectorAll('[data-action]').forEach(function(b) {
-                if (b.dataset.action === 'next') next = b;
-            });
-            return next;
-        }
-
-        function syncNextState() {
-            var panel = onboarding.querySelector('.na-onboarding-panel.is-active');
-            if (!panel) return;
-            var input = panel.querySelector('input[type="radio"]:checked');
-            var nextBtn = nextButtonFor(panel);
-            if (nextBtn && nextBtn.disabled) {
-                nextBtn.disabled = !input;
-            }
-        }
-
-        actions.forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                var act = btn.dataset.action;
-                if (act === 'next') {
-                    var panel = btn.closest('.na-onboarding-panel');
-                    var reachedResult = (current + 1) === panels.length;
-                    if (panel) {
-                        var checked = panel.querySelector('input[type="radio"]:checked');
-                        if (checked) {
-                            var name = checked.name;
-                            answers[name] = checked.value;
-                        }
-                    }
-                    goTo(current + 1);
-                    if (reachedResult) {
-                        completeOnboarding();
-                    }
-                } else if (act === 'prev') {
-                    goTo(current - 1);
-                } else if (act === 'restart') {
-                    answers = { goal: null, level: null, age: null };
-                    onboarding.querySelectorAll('input[type="radio"]').forEach(function(r) { r.checked = false; });
-                    onboarding.classList.remove('is-completed');
-                    var form = document.getElementById('register-form');
-                    if (form) {
-                        form.classList.add('na-register-locked');
-                        form.classList.remove('is-revealed');
-                    }
-                    goTo(1);
-                }
-            });
-        });
-
-        onboarding.querySelectorAll('.na-onboarding-option').forEach(function(label) {
-            label.addEventListener('click', function(e) {
-                var input = label.querySelector('input[type="radio"]');
-                if (input) {
-                    input.checked = true;
-                    label.classList.add('is-selected');
-                    var group = input.name;
-                    onboarding.querySelectorAll('input[name="' + group + '"]').forEach(function(other) {
-                        if (other !== input) {
-                            other.parentElement.classList.remove('is-selected');
-                        }
-                    });
-                    setTimeout(syncNextState, 0);
-                }
-            });
-        });
-
-        goTo(1);
-    })();
+        })();
     </script>
 }

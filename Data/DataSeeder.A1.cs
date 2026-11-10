@@ -46,7 +46,7 @@ namespace NihongoAcademy.Data
 
             new A1Module(7, "A1: Tell time and make a schedule", "時間と予定", 40,
                 "I can ask and tell the time and state when a simple activity happens.",
-                "<h2>Time</h2><p><strong>いま なんじですか。</strong><br/><strong>くじはんです。</strong> Four, seven and nine o'clock are よじ, しちじ and くじ.</p><h2>Particle に</h2><p>Use に with a specific time: しちじに おきます. Relative times such as きょう and あした normally omit it.</p><h2>Output task</h2><p>Create a three-item schedule and ask when one activity begins.</p>",
+                "<h2>Time</h2><p><strong>いま なんじですか。</strong><br/><strong>くじはんです。</strong> Four, seven and nine o'clock are よじ, しちじ and くじ.</p><h2>Minutes</h2><p>The minute counter changes sound: いっぷん, さんぷん, よんぷん, ろっぷん, はっぷん and じゅっぷん use ぷん; にふん, ごふん, ななふん and きゅうふん use ふん.</p><h2>Particle に</h2><p>Use に with a specific time: しちじに おきます. Relative times such as きょう and あした normally omit it.</p><h2>Output task</h2><p>Create a three-item schedule and ask when one activity begins.</p>",
                 new[]{"いま|ima|now|Noun","なんじ|nanji|what time|Question","じ|ji|o'clock|Counter","はん|han|half past|Time","ふん|fun|minute|Counter","あさ|asa|morning|Noun","ひる|hiru|daytime|Noun","ばん|ban|evening|Noun","きょう|kyou|today|Noun","あした|ashita|tomorrow|Noun","げつようび|getsu youbi|Monday|Day","しちじ|shichiji|seven o'clock|Time","くじ|kuji|nine o'clock|Time"}),
 
             new A1Module(8, "A1: Describe your daily routine", "毎日の生活", 45,
@@ -76,13 +76,13 @@ namespace NihongoAcademy.Data
 
             new A1Module(13, "A1: Order food and drinks", "店で注文する", 45,
                 "I can read a simple menu, order items with quantities, and understand a basic total.",
-                "<h2>Order</h2><p><strong>ラーメンを ひとつ おねがいします。</strong><br/><strong>おちゃを ふたつ ください。</strong></p><h2>Restaurant language</h2><p>Respond to ごちゅうもんは？ and いじょうですか. いただきます and ごちそうさまでした express appreciation around a meal.</p><h2>Output task</h2><p>Order two items, state quantities, answer a confirmation and understand the total.</p>",
-                new[]{"メニュー|menyuu|menu|Noun","みず|mizu|water|Noun","おちゃ|ocha|tea|Noun","ごはん|gohan|rice / meal|Noun","ラーメン|raamen|ramen|Noun","ひとつ|hitotsu|one item|Counter","ふたつ|futatsu|two items|Counter","ください|kudasai|please give me|Expression","ぜんぶで|zenbu de|in total|Expression","いただきます|itadakimasu|said before eating|Expression","ごちそうさまでした|gochisousama deshita|said after a meal|Expression"}),
+                "<h2>Order</h2><p><strong>ラーメンを ひとつ おねがいします。</strong><br/><strong>おちゃを にはい ください。</strong></p><h2>Counters</h2><p>ひとつ／ふたつ are useful general counters. Use いっぱい／にはい for cups or servings of drinks.</p><h2>Restaurant language</h2><p>Respond to ごちゅうもんは？ and いじょうですか. いただきます and ごちそうさまでした express appreciation around a meal.</p><h2>Output task</h2><p>Order two items with suitable counters, answer a confirmation and understand the total.</p>",
+                new[]{"メニュー|menyuu|menu|Noun","みず|mizu|water|Noun","おちゃ|ocha|tea|Noun","ごはん|gohan|rice / meal|Noun","ラーメン|raamen|ramen|Noun","ひとつ|hitotsu|one item|Counter","ふたつ|futatsu|two items|Counter","いっぱい|ippai|one cup / serving|Counter","にはい|nihai|two cups / servings|Counter","ください|kudasai|please give me|Expression","ぜんぶで|zenbu de|in total|Expression","いただきます|itadakimasu|said before eating|Expression","ごちそうさまでした|gochisousama deshita|said after a meal|Expression"}),
 
             new A1Module(14, "A1: Shop for an item", "買い物をする", 45,
                 "I can ask for an item, understand its price, and choose a size or colour.",
-                "<h2>Ask</h2><p><strong>その かばんを みせてください。</strong><br/><strong>あかは ありますか。</strong><br/><strong>おおきい サイズは ありますか。</strong></p><h2>Choose</h2><p><strong>これに します。</strong> に marks the chosen option.</p><h2>Output task</h2><p>Ask for an item, specify colour or size, ask the price and choose payment.</p>",
-                new[]{"あか|aka|red|Colour","あお|ao|blue|Colour","しろ|shiro|white|Colour","くろ|kuro|black|Colour","サイズ|saizu|size|Noun","みせてください|misete kudasai|please show me|Expression","これにします|kore ni shimasu|I will take this|Expression","カード|kaado|card|Noun","げんきん|genkin|cash|Noun"}),
+                "<h2>Ask</h2><p><strong>その かばんを みせてください。</strong><br/><strong>あかは ありますか。</strong><br/><strong>おおきい サイズは ありますか。</strong></p><h2>Choose</h2><p><strong>これに します。</strong> に marks the chosen option.</p><h2>Pay</h2><p><strong>カードで はらいます。</strong> means 'I will pay by card.' Use <strong>げんきんで はらいます</strong> for cash; で marks the payment method.</p><h2>Output task</h2><p>Ask for an item, specify colour or size, ask the price and state how you will pay.</p>",
+                new[]{"あか|aka|red|Colour","あお|ao|blue|Colour","しろ|shiro|white|Colour","くろ|kuro|black|Colour","サイズ|saizu|size|Noun","みせてください|misete kudasai|please show me|Expression","これにします|kore ni shimasu|I will take this|Expression","カード|kaado|card|Noun","げんきん|genkin|cash|Noun","はらいます|haraimasu|pay|Verb"}),
 
             new A1Module(15, "A1: Travel and ask directions", "交通・道を聞く", 45,
                 "I can ask where a place is, understand simple directions, and say how I travel.",

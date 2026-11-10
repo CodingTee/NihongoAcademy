@@ -2,7 +2,97 @@
 
 document.addEventListener("DOMContentLoaded", function () {
     initSakuraPetals();
+    initHeroCarousel();
 });
+
+// ===== Hero carousel (interactive dots) =====
+function initHeroCarousel() {
+    var carousel = document.querySelector("[data-hero-carousel]");
+    if (!carousel) return;
+
+    var slides = carousel.querySelectorAll(".na-hero-v2-slide");
+    var dots = carousel.querySelectorAll(".na-hero-v2-dot");
+    var track = carousel.querySelector(".na-hero-v2-slides");
+    if (slides.length <= 1 || slides.length !== dots.length || !track) return;
+
+    var current = 0;
+    var interval = null;
+    var delay = 5000;
+
+    function show(index) {
+        if (index < 0) index = slides.length - 1;
+        if (index >= slides.length) index = 0;
+        current = index;
+
+        // Slide the track horizontally for a real carousel feel.
+        track.style.transform = "translateX(-" + (current * 100) + "%)";
+
+        // Let CSS know which slide is active (e.g. hide background on slides 2/3).
+        carousel.setAttribute("data-active-slide", current.toString());
+
+        slides.forEach(function (slide, i) {
+            slide.classList.toggle("is-active", i === current);
+        });
+        dots.forEach(function (dot, i) {
+            dot.classList.toggle("is-active", i === current);
+        });
+    }
+
+    // Ensure initial state is explicit.
+    show(0);
+
+    function next() { show(current + 1); }
+    function prev() { show(current - 1); }
+
+    function start() {
+        stop();
+        interval = setInterval(next, delay);
+    }
+
+    function stop() {
+        if (interval) {
+            clearInterval(interval);
+            interval = null;
+        }
+    }
+
+    dots.forEach(function (dot, i) {
+        dot.addEventListener("click", function () {
+            show(i);
+            start();
+        });
+    });
+
+    // Touch / drag swipe so it feels like a real sliding carousel.
+    var startX = 0, deltaX = 0, dragging = false;
+    carousel.addEventListener("touchstart", function (e) {
+        startX = e.touches[0].clientX;
+        dragging = true;
+        stop();
+    }, { passive: true });
+    carousel.addEventListener("touchmove", function (e) {
+        if (!dragging) return;
+        deltaX = e.touches[0].clientX - startX;
+        track.style.transition = "none";
+        track.style.transform = "translateX(calc(-" + (current * 100) + "% + " + deltaX + "px))";
+    }, { passive: true });
+    carousel.addEventListener("touchend", function () {
+        if (!dragging) return;
+        dragging = false;
+        track.style.transition = "";
+        if (Math.abs(deltaX) > 50) {
+            if (deltaX < 0) show(current + 1);
+            else show(current - 1);
+        } else {
+            show(current);
+        }
+        deltaX = 0;
+        start();
+    });
+
+    // Auto-play continuously so the hero is always moving.
+    start();
+}
 
 // ===== Japanese pronunciation (Web Speech API) =====
 var jaVoice = null;
@@ -10,32 +100,73 @@ var jaVoice = null;
 function pickJapaneseVoice() {
     if (!("speechSynthesis" in window)) return;
     var voices = window.speechSynthesis.getVoices();
-    jaVoice = voices.find(function (v) { return v.lang === "ja-JP"; }) ||
-              voices.find(function (v) { return v.lang && v.lang.indexOf("ja") === 0; }) ||
-              null;
+    var japaneseVoices = voices.filter(function (v) { return v.lang && v.lang.toLowerCase().indexOf("ja") === 0; });
+    japaneseVoices.sort(function (a, b) {
+        function score(voice) {
+            var value = voice.lang.toLowerCase() === "ja-jp" ? 4 : 0;
+            if (voice.localService) value += 2;
+            if (/natural|nanami|haruka|sayaka|ayumi|kyoko|otoya/i.test(voice.name)) value += 3;
+            return value;
+        }
+        return score(b) - score(a);
+    });
+    jaVoice = japaneseVoices[0] || null;
 }
 
 if ("speechSynthesis" in window) {
     pickJapaneseVoice();
-    // Some browsers load the voice list asynchronously
-    window.speechSynthesis.onvoiceschanged = pickJapaneseVoice;
+    window.speechSynthesis.addEventListener("voiceschanged", pickJapaneseVoice);
 }
 
-function speakJapanese(text) {
-    if (!text) return;
+// Keep a reference to the active utterance; Chrome garbage-collects unreferenced
+// utterances mid-speech, which kills the audio and never fires onend.
+var jaUtterance = null;
+var jaFinish = null; // settles the most recent speakJapanese promise
+
+function speakJapanese(text, options) {
+    if (!text) return Promise.resolve(false);
 
     if (!("speechSynthesis" in window)) {
-        alert("您的浏览器不支持语音合成，请使用 Edge 或 Chrome 浏览器。");
-        return;
+        var unsupportedMessage = document.getElementById("na-speech-status");
+        if (unsupportedMessage) unsupportedMessage.textContent = "Japanese audio is unavailable in this browser.";
+        return Promise.resolve(false);
     }
 
-    window.speechSynthesis.cancel();
+    options = options || {};
+    var synth = window.speechSynthesis;
+
+    // A new call supersedes whatever is queued, so its promise cannot hang.
+    if (jaFinish) { jaFinish(false); jaFinish = null; }
+    synth.cancel();
+
     var utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "ja-JP";
     if (jaVoice) utterance.voice = jaVoice;
-    utterance.rate = 0.85;   // slightly slower for learners
-    window.speechSynthesis.speak(utterance);
+    utterance.rate = Math.max(0.5, Math.min(1.2, Number(options.rate) || 0.82));
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    return new Promise(function (resolve) {
+        var settled = false;
+        var finish = function (ok) {
+            if (settled) return;
+            settled = true;
+            if (jaFinish === finish) jaFinish = null;
+            resolve(ok);
+        };
+        utterance.onend = function () { finish(true); };
+        utterance.onerror = function () { finish(false); };
+        jaFinish = finish;
+        jaUtterance = utterance;
+        // Chrome drops utterances queued in the same tick as cancel(); a short
+        // delay keeps click-to-speak reliable.
+        setTimeout(function () {
+            if (settled) return;
+            if (synth.paused) synth.resume();
+            synth.speak(utterance);
+        }, 60);
+    });
 }
+window.speakJapanese = speakJapanese;
 
 // Speaker buttons: <button class="na-speak-btn" data-speak="こんにちは">
 // Kana chart cells: click any .kana-cell to hear its syllable
@@ -44,7 +175,17 @@ document.addEventListener("click", function (e) {
     if (btn) {
         e.preventDefault();
         e.stopPropagation();
-        speakJapanese(btn.getAttribute("data-speak"));
+        btn.classList.add("is-speaking");
+        btn.setAttribute("aria-busy", "true");
+        speakJapanese(btn.getAttribute("data-speak"), { rate: btn.getAttribute("data-rate") })
+            .catch(function () {
+                var message = document.getElementById("na-speech-status");
+                if (message) message.textContent = "Japanese audio is unavailable in this browser.";
+            })
+            .finally(function () {
+                btn.classList.remove("is-speaking");
+                btn.removeAttribute("aria-busy");
+            });
         return;
     }
 
@@ -53,7 +194,7 @@ document.addEventListener("click", function (e) {
         var romaji = cell.querySelector(".kana-romaji");
         var text = cell.textContent;
         if (romaji) text = text.replace(romaji.textContent, "");
-        speakJapanese(text.trim());
+        speakJapanese(text.trim()).catch(function () { });
     }
 });
 
@@ -62,14 +203,35 @@ function initSakuraPetals() {
     var container = document.querySelector(".sakura-decoration");
     if (!container) return;
 
-    for (var i = 0; i < 15; i++) {
+    for (var i = 0; i < 24; i++) {
         var petal = document.createElement("div");
         petal.className = "sakura-petal";
-        petal.style.left = Math.random() * 100 + "%";
-        petal.style.animationDuration = (Math.random() * 8 + 8) + "s";
-        petal.style.animationDelay = Math.random() * 5 + "s";
-        petal.style.opacity = Math.random() * 0.3 + 0.1;
-        petal.style.transform = "scale(" + (Math.random() * 0.8 + 0.5) + ")";
+        // Cycle through the four petal images so the falling petals vary.
+        var petalImg = 1 + Math.floor(Math.random() * 4);
+        petal.style.backgroundImage = "url('/images/petal" + petalImg + ".png')";
+
+        // Random size (34-60px) for a natural mix - no two petals look the same.
+        var size = Math.floor(Math.random() * 26 + 34);
+        petal.style.setProperty("--size", size + "px");
+
+        // Keep the petal fully inside the viewport (allow for its own size):
+        // a petal at the very right edge gets clipped by overflow:hidden and
+        // looks stuck half-cut, so clamp the left edge with its width.
+        var maxX = Math.max(0, window.innerWidth - (size + 12));
+        petal.style.left = Math.floor(Math.random() * maxX) + "px";
+
+        // Per-petal motion variety so they don't sway/fall in lockstep:
+        //  - random horizontal drift amount and direction (left or right)
+        //  - random spin direction (clockwise / counter-clockwise)
+        //  - random fall duration and a NEGATIVE delay so they are already
+        //    scattered mid-air when the page loads (no synchronized start).
+        var swayAmp = Math.floor(Math.random() * 60 + 20);
+        var swayDir = Math.random() < 0.5 ? 1 : -1;
+        petal.style.setProperty("--sway", (swayAmp * swayDir) + "px");
+        petal.style.setProperty("--spin", Math.random() < 0.5 ? "1" : "-1");
+        petal.style.setProperty("--dur", (Math.random() * 7 + 9) + "s");   // 9-16s
+        petal.style.animationDelay = "-" + (Math.random() * 14) + "s";      // already mid-fall
+        petal.style.opacity = Math.random() * 0.35 + 0.4;
         container.appendChild(petal);
     }
 }
@@ -111,7 +273,9 @@ function showCard(index) {
         back.querySelector(".flashcard-type").textContent = data.partOfSpeech || "";
         var example = back.querySelector(".flashcard-example");
         if (example) {
-            example.textContent = data.exampleJapanese ? data.exampleJapanese + " — " + (data.exampleEnglish || "") : "";
+            example.textContent = data.exampleJapanese
+                ? data.exampleJapanese + (data.exampleReading && data.exampleReading !== data.exampleJapanese ? "（" + data.exampleReading + "）" : "") + " — " + (data.exampleEnglish || "")
+                : "";
         }
     }
 
@@ -178,8 +342,11 @@ function markSRS(quality) {
         },
         body: "vocabularyId=" + card.id + "&quality=" + quality
     })
-    .then(function(response) { return response.json(); })
-    .then(function(data) {
+    .then(function (response) {
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        return response.json();
+    })
+    .then(function (data) {
         if (data.success) {
             var intervalEl = document.getElementById("srs-interval");
             if (intervalEl) {
@@ -196,6 +363,12 @@ function markSRS(quality) {
         localStorage.setItem("na-progress-updated", Date.now().toString());
         localStorage.removeItem("na-progress-updated");
     } catch (e) { /* silent */ }
+
+    // Anki-style: re-queue "Again" cards to the end of the current session so the
+    // learner sees them again before finishing. Non-Again ratings are done for good.
+    if (quality === 1) {
+        flashcardData.push(card);
+    }
 
     if (currentCardIndex < flashcardData.length - 1) {
         nextCard();
@@ -228,7 +401,7 @@ function showResults() {
         resultsDiv.innerHTML =
             '<div class="na-card text-center">' +
             '<h3>Session Complete!</h3>' +
-            '<p class="text-muted">完了！</p>' +
+            '<p class="text-muted">All done!</p>' +
             '<div class="row mt-4">' +
             '<div class="col-4"><div class="na-stat"><div class="stat-number text-success">' + knownCount + '</div><div class="stat-label">Known</div></div></div>' +
             '<div class="col-4"><div class="na-stat"><div class="stat-number text-danger">' + unknownCount + '</div><div class="stat-label">Review</div></div></div>' +
@@ -265,7 +438,10 @@ function initQuiz(questions, timeLimitMinutes) {
     currentQuestion = 0;
     quizStartTime = Date.now();
 
-    startQuizTimer();
+    // A quiz without a time limit should not run a countdown that is already expired.
+    if (quizTimeLimit > 0) {
+        startQuizTimer();
+    }
     showQuestion(0);
     updateQuizProgress();
 }
@@ -279,7 +455,9 @@ function startQuizTimer() {
 
         if (remaining <= 0) {
             clearInterval(quizTimerInterval);
-            submitQuiz();
+            // Time is up, so there is nothing left to confirm: asking would restart
+            // the timer and then ask again every second, locking the page.
+            submitQuiz({ auto: true });
             return;
         }
 
@@ -381,11 +559,18 @@ function prevQuestion() {
     }
 }
 
-function submitQuiz() {
+var quizSubmissionStarted = false;
+
+function submitQuiz(options) {
+    if (quizSubmissionStarted) return;
     if (quizTimerInterval) clearInterval(quizTimerInterval);
 
+    options = options || {};
     var unanswered = quizAnswers.filter(function (a) { return a === 0; }).length;
-    if (unanswered > 0) {
+    // Confirming is only meaningful when the learner submits deliberately. An expired
+    // timer must never open confirm(), because cancelling it would restart the timer
+    // with zero seconds left and re-enter this branch forever.
+    if (!options.auto && unanswered > 0) {
         if (!confirm(unanswered + " question(s) unanswered. Submit anyway?")) {
             startQuizTimer();
             return;
@@ -394,6 +579,13 @@ function submitQuiz() {
 
     var form = document.getElementById("quiz-form");
     if (!form) return;
+
+    quizSubmissionStarted = true;
+    var submitButton = document.getElementById("submit-quiz");
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="bi bi-hourglass-split"></i> Submitting…';
+    }
 
     var answersInput = document.getElementById("answers-data");
     if (answersInput) {
@@ -426,10 +618,19 @@ function markLessonComplete(lessonId) {
         },
         body: "lessonId=" + lessonId
     })
-    .then(function (response) { return response.json(); })
+    .then(function (response) {
+        if (!response.ok) throw new Error("HTTP " + response.status);
+        return response.json();
+    })
     .then(function (data) {
-        if (data.success) {
-            var btn = document.getElementById("complete-btn");
+        // Mastery lessons reject this shortcut with requiresMastery, so surface the
+        // server's own message instead of failing silently.
+        if (!data.success) {
+            alert(data.message || "This lesson has to be finished through its mastery check.");
+            return;
+        }
+
+        var btn = document.getElementById("complete-btn");
             if (btn) {
                 btn.innerHTML = '<i class="bi bi-check-circle-fill"></i> Completed';
                 btn.classList.remove("btn-na-primary");
@@ -444,7 +645,6 @@ function markLessonComplete(lessonId) {
                 localStorage.setItem("na-progress-updated", Date.now().toString());
                 localStorage.removeItem("na-progress-updated");
             } catch (e) { /* silent */ }
-        }
     })
     .catch(function () {
         alert("An error occurred. Please try again.");

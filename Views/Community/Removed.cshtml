@@ -1,0 +1,17 @@
+@model string
+@{
+    ViewData["Title"] = "Content removed";
+}
+
+<div class="na-community">
+    <a asp-action="Index" class="na-link-soft mb-3 d-inline-block">
+        <i class="bi bi-arrow-left"></i> Back to Community
+    </a>
+    <div class="na-card text-center py-5">
+        <div class="na-takedown-banner na-takedown-banner--center mb-3">
+            <i class="bi bi-shield-exclamation" style="font-size:2rem;"></i>
+        </div>
+        <h4 class="mb-2">This content has been removed by a moderator</h4>
+        <p class="text-muted mb-0">@Model</p>
+    </div>
+</div>

@@ -4,12 +4,27 @@
     ViewData["Title"] = "Create Lesson";
 }
 
-<h2><i class="bi bi-journal-plus"></i> Create New Lesson</h2>
+@await Html.PartialAsync("_AdminPageHeader", new NihongoAcademy.Models.AdminPageHeaderModel
+{
+    Trail =
+    {
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Admin", Url = Url.Action("Index", "Admin") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Lessons", Url = Url.Action("Index", "AdminContent", new { type = "lesson" }) },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Create Lesson" }
+    },
+    Icon = "bi-journal-plus",
+    Title = "Create New Lesson",
+    TitleJp = "レッスン作成",
+    Actions =
+    {
+        new NihongoAcademy.Models.AdminPageHeaderAction { Text = "Back to Lessons", Url = Url.Action("Index", "AdminContent", new { type = "lesson" }), Icon = "bi-arrow-left", Outline = true }
+    }
+})
 
 <div class="row">
-    <div class="col-md-8">
+    <div class="col-12">
         <div class="na-card-flat">
-            <form asp-action="Create">
+            <form asp-controller="AdminLessons" asp-action="Create">
                 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
                 <div class="mb-3">
@@ -40,8 +55,7 @@
 
                 <div class="mb-3">
                     <label asp-for="Content" class="form-label"></label>
-                    <textarea asp-for="Content" class="form-control" rows="8" placeholder="Enter HTML content for the lesson..."></textarea>
-                    <span asp-validation-for="Content" class="text-danger"></span>
+                    <partial name="_RichTextEditor" for="Content" />
                 </div>
 
                 <div class="row">
@@ -75,7 +89,7 @@
 
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn-na-primary"><i class="bi bi-check-circle"></i> Create</button>
-                    <a asp-action="Index" class="btn-na-outline">Cancel</a>
+                    <a asp-controller="AdminContent" asp-action="Index" asp-route-type="lesson" class="btn-na-outline">Cancel</a>
                 </div>
             </form>
         </div>

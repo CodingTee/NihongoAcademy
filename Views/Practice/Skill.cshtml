@@ -2,6 +2,14 @@
 
 @{
     ViewData["Title"] = Model.Title;
+    var structuredAction = Model.SkillKey switch
+    {
+        "listening" => "ListeningLibrary",
+        "reading" => "ReadingLibrary",
+        "speaking" => "SpeakingLibrary",
+        "writing" => "WritingLibrary",
+        _ => "Mode"
+    };
 }
 
 <nav aria-label="breadcrumb" class="mb-3">
@@ -23,7 +31,7 @@
         <h6>✨ Recommended for You</h6>
         <small class="text-muted">Beginner · ~8 min</small>
     </div>
-    <a asp-action="Mode" asp-route-skill="@Model.SkillKey" asp-route-mode="@Model.Modes.FirstOrDefault()?.Key" class="btn-na-primary btn-sm">
+    <a asp-action="@structuredAction" asp-route-skill="@Model.SkillKey" asp-route-mode="@Model.Modes.FirstOrDefault()?.Key" class="btn-na-primary btn-sm">
         Start Practice
     </a>
 </div>
@@ -34,7 +42,7 @@
     <div class="na-mode-grid">
         @foreach (var mode in Model.Modes)
         {
-            <a asp-action="Mode" asp-route-skill="@Model.SkillKey" asp-route-mode="@mode.Key" class="na-mode-card">
+            <a asp-action="@(Model.SkillKey == "reading" && (mode.Key == "reading-comprehension" || mode.Key == "short-stories") ? "ReadingLibrary" : "Mode")" asp-route-skill="@Model.SkillKey" asp-route-mode="@mode.Key" class="na-mode-card">
                 <div class="na-mode-card__icon">@mode.Icon</div>
                 <div class="na-mode-card__label">@mode.Title</div>
                 <div class="na-mode-card__desc">@mode.Description</div>

@@ -15,7 +15,7 @@ namespace NihongoAcademy.Data
                 .ThenBy(l => l.Id)
                 .ToListAsync();
 
-            var expectedCounts = new[] { 5, 5, 5, 5, 5, 5, 8, 8, 25, 25, 8, 10, 15 };
+            var expectedCounts = new[] { 5, 5, 5, 5, 5, 5, 8, 8, 25, 33, 8, 10, 15 };
             if (lessons.Count != expectedCounts.Length)
                 throw new InvalidOperationException($"Hiragana curriculum must contain {expectedCounts.Length} published lessons; found {lessons.Count}.");
 

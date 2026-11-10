@@ -261,6 +261,35 @@ namespace NihongoAcademy.Data.Migrations
                     b.ToTable("Categories");
                 });
 
+            modelBuilder.Entity("NihongoAcademy.Models.CommunityBookmark", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("PostId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PostId");
+
+                    b.HasIndex("UserId", "PostId")
+                        .IsUnique();
+
+                    b.ToTable("CommunityBookmarks");
+                });
+
             modelBuilder.Entity("NihongoAcademy.Models.CommunityComment", b =>
                 {
                     b.Property<int>("Id")
@@ -277,11 +306,27 @@ namespace NihongoAcademy.Data.Migrations
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("IsTakenDown")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<int?>("ParentCommentId")
                         .HasColumnType("int");
 
                     b.Property<int>("PostId")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("TakenDownAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TakenDownByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("TakenDownReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -289,6 +334,8 @@ namespace NihongoAcademy.Data.Migrations
                         .HasColumnType("nvarchar(450)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("IsTakenDown");
 
                     b.HasIndex("ParentCommentId");
 
@@ -350,8 +397,24 @@ namespace NihongoAcademy.Data.Migrations
                     b.Property<bool>("FeedbackWanted")
                         .HasColumnType("bit");
 
+                    b.Property<bool>("IsTakenDown")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("TakenDownAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TakenDownByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("TakenDownReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -369,9 +432,107 @@ namespace NihongoAcademy.Data.Migrations
 
                     b.HasIndex("CreatedDate");
 
+                    b.HasIndex("IsTakenDown");
+
                     b.HasIndex("UserId");
 
                     b.ToTable("CommunityPosts");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.ContentReport", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("ReporterUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("ResolutionNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ResolvedByUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("ResolvedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TargetId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedDate");
+
+                    b.HasIndex("ReporterUserId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("TargetType");
+
+                    b.ToTable("ContentReports");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.DirectMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("ReceiverUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("SenderUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceiverUserId", "IsRead");
+
+                    b.HasIndex("SenderUserId", "ReceiverUserId");
+
+                    b.ToTable("DirectMessages");
                 });
 
             modelBuilder.Entity("NihongoAcademy.Models.FlashcardProgress", b =>
@@ -421,6 +582,70 @@ namespace NihongoAcademy.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("FlashcardProgress");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.GrammarPoint", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("CommonMistake")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ExampleEnglish")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("ExampleJapanese")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("ExampleReading")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("nvarchar(400)");
+
+                    b.Property<string>("Formation")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("Meaning")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Pattern")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("UsageNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("GrammarPoints");
                 });
 
             modelBuilder.Entity("NihongoAcademy.Models.Lesson", b =>
@@ -524,6 +749,10 @@ namespace NihongoAcademy.Data.Migrations
                     b.Property<int>("LessonId")
                         .HasColumnType("int");
 
+                    b.Property<string>("NaturalAudioUrl")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
                     b.Property<string>("OptionsJson")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
@@ -533,11 +762,42 @@ namespace NihongoAcademy.Data.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("ReadingSupportText")
+                        .HasMaxLength(1200)
+                        .HasColumnType("nvarchar(1200)");
+
+                    b.Property<string>("SlowAudioUrl")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("LessonId", "DisplayOrder");
 
                     b.ToTable("LessonActivities");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.LessonGrammarPoint", b =>
+                {
+                    b.Property<int>("LessonId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("GrammarPointId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("bit");
+
+                    b.HasKey("LessonId", "GrammarPointId");
+
+                    b.HasIndex("GrammarPointId");
+
+                    b.HasIndex("LessonId", "DisplayOrder");
+
+                    b.ToTable("LessonGrammarPoints");
                 });
 
             modelBuilder.Entity("NihongoAcademy.Models.LessonPrerequisite", b =>
@@ -574,6 +834,9 @@ namespace NihongoAcademy.Data.Migrations
 
                     b.Property<DateTime?>("FirstMasteryPassedDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsAdminSimulated")
+                        .HasColumnType("bit");
 
                     b.Property<bool>("IsCompleted")
                         .HasColumnType("bit");
@@ -625,6 +888,260 @@ namespace NihongoAcademy.Data.Migrations
                     b.ToTable("LessonVocabulary");
                 });
 
+            modelBuilder.Entity("NihongoAcademy.Models.ListeningAttempt", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Answer")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("AttemptedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsCorrect")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ListeningQuestionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ListeningTaskId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PlaybackMode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ListeningQuestionId");
+
+                    b.HasIndex("ListeningTaskId");
+
+                    b.HasIndex("UserId", "ListeningTaskId", "AttemptedAt");
+
+                    b.ToTable("ListeningAttempts");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.ListeningQuestion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CorrectAnswer")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Explanation")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("ListeningTaskId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("OptionsJson")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Prompt")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("QuestionType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ListeningTaskId", "DisplayOrder");
+
+                    b.ToTable("ListeningQuestions");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.ListeningTask", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EstimatedMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<string>("JapaneseTitle")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("LessonId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("ListeningTipsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ScriptEnglish")
+                        .IsRequired()
+                        .HasMaxLength(3000)
+                        .HasColumnType("nvarchar(3000)");
+
+                    b.Property<string>("ScriptJapanese")
+                        .IsRequired()
+                        .HasMaxLength(3000)
+                        .HasColumnType("nvarchar(3000)");
+
+                    b.Property<string>("Situation")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("TaskType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("LessonId");
+
+                    b.ToTable("ListeningTasks");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.LoginLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("LoginTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("Succeeded")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LoginTime");
+
+                    b.HasIndex("Succeeded");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("LoginLogs");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.OperationLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("EntityId")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("EntityType")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Action");
+
+                    b.HasIndex("Timestamp");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("OperationLogs");
+                });
+
             modelBuilder.Entity("NihongoAcademy.Models.PracticeAttempt", b =>
                 {
                     b.Property<int>("Id")
@@ -636,10 +1153,17 @@ namespace NihongoAcademy.Data.Migrations
                     b.Property<DateTime>("AttemptedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Details")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("ExerciseType")
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
+
+                    b.Property<int?>("GrammarPointId")
+                        .HasColumnType("int");
 
                     b.Property<bool>("IsCorrect")
                         .HasColumnType("bit");
@@ -648,6 +1172,9 @@ namespace NihongoAcademy.Data.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("LessonId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Score")
                         .HasColumnType("int");
 
                     b.Property<string>("UserId")
@@ -660,11 +1187,15 @@ namespace NihongoAcademy.Data.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("GrammarPointId");
+
                     b.HasIndex("LessonActivityId");
 
                     b.HasIndex("LessonId");
 
                     b.HasIndex("VocabularyId");
+
+                    b.HasIndex("UserId", "GrammarPointId", "ExerciseType");
 
                     b.HasIndex("UserId", "LessonId", "ExerciseType");
 
@@ -816,6 +1347,429 @@ namespace NihongoAcademy.Data.Migrations
                     b.ToTable("QuizQuestions");
                 });
 
+            modelBuilder.Entity("NihongoAcademy.Models.ReadingAttempt", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Answer")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime>("AttemptedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsCorrect")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("ReadingPassageId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReadingQuestionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReadingPassageId");
+
+                    b.HasIndex("ReadingQuestionId");
+
+                    b.HasIndex("UserId", "ReadingPassageId", "AttemptedAt");
+
+                    b.ToTable("ReadingAttempts");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.ReadingPassage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EstimatedMinutes")
+                        .HasColumnType("int");
+
+                    b.Property<string>("GlossaryJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("GrammarPointId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("JapaneseText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("JapaneseTitle")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("KanaText")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("LessonId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("SentenceNotesJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TextType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("GrammarPointId");
+
+                    b.HasIndex("LessonId");
+
+                    b.ToTable("ReadingPassages");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.ReadingPassageVocabulary", b =>
+                {
+                    b.Property<int>("ReadingPassageId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("VocabularyId")
+                        .HasColumnType("int");
+
+                    b.HasKey("ReadingPassageId", "VocabularyId");
+
+                    b.HasIndex("VocabularyId");
+
+                    b.ToTable("ReadingPassageVocabulary");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.ReadingQuestion", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CorrectAnswer")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Explanation")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("OptionsJson")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("Prompt")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("QuestionType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("ReadingPassageId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReadingPassageId", "DisplayOrder");
+
+                    b.ToTable("ReadingQuestions");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.SpeakingAttempt", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AttemptedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FeedbackJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("InputMode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<bool>("IsPassing")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SpeakingTaskId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Transcript")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SpeakingTaskId");
+
+                    b.HasIndex("UserId", "SpeakingTaskId", "AttemptedAt");
+
+                    b.ToTable("SpeakingAttempts");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.SpeakingTask", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ChecklistJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("JapaneseTitle")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("LessonId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int>("MinimumJapaneseCharacters")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ModelResponse")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("ModelResponseReading")
+                        .IsRequired()
+                        .HasMaxLength(2400)
+                        .HasColumnType("nvarchar(2400)");
+
+                    b.Property<string>("PromptEnglish")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("PromptJapanese")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("PromptReading")
+                        .IsRequired()
+                        .HasMaxLength(1200)
+                        .HasColumnType("nvarchar(1200)");
+
+                    b.Property<string>("RequirementsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ResponseStepsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Situation")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("TaskType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("LessonId");
+
+                    b.ToTable("SpeakingTasks");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.TutorConversation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("LastActiveDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastActiveDate");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TutorConversations");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.TutorMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int>("ConversationId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<string>("StepsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId");
+
+                    b.ToTable("TutorMessages");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.UserNotification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("SenderUserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("TargetUrl")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("UserNotifications");
+                });
+
             modelBuilder.Entity("NihongoAcademy.Models.UserProfile", b =>
                 {
                     b.Property<int>("Id")
@@ -824,14 +1778,67 @@ namespace NihongoAcademy.Data.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("AgeGroup")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("AvatarImagePath")
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
                     b.Property<string>("AvatarJson")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("AvatarMode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("generated");
+
+                    b.Property<string>("Bio")
+                        .HasMaxLength(240)
+                        .HasColumnType("nvarchar(240)");
+
+                    b.Property<string>("Country")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime>("CreatedDate")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CurrentLevel")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("DailyReminder")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("LearningGoal")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<DateTime?>("ModifiedDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("NativeLanguage")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("Sparks")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ThemePreference")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int>("TotalXp")
+                        .HasColumnType("int");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -844,6 +1851,74 @@ namespace NihongoAcademy.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("UserProfiles");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.UserRelationship", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TargetUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TargetUserId");
+
+                    b.HasIndex("UserId", "TargetUserId")
+                        .IsUnique();
+
+                    b.ToTable("UserRelationships");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.UserXpLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Amount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<DateTime>("EarnedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EarnedAt");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserXpLogs");
                 });
 
             modelBuilder.Entity("NihongoAcademy.Models.Vocabulary", b =>
@@ -880,6 +1955,10 @@ namespace NihongoAcademy.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("ExampleReading")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
                     b.Property<string>("ImagePath")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
@@ -906,6 +1985,136 @@ namespace NihongoAcademy.Data.Migrations
                     b.HasIndex("CategoryId");
 
                     b.ToTable("Vocabulary");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.WritingSubmission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<string>("FeedbackJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsPassing")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("PreviousSubmissionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<int>("WritingTaskId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PreviousSubmissionId");
+
+                    b.HasIndex("WritingTaskId");
+
+                    b.HasIndex("UserId", "WritingTaskId", "SubmittedAt");
+
+                    b.ToTable("WritingSubmissions");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.WritingTask", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ChecklistJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("GrammarPointId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("JapaneseTitle")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("LessonId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.Property<int>("MinimumJapaneseCharacters")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MinimumSentences")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ModelAnswer")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("ModelAnswerReading")
+                        .IsRequired()
+                        .HasMaxLength(2400)
+                        .HasColumnType("nvarchar(2400)");
+
+                    b.Property<string>("Prompt")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("RequirementsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("StepsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("TaskType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("GrammarPointId");
+
+                    b.HasIndex("LessonId");
+
+                    b.ToTable("WritingTasks");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
@@ -957,6 +2166,25 @@ namespace NihongoAcademy.Data.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.CommunityBookmark", b =>
+                {
+                    b.HasOne("NihongoAcademy.Models.CommunityPost", "Post")
+                        .WithMany()
+                        .HasForeignKey("PostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Post");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("NihongoAcademy.Models.CommunityComment", b =>
@@ -1015,6 +2243,17 @@ namespace NihongoAcademy.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("NihongoAcademy.Models.ContentReport", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityUser", "ReporterUser")
+                        .WithMany()
+                        .HasForeignKey("ReporterUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ReporterUser");
+                });
+
             modelBuilder.Entity("NihongoAcademy.Models.FlashcardProgress", b =>
                 {
                     b.HasOne("NihongoAcademy.Models.Vocabulary", "Vocabulary")
@@ -1044,6 +2283,25 @@ namespace NihongoAcademy.Data.Migrations
                         .HasForeignKey("LessonId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Lesson");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.LessonGrammarPoint", b =>
+                {
+                    b.HasOne("NihongoAcademy.Models.GrammarPoint", "GrammarPoint")
+                        .WithMany("Lessons")
+                        .HasForeignKey("GrammarPointId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NihongoAcademy.Models.Lesson", "Lesson")
+                        .WithMany("LessonGrammarPoints")
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GrammarPoint");
 
                     b.Navigation("Lesson");
                 });
@@ -1105,8 +2363,53 @@ namespace NihongoAcademy.Data.Migrations
                     b.Navigation("Vocabulary");
                 });
 
+            modelBuilder.Entity("NihongoAcademy.Models.ListeningAttempt", b =>
+                {
+                    b.HasOne("NihongoAcademy.Models.ListeningQuestion", "ListeningQuestion")
+                        .WithMany()
+                        .HasForeignKey("ListeningQuestionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihongoAcademy.Models.ListeningTask", "ListeningTask")
+                        .WithMany()
+                        .HasForeignKey("ListeningTaskId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ListeningQuestion");
+
+                    b.Navigation("ListeningTask");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.ListeningQuestion", b =>
+                {
+                    b.HasOne("NihongoAcademy.Models.ListeningTask", "ListeningTask")
+                        .WithMany("Questions")
+                        .HasForeignKey("ListeningTaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ListeningTask");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.ListeningTask", b =>
+                {
+                    b.HasOne("NihongoAcademy.Models.Lesson", "Lesson")
+                        .WithMany()
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Lesson");
+                });
+
             modelBuilder.Entity("NihongoAcademy.Models.PracticeAttempt", b =>
                 {
+                    b.HasOne("NihongoAcademy.Models.GrammarPoint", "GrammarPoint")
+                        .WithMany()
+                        .HasForeignKey("GrammarPointId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NihongoAcademy.Models.LessonActivity", "LessonActivity")
                         .WithMany()
                         .HasForeignKey("LessonActivityId")
@@ -1122,6 +2425,8 @@ namespace NihongoAcademy.Data.Migrations
                         .WithMany()
                         .HasForeignKey("VocabularyId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("GrammarPoint");
 
                     b.Navigation("Lesson");
 
@@ -1171,6 +2476,104 @@ namespace NihongoAcademy.Data.Migrations
                     b.Navigation("Quiz");
                 });
 
+            modelBuilder.Entity("NihongoAcademy.Models.ReadingAttempt", b =>
+                {
+                    b.HasOne("NihongoAcademy.Models.ReadingPassage", "ReadingPassage")
+                        .WithMany()
+                        .HasForeignKey("ReadingPassageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihongoAcademy.Models.ReadingQuestion", "ReadingQuestion")
+                        .WithMany()
+                        .HasForeignKey("ReadingQuestionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ReadingPassage");
+
+                    b.Navigation("ReadingQuestion");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.ReadingPassage", b =>
+                {
+                    b.HasOne("NihongoAcademy.Models.GrammarPoint", "GrammarPoint")
+                        .WithMany()
+                        .HasForeignKey("GrammarPointId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("NihongoAcademy.Models.Lesson", "Lesson")
+                        .WithMany()
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("GrammarPoint");
+
+                    b.Navigation("Lesson");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.ReadingPassageVocabulary", b =>
+                {
+                    b.HasOne("NihongoAcademy.Models.ReadingPassage", "ReadingPassage")
+                        .WithMany("Vocabulary")
+                        .HasForeignKey("ReadingPassageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NihongoAcademy.Models.Vocabulary", "Vocabulary")
+                        .WithMany()
+                        .HasForeignKey("VocabularyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ReadingPassage");
+
+                    b.Navigation("Vocabulary");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.ReadingQuestion", b =>
+                {
+                    b.HasOne("NihongoAcademy.Models.ReadingPassage", "ReadingPassage")
+                        .WithMany("Questions")
+                        .HasForeignKey("ReadingPassageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ReadingPassage");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.SpeakingAttempt", b =>
+                {
+                    b.HasOne("NihongoAcademy.Models.SpeakingTask", "SpeakingTask")
+                        .WithMany("Attempts")
+                        .HasForeignKey("SpeakingTaskId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("SpeakingTask");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.SpeakingTask", b =>
+                {
+                    b.HasOne("NihongoAcademy.Models.Lesson", "Lesson")
+                        .WithMany()
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Lesson");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.TutorMessage", b =>
+                {
+                    b.HasOne("NihongoAcademy.Models.TutorConversation", "Conversation")
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
+                });
+
             modelBuilder.Entity("NihongoAcademy.Models.Vocabulary", b =>
                 {
                     b.HasOne("NihongoAcademy.Models.Category", "Category")
@@ -1180,6 +2583,41 @@ namespace NihongoAcademy.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.WritingSubmission", b =>
+                {
+                    b.HasOne("NihongoAcademy.Models.WritingSubmission", "PreviousSubmission")
+                        .WithMany()
+                        .HasForeignKey("PreviousSubmissionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihongoAcademy.Models.WritingTask", "WritingTask")
+                        .WithMany("Submissions")
+                        .HasForeignKey("WritingTaskId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("PreviousSubmission");
+
+                    b.Navigation("WritingTask");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.WritingTask", b =>
+                {
+                    b.HasOne("NihongoAcademy.Models.GrammarPoint", "GrammarPoint")
+                        .WithMany()
+                        .HasForeignKey("GrammarPointId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("NihongoAcademy.Models.Lesson", "Lesson")
+                        .WithMany()
+                        .HasForeignKey("LessonId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("GrammarPoint");
+
+                    b.Navigation("Lesson");
                 });
 
             modelBuilder.Entity("NihongoAcademy.Models.Category", b =>
@@ -1203,9 +2641,16 @@ namespace NihongoAcademy.Data.Migrations
                     b.Navigation("Likes");
                 });
 
+            modelBuilder.Entity("NihongoAcademy.Models.GrammarPoint", b =>
+                {
+                    b.Navigation("Lessons");
+                });
+
             modelBuilder.Entity("NihongoAcademy.Models.Lesson", b =>
                 {
                     b.Navigation("Activities");
+
+                    b.Navigation("LessonGrammarPoints");
 
                     b.Navigation("LessonVocabulary");
 
@@ -1216,6 +2661,11 @@ namespace NihongoAcademy.Data.Migrations
                     b.Navigation("RequiredByLessons");
                 });
 
+            modelBuilder.Entity("NihongoAcademy.Models.ListeningTask", b =>
+                {
+                    b.Navigation("Questions");
+                });
+
             modelBuilder.Entity("NihongoAcademy.Models.Quiz", b =>
                 {
                     b.Navigation("Attempts");
@@ -1223,9 +2673,31 @@ namespace NihongoAcademy.Data.Migrations
                     b.Navigation("Questions");
                 });
 
+            modelBuilder.Entity("NihongoAcademy.Models.ReadingPassage", b =>
+                {
+                    b.Navigation("Questions");
+
+                    b.Navigation("Vocabulary");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.SpeakingTask", b =>
+                {
+                    b.Navigation("Attempts");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.TutorConversation", b =>
+                {
+                    b.Navigation("Messages");
+                });
+
             modelBuilder.Entity("NihongoAcademy.Models.Vocabulary", b =>
                 {
                     b.Navigation("LessonVocabulary");
+                });
+
+            modelBuilder.Entity("NihongoAcademy.Models.WritingTask", b =>
+                {
+                    b.Navigation("Submissions");
                 });
 #pragma warning restore 612, 618
         }

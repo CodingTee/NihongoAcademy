@@ -1,28 +1,109 @@
+@using NihongoAcademy.Data
+@using Microsoft.EntityFrameworkCore
 @inject SignInManager<IdentityUser> SignInManager
+@inject UserManager<IdentityUser> UserManager
+@inject ApplicationDbContext DbContext
 @{
     var hasExternalLogins = (await SignInManager.GetExternalAuthenticationSchemesAsync()).Any();
+    var manageUser = await UserManager.GetUserAsync(User);
+    var manageEmail = manageUser?.Email ?? User.Identity?.Name ?? "";
+    var manageInitial = string.IsNullOrWhiteSpace(manageEmail) ? "?" : manageEmail.Substring(0, 1).ToUpperInvariant();
+    var verified = manageUser != null && manageUser.EmailConfirmed;
+    var profile = manageUser == null ? null : await DbContext.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == manageUser.Id);
 }
 
-<ul class="nav nav-pills flex-column na-manage-nav">
-    <li class="nav-item">
-        <a class="nav-link @ManageNavPages.IndexNavClass(ViewContext)" id="profile" asp-page="./Index">Profile</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @ManageNavPages.EmailNavClass(ViewContext)" id="email" asp-page="./Email">Email</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @ManageNavPages.ChangePasswordNavClass(ViewContext)" id="change-password" asp-page="./ChangePassword">Password</a>
-    </li>
-    @if (hasExternalLogins)
-    {
-        <li id="external-logins" class="nav-item">
-            <a id="external-login" class="nav-link @ManageNavPages.ExternalLoginsNavClass(ViewContext)" asp-page="./ExternalLogins">External logins</a>
-        </li>
-    }
-    <li class="nav-item">
-        <a class="nav-link @ManageNavPages.TwoFactorAuthenticationNavClass(ViewContext)" id="two-factor" asp-page="./TwoFactorAuthentication">Two-factor authentication</a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link @ManageNavPages.PersonalDataNavClass(ViewContext)" id="personal-data" asp-page="./PersonalData">Personal data</a>
-    </li>
-</ul>
+<div class="na-manage-side">
+    @* ----- Account summary card ----- *@
+    <div class="na-manage-profile-card">
+        @if (profile?.AvatarMode == "uploaded" && !string.IsNullOrWhiteSpace(profile.AvatarImagePath))
+        {
+            <img src="@profile.AvatarImagePath" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;flex-shrink:0;" />
+        }
+        else if (profile != null && !string.IsNullOrWhiteSpace(profile.AvatarJson))
+        {
+            <div class="na-avatar-inline" data-size="48" data-avatar-json="@profile.AvatarJson">@manageInitial</div>
+        }
+        else
+        {
+            <span class="na-manage-avatar" aria-hidden="true">@manageInitial</span>
+        }
+        <div class="na-manage-profile-meta">
+            <span class="na-manage-profile-name">@(string.IsNullOrWhiteSpace(profile?.DisplayName) ? User.Identity?.Name : profile.DisplayName)</span>
+            <span class="na-manage-profile-email" title="@manageEmail">@manageEmail</span>
+            @if (verified)
+            {
+                <span class="na-manage-profile-badge"><i class="bi bi-patch-check-fill"></i> Email verified</span>
+            }
+        </div>
+    </div>
+
+    @* ----- Section nav with icons + descriptions ----- *@
+    <nav class="na-manage-nav-card" aria-label="Account settings">
+        <span class="na-manage-nav-heading"><i class="bi bi-sliders"></i> Settings</span>
+        <ul class="nav nav-pills flex-column na-manage-nav">
+            <li class="nav-item">
+                <a class="nav-link @ManageNavPages.IndexNavClass(ViewContext)" id="profile" asp-page="./Index">
+                    <i class="bi bi-person-circle"></i>
+                    <span class="na-manage-nav-text">
+                        <span class="na-manage-nav-label">Profile</span>
+                        <span class="na-manage-nav-desc">Your public details</span>
+                    </span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @ManageNavPages.EmailNavClass(ViewContext)" id="email" asp-page="./Email">
+                    <i class="bi bi-envelope"></i>
+                    <span class="na-manage-nav-text">
+                        <span class="na-manage-nav-label">Email</span>
+                        <span class="na-manage-nav-desc">Address &amp; verification</span>
+                    </span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @ManageNavPages.ChangePasswordNavClass(ViewContext)" id="change-password" asp-page="./ChangePassword">
+                    <i class="bi bi-shield-lock"></i>
+                    <span class="na-manage-nav-text">
+                        <span class="na-manage-nav-label">Password</span>
+                        <span class="na-manage-nav-desc">Sign-in password</span>
+                    </span>
+                </a>
+            </li>
+            @if (hasExternalLogins)
+            {
+                <li id="external-logins" class="nav-item">
+                    <a id="external-login" class="nav-link @ManageNavPages.ExternalLoginsNavClass(ViewContext)" asp-page="./ExternalLogins">
+                        <i class="bi bi-box-arrow-in-right"></i>
+                        <span class="na-manage-nav-text">
+                            <span class="na-manage-nav-label">External logins</span>
+                            <span class="na-manage-nav-desc">Google &amp; other providers</span>
+                        </span>
+                    </a>
+                </li>
+            }
+            <li class="nav-item">
+                <a class="nav-link @ManageNavPages.TwoFactorAuthenticationNavClass(ViewContext)" id="two-factor" asp-page="./TwoFactorAuthentication">
+                    <i class="bi bi-phone"></i>
+                    <span class="na-manage-nav-text">
+                        <span class="na-manage-nav-label">Two-factor</span>
+                        <span class="na-manage-nav-desc">Extra sign-in security</span>
+                    </span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link @ManageNavPages.PersonalDataNavClass(ViewContext)" id="personal-data" asp-page="./PersonalData">
+                    <i class="bi bi-database"></i>
+                    <span class="na-manage-nav-text">
+                        <span class="na-manage-nav-label">Personal data</span>
+                        <span class="na-manage-nav-desc">Export or delete</span>
+                    </span>
+                </a>
+            </li>
+        </ul>
+
+        @* ----- Safety tip footer ----- *@
+        <div class="na-manage-nav-tip">
+            <i class="bi bi-lightbulb"></i>
+            <span>Enable 2FA to protect your learning streak.</span>
+        </div>
+    </nav>
+</div>

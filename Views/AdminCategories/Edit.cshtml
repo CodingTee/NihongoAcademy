@@ -4,12 +4,28 @@
     ViewData["Title"] = "Edit Category";
 }
 
-<h2><i class="bi bi-pencil"></i> Edit Category</h2>
+@await Html.PartialAsync("_AdminPageHeader", new NihongoAcademy.Models.AdminPageHeaderModel
+{
+    Trail =
+    {
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Admin", Url = Url.Action("Index", "Admin") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Categories", Url = Url.Action("Index", "AdminContent", new { type = "category" }) },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Edit Category" }
+    },
+    Icon = "bi-pencil",
+    Title = "Edit Category",
+    TitleJp = "カテゴリ編集",
+    Lead = Model.Name,
+    Actions =
+    {
+        new NihongoAcademy.Models.AdminPageHeaderAction { Text = "Back to Categories", Url = Url.Action("Index", "AdminContent", new { type = "category" }), Icon = "bi-arrow-left", Outline = true }
+    }
+})
 
 <div class="row">
-    <div class="col-md-6">
+    <div class="col-12">
         <div class="na-card-flat">
-            <form asp-action="Edit">
+            <form asp-controller="AdminCategories" asp-action="Edit">
                 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
                 <input type="hidden" asp-for="Id" />
 
@@ -36,7 +52,7 @@
 
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn-na-primary"><i class="bi bi-check-circle"></i> Save</button>
-                    <a asp-action="Index" class="btn-na-outline">Cancel</a>
+                    <a asp-controller="AdminContent" asp-action="Index" asp-route-type="category" class="btn-na-outline">Cancel</a>
                 </div>
             </form>
         </div>

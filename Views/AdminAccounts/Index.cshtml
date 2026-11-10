@@ -1,0 +1,137 @@
+@model IEnumerable<Microsoft.AspNetCore.Identity.IdentityUser>
+@using NihongoAcademy.Models
+@using Microsoft.AspNetCore.Identity
+
+@{
+    ViewData["Title"] = "User Accounts";
+    var currentUserId = (string?)ViewBag.CurrentUserId;
+    var userRoles = (Dictionary<string, IList<string>>)ViewBag.UserRoles;
+    var roleOptions = (string[])ViewBag.RoleOptions;
+    var superAdminCount = (int)ViewBag.SuperAdminCount;
+}
+
+@await Html.PartialAsync("_AdminPageHeader", new NihongoAcademy.Models.AdminPageHeaderModel
+{
+    Trail =
+    {
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Admin", Url = Url.Action("Index", "Admin") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "User Accounts" }
+    },
+    Icon = "bi-people-fill",
+    Title = "User Accounts",
+    TitleJp = "アカウント管理",
+    Lead = "Change passwords, lock accounts, and manage roles. Role changes immediately expire the user's session."
+})
+
+<div class="na-card-flat mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <h5 class="mb-0"><i class="bi bi-people"></i> All users</h5>
+        <form asp-action="Index" method="get" class="d-flex gap-2" role="search">
+            <input type="search" name="search" value="@Context.Request.Query["search"]" class="form-control form-control-sm" placeholder="Search by email…" style="min-width: 220px;" />
+            <button type="submit" class="btn btn-sm btn-na-outline"><i class="bi bi-search"></i></button>
+            @if (!string.IsNullOrEmpty(Context.Request.Query["search"]))
+            {
+                <a asp-action="Index" class="btn btn-sm btn-na-outline"><i class="bi bi-x-lg"></i></a>
+            }
+        </form>
+    </div>
+    <hr />
+    @if (!Model.Any())
+    {
+        <p class="text-muted mb-0"><i class="bi bi-search"></i> No users match "@Context.Request.Query["search"]".</p>
+    }
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in Model)
+                {
+                    var roles = userRoles.TryGetValue(user.Id, out var found) ? found : null;
+                    var currentRole = roles != null && roles.Any() ? roles.First() : "Student";
+                    var isDisabled = user.LockoutEnd.HasValue && user.LockoutEnd > DateTimeOffset.UtcNow;
+                    var isSelf = user.Id == currentUserId;
+                    <tr>
+                        <td>
+                            @user.Email
+                            @if (user.EmailConfirmed) { <i class="bi bi-patch-check-fill text-success small"></i> }
+                            @if (isSelf) { <span class="na-badge bg-light text-muted">you</span> }
+                        </td>
+                        <td>
+                            @foreach (var role in roles ?? new List<string>())
+                            {
+                                <span class="na-badge @(role == "SuperAdmin" ? "na-badge-role-super" : role == "Admin" ? "na-badge-role-admin" : "na-badge-role-student")">@role</span>
+                            }
+                        </td>
+                        <td>
+                            @if (isDisabled)
+                            {
+                                <span class="na-badge bg-danger text-white"><i class="bi bi-lock-fill"></i> Disabled</span>
+                            }
+                            else
+                            {
+                                <span class="na-badge bg-success text-white">Active</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="na-actions">
+                                <a asp-action="Details" asp-route-userId="@user.Id" class="na-icon-btn" title="View &amp; edit details" aria-label="View details"><i class="bi bi-eye"></i></a>
+                                @if (!isSelf)
+                                {
+                                    <form asp-action="ChangeRole" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="userId" value="@user.Id" />
+                                        <select name="role" class="na-role-pill" data-current="@currentRole"
+                                                onchange="naRoleChange(this, '@user.Email')" aria-label="Change role">
+                                            @foreach (var r in roleOptions)
+                                            {
+                                                <option value="@r" selected="@(r == currentRole)">@r</option>
+                                            }
+                                        </select>
+                                    </form>
+                                    <a asp-action="ResetPassword" asp-route-userId="@user.Id" class="na-icon-btn" title="Change password" aria-label="Change password"><i class="bi bi-key"></i></a>
+                                    <form asp-action="ToggleLockout" method="post" class="d-inline">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="userId" value="@user.Id" />
+                                        <input type="hidden" name="disable" value="@(!isDisabled)" />
+                                        <button type="submit"
+                                                class="na-icon-btn @(isDisabled ? "na-icon-danger" : "")"
+                                                title="@(isDisabled ? "Locked — click to unlock" : "Active — click to lock")"
+                                                aria-label="@(isDisabled ? "Unlock account" : "Lock account")"
+                                                onclick="return confirm('@(isDisabled ? "Unlock" : "Lock") @user.Email?')">
+                                            <i class="bi bi-@(isDisabled ? "unlock-fill" : "lock-fill")"></i>
+                                        </button>
+                                    </form>
+                                }
+                                else
+                                {
+                                    <span class="na-actions-self">this is you</span>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <p class="text-muted small mb-0"><i class="bi bi-info-circle"></i> There are @superAdminCount Super Admin account(s). The last Super Admin cannot be demoted or locked.</p>
+</div>
+
+<script>
+    function naRoleChange(sel, email) {
+        var prev = sel.getAttribute('data-current');
+        if (sel.value === prev) return;
+        if (!confirm('Change ' + email + ' to ' + sel.value + '? Their session will be invalidated.')) {
+            sel.value = prev;
+            return;
+        }
+        sel.setAttribute('data-current', sel.value);
+        sel.form.submit();
+    }
+</script>

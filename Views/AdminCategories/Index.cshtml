@@ -4,10 +4,22 @@
     ViewData["Title"] = "Manage Categories";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-grid-3x3-gap"></i> Manage Categories</h2>
-    <a asp-action="Create" class="btn-na-primary"><i class="bi bi-plus-circle"></i> New Category</a>
-</div>
+@await Html.PartialAsync("_AdminPageHeader", new NihongoAcademy.Models.AdminPageHeaderModel
+{
+    Trail =
+    {
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Admin", Url = Url.Action("Index", "Admin") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Categories" }
+    },
+    Icon = "bi-grid-3x3-gap",
+    Title = "Manage Categories",
+    TitleJp = "カテゴリ管理",
+    Lead = "Organize lesson, vocabulary, and quiz groupings.",
+    Actions =
+    {
+        new NihongoAcademy.Models.AdminPageHeaderAction { Text = "New Category", Url = Url.Action("Editor", "AdminContent", new { type = "category", mode = "create" }), Icon = "bi-plus-circle" }
+    }
+})
 
 <div class="na-card-flat">
     <div class="table-responsive">
@@ -40,8 +52,10 @@
                         <td>@item.Quizzes.Count</td>
                         <td>@item.DisplayOrder</td>
                         <td>
-                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-na-outline"><i class="bi bi-pencil"></i></a>
-                            <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-na-outline" style="color: #D44;"><i class="bi bi-trash"></i></a>
+                            <div class="na-actions">
+                                <a asp-controller="AdminContent" asp-action="Editor" asp-route-type="category" asp-route-mode="edit" asp-route-id="@item.Id" class="na-icon-btn" title="Edit" aria-label="Edit category"><i class="bi bi-pencil"></i></a>
+                                <a asp-controller="AdminContent" asp-action="Editor" asp-route-type="category" asp-route-mode="delete" asp-route-id="@item.Id" class="na-icon-btn na-icon-danger" title="Delete" aria-label="Delete category"><i class="bi bi-trash"></i></a>
+                            </div>
                         </td>
                     </tr>
                 }

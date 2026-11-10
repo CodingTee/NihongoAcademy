@@ -1,0 +1,111 @@
+@model NihongoAcademy.Models.ContentReport
+@using NihongoAcademy.Models
+@{
+    ViewData["Title"] = "Review Report";
+    var post = Model.TargetType == ReportTargetType.Post ? (CommunityPost?)ViewBag.Target : null;
+    var comment = Model.TargetType == ReportTargetType.Comment ? (CommunityComment?)ViewBag.Target : null;
+    bool isTd = post != null ? post.IsTakenDown : (comment != null && comment.IsTakenDown);
+}
+
+@await Html.PartialAsync("_AdminPageHeader", new NihongoAcademy.Models.AdminPageHeaderModel
+{
+    Trail =
+    {
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Admin", Url = Url.Action("Index", "Admin") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Content Reports", Url = Url.Action("Index", "AdminModeration") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = $"Report #{Model.Id}" }
+    },
+    Icon = "bi-flag",
+    Title = "Review Report",
+    TitleJp = "通報レビュー",
+    Lead = $"Reported {Model.TargetType} #{Model.TargetId} by {Model.ReporterUser?.Email}",
+    Actions =
+    {
+        new NihongoAcademy.Models.AdminPageHeaderAction { Text = "Back to Queue", Url = Url.Action("Index", "AdminModeration"), Icon = "bi-arrow-left", Outline = true }
+    }
+})
+
+<div class="row">
+    <div class="col-md-7">
+        <div class="na-card-flat">
+            <h5><i class="bi bi-exclamation-triangle"></i> Reported content</h5>
+            <hr />
+            @if (post != null)
+            {
+                <span class="na-badge na-badge-role-admin mb-2">Post</span>
+                <h6>@post.Title</h6>
+                <div class="na-report-content">@post.Content</div>
+                <p class="text-muted small mt-2">Author: @post.User?.Email · <a asp-controller="Community" asp-action="Details" asp-route-id="@post.Id" target="_blank">Open in community ↗</a></p>
+            }
+            else if (comment != null)
+            {
+                <span class="na-badge na-badge-role-student mb-2">Comment</span>
+                <div class="na-report-content">@comment.Content</div>
+                <p class="text-muted small mt-2">Author: @comment.User?.Email · <a asp-controller="Community" asp-action="Details" asp-route-id="@comment.PostId" target="_blank">Open in community ↗</a></p>
+            }
+            else
+            {
+                <p class="text-muted">The reported content has been deleted.</p>
+            }
+            @if (isTd)
+            {
+                <div class="na-takedown-banner mt-2"><i class="bi bi-shield-exclamation"></i> Currently taken down.</div>
+                <form asp-action="Restore" method="post" class="mt-2 d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="targetId" value="@Model.TargetId" />
+                    <input type="hidden" name="targetType" value="@Model.TargetType" />
+                    <button type="submit" class="btn btn-sm btn-na-outline"><i class="bi bi-arrow-counterclockwise"></i> Restore content</button>
+                </form>
+            }
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="na-card-flat">
+            <h5><i class="bi bi-card-checklist"></i> Report details</h5>
+            <hr />
+            <p><strong>Reason:</strong> @Model.Reason</p>
+            @if (!string.IsNullOrEmpty(Model.Detail))
+            {
+                <p><strong>Details:</strong> <span class="na-report-content">@Model.Detail</span></p>
+            }
+            <p><strong>Reporter:</strong> @Model.ReporterUser?.Email</p>
+            <p><strong>Submitted:</strong> <small>@Model.CreatedDate.ToLocalTime().ToString("MMM dd, yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture)</small></p>
+            <p><strong>Status:</strong>
+                <span class="na-badge @(Model.Status == ReportStatus.Pending ? "bg-warning text-dark" : Model.Status == ReportStatus.Approved ? "bg-danger text-white" : "bg-secondary text-white")">@Model.Status</span>
+            </p>
+            @if (Model.Status != ReportStatus.Pending)
+            {
+                <p><strong>Resolved:</strong> <small>@(Model.ResolvedDate?.ToLocalTime().ToString("MMM dd, yyyy HH:mm", System.Globalization.CultureInfo.InvariantCulture) ?? "-")</small></p>
+                if (!string.IsNullOrEmpty(Model.ResolutionNote)) { <p><strong>Note:</strong> @Model.ResolutionNote</p> }
+            }
+
+            @if (Model.Status == ReportStatus.Pending)
+            {
+                <hr />
+                <form asp-action="Approve" method="post">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <div class="mb-2">
+                        <label class="form-label small">Moderation note (sent to the author)</label>
+                        <input type="text" name="note" class="form-control na-input" maxlength="500" placeholder="Why this was taken down" />
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Approve this report and take the content down?')">
+                        <i class="bi bi-shield-x"></i> Approve &amp; take down
+                    </button>
+                </form>
+                <form asp-action="Dismiss" method="post" class="mt-2">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <div class="mb-2">
+                        <label class="form-label small">Note (optional)</label>
+                        <input type="text" name="note" class="form-control na-input" maxlength="500" />
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-na-outline" onclick="return confirm('Dismiss this report?')">
+                        <i class="bi bi-x-circle"></i> Dismiss
+                    </button>
+                </form>
+            }
+        </div>
+    </div>
+</div>

@@ -1,13 +1,32 @@
-@model IEnumerable<NihongoAcademy.Models.Vocabulary>
+@model NihongoAcademy.Models.AdminVocabularyListViewModel
 
 @{
     ViewData["Title"] = "Manage Vocabulary";
+    // Build pager links that keep any other query string (e.g. type=vocabulary)
+    var extraQuery = Context.Request.Query
+        .Where(kv => kv.Key != "page")
+        .Select(kv => kv.Key + "=" + Uri.EscapeDataString(kv.Value.ToString()))
+        .ToList();
+    var pagerBase = Context.Request.Path + (extraQuery.Count > 0 ? "?" + string.Join("&", extraQuery) : "");
+    var pagerSep = extraQuery.Count > 0 ? "&" : "?";
 }
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2><i class="bi bi-card-text"></i> Manage Vocabulary</h2>
-    <a asp-action="Create" class="btn-na-primary"><i class="bi bi-plus-circle"></i> New Word</a>
-</div>
+@await Html.PartialAsync("_AdminPageHeader", new NihongoAcademy.Models.AdminPageHeaderModel
+{
+    Trail =
+    {
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Admin", Url = Url.Action("Index", "Admin") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Vocabulary" }
+    },
+    Icon = "bi-card-text",
+    Title = "Manage Vocabulary",
+    TitleJp = "単語管理",
+    Lead = "Maintain the learner word bank.",
+    Actions =
+    {
+        new NihongoAcademy.Models.AdminPageHeaderAction { Text = "New Word", Url = Url.Action("Editor", "AdminContent", new { type = "vocabulary", mode = "create" }), Icon = "bi-plus-circle" }
+    }
+})
 
 <div class="na-card-flat">
     <div class="table-responsive">
@@ -23,22 +42,41 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach (var item in Model)
+                @foreach (var item in Model.Items)
                 {
                     <tr>
                         <td style="font-size: 1.2rem;">@item.Japanese</td>
                         <td><em>@item.Romaji</em></td>
                         <td>@item.English</td>
                         <td><span class="na-badge na-badge-@(item.Category?.Name?.ToLower())">@item.Category?.Name</span></td>
-                        <td><span class="na-badge" style="background: #F0E5FF; color: #5B3C8A;">N@item.JlptLevel</span></td>
+                        <td><span class="na-badge" style="background: #EDE8F8; color: #C1A8E0;">N@(item.JlptLevel)</span></td>
                         <td>
-                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-sm btn-na-outline"><i class="bi bi-eye"></i></a>
-                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-sm btn-na-outline"><i class="bi bi-pencil"></i></a>
-                            <a asp-action="Delete" asp-route-id="@item.Id" class="btn btn-sm btn-na-outline" style="color: #D44;"><i class="bi bi-trash"></i></a>
+                            <a asp-controller="AdminContent" asp-action="Editor" asp-route-type="vocabulary" asp-route-mode="details" asp-route-id="@item.Id" class="na-icon-btn" title="View" aria-label="View word"><i class="bi bi-eye"></i></a>
+                            <a asp-controller="AdminContent" asp-action="Editor" asp-route-type="vocabulary" asp-route-mode="edit" asp-route-id="@item.Id" class="na-icon-btn" title="Edit" aria-label="Edit word"><i class="bi bi-pencil"></i></a>
+                            <a asp-controller="AdminContent" asp-action="Editor" asp-route-type="vocabulary" asp-route-mode="delete" asp-route-id="@item.Id" class="na-icon-btn na-icon-danger" title="Delete" aria-label="Delete word"><i class="bi bi-trash"></i></a>
                         </td>
                     </tr>
                 }
-            </tbody>
-        </table>
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
+
+    @if (Model.TotalPages > 1)
+    {
+        <div class="na-pagination mt-3">
+            @if (Model.Page > 1)
+            {
+                <a href="@(pagerBase)@(pagerSep)page=@(Model.Page - 1)" class="btn-na-outline btn-sm">
+                    <i class="bi bi-chevron-left"></i> Previous
+                </a>
+            }
+            <span class="text-muted small">Page @Model.Page of @Model.TotalPages · @Model.TotalCount words</span>
+            @if (Model.Page < Model.TotalPages)
+            {
+                <a href="@(pagerBase)@(pagerSep)page=@(Model.Page + 1)" class="btn-na-outline btn-sm">
+                    Next <i class="bi bi-chevron-right"></i>
+                </a>
+            }
+        </div>
+    }

@@ -1,0 +1,66 @@
+@{
+    ViewData["Title"] = "Mini Quiz";
+    var lesson = ViewBag.Lesson as NihongoAcademy.Models.Lesson;
+    var targets = ViewBag.QuizTargets as IEnumerable<NihongoAcademy.Models.Vocabulary> ?? Enumerable.Empty<NihongoAcademy.Models.Vocabulary>();
+    var pool = ViewBag.QuizPool as IEnumerable<NihongoAcademy.Models.Vocabulary> ?? Enumerable.Empty<NihongoAcademy.Models.Vocabulary>();
+    var questionCount = ViewBag.QuizQuestionCount == null ? 0 : (int)ViewBag.QuizQuestionCount;
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
+        <li class="breadcrumb-item"><a asp-controller="Lessons" asp-action="Index">Lessons</a></li>
+        <li class="breadcrumb-item"><a asp-controller="Lessons" asp-action="Details" asp-route-id="@lesson?.Id">@lesson?.Title</a></li>
+        <li class="breadcrumb-item active">Mini Quiz</li>
+    </ol>
+</nav>
+
+<div class="mb-4">
+    <h2><i class="bi bi-patch-question na-page-icon"></i> Mini Quiz</h2>
+    @if (lesson != null)
+    {
+        <h5 class="text-na-primary">@lesson.Title</h5>
+        <p class="text-muted mb-0">@questionCount quick questions from this lesson · instant feedback · no time limit</p>
+    }
+</div>
+
+<div class="na-card-flat p-3 mb-4">
+    <div class="d-flex justify-content-between align-items-start gap-3">
+        <div>
+            <strong>Quick self-check</strong>
+            <div class="small text-muted">Every question comes from the words and kana in this lesson. It is a warm-up before the mastery check, so it never changes your lesson progress.</div>
+        </div>
+        <span id="mini-quiz-score" class="na-chip">0 / @questionCount</span>
+    </div>
+</div>
+
+<div class="quiz-progress-bar mb-2">
+    <div class="quiz-progress-fill" id="mini-quiz-progress" style="width: 0%;"></div>
+</div>
+<p class="text-muted text-center mb-4" id="mini-quiz-progress-text">Question 1 of @questionCount</p>
+
+<div id="mini-quiz-root" data-question-count="@questionCount" aria-live="polite"></div>
+
+<div class="mt-4 d-flex flex-wrap gap-2 align-items-center">
+    <a asp-controller="Practice" asp-action="LessonPractice" asp-route-lessonId="@lesson?.Id" class="btn-na-outline btn-sm">
+        <i class="bi bi-lightning-charge"></i> Practice This Lesson
+    </a>
+    <a asp-controller="Lessons" asp-action="Details" asp-route-id="@lesson?.Id" class="na-link-soft">
+        <i class="bi bi-arrow-left"></i> Back to Lesson
+    </a>
+</div>
+
+<script id="mini-quiz-targets" type="application/json">
+    @Html.Raw(System.Text.Json.JsonSerializer.Serialize(targets.Select(v => new {
+        v.Id, v.Japanese, v.Romaji, v.English, v.PartOfSpeech
+    })))
+</script>
+<script id="mini-quiz-pool" type="application/json">
+    @Html.Raw(System.Text.Json.JsonSerializer.Serialize(pool.Select(v => new {
+        v.Id, v.Japanese, v.Romaji, v.English, v.PartOfSpeech
+    })))
+</script>
+
+@section Scripts {
+    <script src="~/js/lesson-quiz.js" asp-append-version="true"></script>
+}

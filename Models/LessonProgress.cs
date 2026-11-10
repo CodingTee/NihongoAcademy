@@ -32,6 +32,9 @@ namespace NihongoAcademy.Models
         [Display(Name = "Stable Mastery Confirmed")]
         public DateTime? StableMasteryDate { get; set; }
 
+        [Display(Name = "Admin-simulated progress")]
+        public bool IsAdminSimulated { get; set; }
+
         [Display(Name = "Time Spent (minutes)")]
         public int TimeSpentMinutes { get; set; }
     }

@@ -86,7 +86,13 @@ function _saveProgress(pct) {
         },
         body: 'lessonId=' + _lessonId + '&percentage=' + pct
     })
-    .then(function (r) { return r.json(); })
+    .then(function (r) {
+        // A 400 here is almost always an expired anti-forgery token. Without this check
+        // the UI keeps showing progress the server never accepted, and it disappears
+        // again on reload.
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+    })
     .then(function (data) {
         if (data.success) {
             _lastSavedProgress = pct;
@@ -94,7 +100,7 @@ function _saveProgress(pct) {
             _notifyProgressChanged();
         }
     })
-    .catch(function () { /* silent */ });
+    .catch(function () { /* silent: the learner can keep reading offline */ });
 }
 
 function _onScroll() {

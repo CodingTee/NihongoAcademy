@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using NihongoAcademy.Data;
 using NihongoAcademy.Models;
+using NihongoAcademy.Services;
 
 namespace NihongoAcademy.Controllers
 {
@@ -11,11 +12,13 @@ namespace NihongoAcademy.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<IdentityUser> _userManager;
+        private readonly IAppClock _clock;
 
-        public LessonsController(ApplicationDbContext context, UserManager<IdentityUser> userManager)
+        public LessonsController(ApplicationDbContext context, UserManager<IdentityUser> userManager, IAppClock clock)
         {
             _context = context;
             _userManager = userManager;
+            _clock = clock;
         }
 
         public async Task<IActionResult> Index(int? categoryId, string searchString)
@@ -66,7 +69,7 @@ namespace NihongoAcademy.Controllers
                     .Include(p => p.PrerequisiteLesson)
                     .ToListAsync();
                 var stablyMasteredIds = userProgress
-                    .Where(p => p.StableMasteryDate.HasValue)
+                    .Where(p => p.FirstMasteryPassedDate.HasValue)
                     .Select(p => p.LessonId)
                     .ToHashSet();
                 ViewBag.LockedPrerequisites = prerequisiteRows
@@ -76,11 +79,18 @@ namespace NihongoAcademy.Controllers
                         g => g.Key,
                         g => g.Select(p => p.PrerequisiteLesson?.Title ?? "previous lesson").ToList());
 
-                // Category-level progress for learning path
+                // Category-level progress for learning path: one GROUP BY instead of one COUNT per category.
+                var lessonCountsByCategory = await _context.Lessons
+                    .AsNoTracking()
+                    .Where(l => l.IsPublished)
+                    .GroupBy(l => l.CategoryId)
+                    .Select(g => new { CategoryId = g.Key, Count = g.Count() })
+                    .ToDictionaryAsync(x => x.CategoryId, x => x.Count);
+
                 var pathProgress = new Dictionary<string, string>();
                 foreach (var cat in pathCategories)
                 {
-                    var catLessons = await _context.Lessons.Where(l => l.CategoryId == cat.Id && l.IsPublished).CountAsync();
+                    var catLessons = lessonCountsByCategory.GetValueOrDefault(cat.Id);
                     var catCompleted = userProgress.Count(p => p.Lesson?.CategoryId == cat.Id && p.IsCompleted);
                     var catStarted = userProgress.Any(p => p.Lesson?.CategoryId == cat.Id && !p.IsCompleted && p.CompletionPercentage > 0);
 
@@ -116,6 +126,8 @@ namespace NihongoAcademy.Controllers
             var lesson = await _context.Lessons
                 .Include(l => l.Category)
                 .Include(l => l.LessonVocabulary)
+                .Include(l => l.LessonGrammarPoints).ThenInclude(link => link.GrammarPoint)
+                .Include(l => l.Activities)
                 .FirstOrDefaultAsync(l => l.Id == id && l.IsPublished);
 
             if (lesson == null) return NotFound();
@@ -128,7 +140,7 @@ namespace NihongoAcademy.Controllers
                     .Where(p => !_context.LessonProgress.Any(progress =>
                         progress.UserId == currentUserId &&
                         progress.LessonId == p.PrerequisiteLessonId &&
-                        progress.StableMasteryDate != null))
+                        progress.FirstMasteryPassedDate.HasValue))
                     .Select(p => p.PrerequisiteLesson!.Title)
                     .ToListAsync();
                 if (unmet.Count > 0)
@@ -146,19 +158,8 @@ namespace NihongoAcademy.Controllers
                 viewModel.Progress = await _context.LessonProgress
                     .FirstOrDefaultAsync(p => p.UserId == userId && p.LessonId == id);
 
-                if (viewModel.Progress == null)
-                {
-                    viewModel.Progress = new LessonProgress
-                    {
-                        UserId = userId!,
-                        LessonId = id,
-                        StartedDate = DateTime.Now,
-                        CompletionPercentage = 0,
-                        IsCompleted = false
-                    };
-                    _context.LessonProgress.Add(viewModel.Progress);
-                    await _context.SaveChangesAsync();
-                }
+                // Progress is created lazily by LessonMasteryService.EvaluateAsync on the
+                // first mastery pass, so a plain GET must not write to the database.
 
                 // Follow the explicit curriculum graph instead of guessing from
                 // category/display ordering.
@@ -166,6 +167,42 @@ namespace NihongoAcademy.Controllers
                     .Where(p => p.PrerequisiteLessonId == id && p.Lesson!.IsPublished)
                     .Select(p => p.Lesson)
                     .FirstOrDefaultAsync();
+
+                viewModel.PreviousLesson = await _context.LessonPrerequisites
+                    .Where(p => p.LessonId == id && p.PrerequisiteLesson!.IsPublished)
+                    .Select(p => p.PrerequisiteLesson)
+                    .FirstOrDefaultAsync();
+
+                // Read-only snapshot of first-pass progress for the UI. Intentionally does
+                // not call EvaluateAsync so a GET never mutates LessonProgress.
+                if (lesson.LessonVocabulary.Any())
+                {
+                    var vocabIds = lesson.LessonVocabulary.Select(x => x.VocabularyId).ToList();
+                    var attempts = await _context.PracticeAttempts
+                        .Where(a => a.UserId == userId && a.LessonId == id).ToListAsync();
+                    var requiredTypes = lesson.Title.StartsWith("A1:") || lesson.Title.StartsWith("A2:")
+                        ? LessonMasteryPolicy.CoreTypes.Concat(new[] { "production" }).ToArray()
+                        : LessonMasteryPolicy.CoreTypes;
+                    var results = requiredTypes.ToDictionary(
+                        type => type,
+                        type =>
+                        {
+                            var grp = attempts.Where(a => a.ExerciseType == type &&
+                                a.VocabularyId.HasValue && vocabIds.Contains(a.VocabularyId.Value)).ToList();
+                            return new ExerciseMasteryResult(
+                                grp.Count,
+                                grp.Count == 0 ? 0 : (int)Math.Round(grp.Count(a => a.IsCorrect) * 100d / grp.Count),
+                                grp.Where(a => a.VocabularyId.HasValue).Select(a => a.VocabularyId).Distinct().Count(),
+                                type == "production" ? 1 : vocabIds.Count);
+                        });
+                    var reqActivityIds = lesson.Activities
+                        .Where(a => a.ActivityType != "dialogue")
+                        .Select(a => a.Id).ToList();
+                    var actDone = reqActivityIds.Count(id => attempts.Any(a =>
+                        a.LessonActivityId == id && a.IsCorrect));
+                    viewModel.MasteryEvaluation = new MasteryEvaluation(
+                        false, false, false, viewModel.Progress?.MasteryReviewDueDate, results, actDone, reqActivityIds.Count);
+                }
             }
 
             return View(viewModel);
@@ -213,9 +250,9 @@ namespace NihongoAcademy.Controllers
                     LessonId = lessonId,
                     IsCompleted = true,
                     CompletionPercentage = 100,
-                    StartedDate = DateTime.Now,
-                    CompletedDate = DateTime.Now,
-                    StableMasteryDate = DateTime.Now
+                    StartedDate = _clock.Now,
+                    CompletedDate = _clock.Now,
+                    StableMasteryDate = _clock.Now
                 };
                 _context.LessonProgress.Add(progress);
             }
@@ -223,8 +260,8 @@ namespace NihongoAcademy.Controllers
             {
                 progress.IsCompleted = true;
                 progress.CompletionPercentage = 100;
-                progress.CompletedDate = DateTime.Now;
-                progress.StableMasteryDate ??= DateTime.Now;
+                progress.CompletedDate = _clock.Now;
+                progress.StableMasteryDate ??= _clock.Now;
                 _context.Update(progress);
             }
 
@@ -261,10 +298,10 @@ namespace NihongoAcademy.Controllers
                     LessonId = lessonId,
                     CompletionPercentage = percentage,
                     IsCompleted = percentage >= 100,
-                    StartedDate = DateTime.Now,
-                    CompletedDate = percentage >= 100 ? DateTime.Now : null
+                    StartedDate = _clock.Now,
+                    CompletedDate = percentage >= 100 ? _clock.Now : null
                 };
-                if (percentage >= 100) progress.StableMasteryDate = DateTime.Now;
+                if (percentage >= 100) progress.StableMasteryDate = _clock.Now;
                 _context.LessonProgress.Add(progress);
             }
             else
@@ -273,8 +310,8 @@ namespace NihongoAcademy.Controllers
                 if (percentage >= 100)
                 {
                     progress.IsCompleted = true;
-                    progress.CompletedDate = DateTime.Now;
-                    progress.StableMasteryDate ??= DateTime.Now;
+                    progress.CompletedDate = _clock.Now;
+                    progress.StableMasteryDate ??= _clock.Now;
                 }
                 _context.Update(progress);
             }
@@ -289,6 +326,8 @@ namespace NihongoAcademy.Controllers
         public Lesson Lesson { get; set; } = new();
         public LessonProgress? Progress { get; set; }
         public Lesson? NextLesson { get; set; }
+        public Lesson? PreviousLesson { get; set; }
         public bool RequiresMastery { get; set; }
+        public Services.MasteryEvaluation? MasteryEvaluation { get; set; }
     }
 }

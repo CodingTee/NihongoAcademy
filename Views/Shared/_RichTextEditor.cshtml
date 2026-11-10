@@ -1,0 +1,44 @@
+@model string
+@* WYSIWYG editor for Lesson Content. Use with: <partial name="_RichTextEditor" for="Content" /> *@
+<div class="na-rich" data-rich-editor>
+    <div class="na-rich-toolbar" data-rich-toolbar role="toolbar" aria-label="Formatting toolbar">
+        <div class="na-rich-group">
+            <button type="button" data-cmd="bold" title="Bold (Ctrl+B)"><i class="bi bi-type-bold"></i></button>
+            <button type="button" data-cmd="italic" title="Italic (Ctrl+I)"><i class="bi bi-type-italic"></i></button>
+            <button type="button" data-cmd="underline" title="Underline (Ctrl+U)"><i class="bi bi-type-underline"></i></button>
+            <button type="button" data-cmd="strikeThrough" title="Strikethrough"><i class="bi bi-type-strikethrough"></i></button>
+        </div>
+        <div class="na-rich-group">
+            <select data-rich-block title="Paragraph style">
+                <option value="p">Normal text</option>
+                <option value="h2">Heading</option>
+                <option value="h3">Subheading</option>
+                <option value="blockquote">Quote</option>
+                <option value="pre">Code block</option>
+            </select>
+        </div>
+        <div class="na-rich-group">
+            <button type="button" data-cmd="insertUnorderedList" title="Bullet list"><i class="bi bi-list-ul"></i></button>
+            <button type="button" data-cmd="insertOrderedList" title="Numbered list"><i class="bi bi-list-ol"></i></button>
+        </div>
+        <div class="na-rich-group">
+            <button type="button" data-rich-link-btn title="Insert link"><i class="bi bi-link-45deg"></i></button>
+            <label class="na-rich-color" title="Text colour">
+                <i class="bi bi-palette"></i>
+                <input type="color" data-rich-color value="#3d3539" />
+            </label>
+            <button type="button" data-cmd="insertHorizontalRule" title="Divider line"><i class="bi bi-dash-lg"></i></button>
+        </div>
+        <div class="na-rich-group">
+            <button type="button" data-cmd="undo" title="Undo (Ctrl+Z)"><i class="bi bi-arrow-counterclockwise"></i></button>
+            <button type="button" data-cmd="redo" title="Redo (Ctrl+Y)"><i class="bi bi-arrow-clockwise"></i></button>
+            <button type="button" data-cmd="removeFormat" title="Clear formatting"><i class="bi bi-eraser"></i></button>
+        </div>
+        <div class="na-rich-group na-rich-group-end">
+            <button type="button" data-rich-source-btn title="Toggle HTML source"><i class="bi bi-code-slash"></i></button>
+        </div>
+    </div>
+    <div class="na-rich-area" contenteditable="true" data-rich-area spellcheck="false" aria-label="Content editor">@(Model != null ? Html.Raw(Model) : null)</div>
+    <textarea name="@Html.NameFor(m => m)" id="@Html.IdFor(m => m)" class="d-none" data-rich-source-text>@Model</textarea>
+    @Html.ValidationMessageFor(m => m, string.Empty, new { @class = "text-danger" })
+</div>

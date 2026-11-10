@@ -1,0 +1,137 @@
+@{
+    ViewData["Title"] = "Audit Logs";
+    var scope = (string?)ViewBag.Scope ?? "all";
+    var loginLogs = (System.Collections.Generic.List<NihongoAcademy.Models.LoginLog>)ViewBag.LoginLogs;
+    var operationLogs = (System.Collections.Generic.List<NihongoAcademy.Models.OperationLog>)ViewBag.OperationLogs;
+}
+
+@await Html.PartialAsync("_AdminPageHeader", new NihongoAcademy.Models.AdminPageHeaderModel
+{
+    Trail =
+    {
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Admin", Url = Url.Action("Index", "Admin") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Audit Logs" }
+    },
+    Icon = "bi-clock-history",
+    Title = "Audit Logs",
+    TitleJp = "監査ログ",
+    Lead = "Login attempts and sensitive operations are recorded here."
+})
+
+<div class="na-card-flat mb-4">
+    <form asp-action="Index" method="get" class="row g-2 align-items-end">
+        <div class="col-auto">
+            <label class="form-label small">Scope</label>
+            <select name="scope" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="all" selected="@(scope == "all")">All</option>
+                <option value="login" selected="@(scope == "login")">Logins</option>
+                <option value="operation" selected="@(scope == "operation")">Operations</option>
+            </select>
+        </div>
+        <div class="col-auto">
+            <label class="form-label small">From</label>
+            <input type="date" name="from" value="@ViewBag.From" class="form-control form-control-sm" />
+        </div>
+        <div class="col-auto">
+            <label class="form-label small">To</label>
+            <input type="date" name="to" value="@ViewBag.To" class="form-control form-control-sm" />
+        </div>
+        <div class="col-auto">
+            <label class="form-label small">Search</label>
+            <input type="text" name="q" value="@ViewBag.Q" class="form-control form-control-sm" placeholder="email or action" />
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-sm btn-na-primary"><i class="bi bi-search"></i> Filter</button>
+            <a asp-action="Index" class="btn btn-sm btn-na-outline">Clear</a>
+        </div>
+    </form>
+</div>
+
+@if (scope != "operation")
+{
+    <div class="na-card-flat mb-4">
+        <h5><i class="bi bi-box-arrow-in-right"></i> Login logs</h5>
+        <hr />
+        @if (!loginLogs.Any())
+        {
+            <p class="text-muted mb-0">No login records match.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Email</th>
+                            <th>Result</th>
+                            <th>IP</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var l in loginLogs)
+                        {
+                            <tr>
+                                <td><small>@l.LoginTime.ToString("MMM dd, HH:mm", System.Globalization.CultureInfo.InvariantCulture)</small></td>
+                                <td>@l.Email</td>
+                                <td>
+                                    @if (l.Succeeded)
+                                    {
+                                        <span class="na-badge bg-success text-white">Success</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="na-badge bg-danger text-white">Failed</span>
+                                    }
+                                </td>
+                                <td><small>@l.IpAddress</small></td>
+                                <td><small>@l.FailureReason</small></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}
+
+@if (scope != "login")
+{
+    <div class="na-card-flat">
+        <h5><i class="bi bi-list-check"></i> Operation logs</h5>
+        <hr />
+        @if (!operationLogs.Any())
+        {
+            <p class="text-muted mb-0">No operation records match.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Action</th>
+                            <th>By</th>
+                            <th>Target</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var o in operationLogs)
+                        {
+                            <tr>
+                                <td><small>@o.Timestamp.ToString("MMM dd, HH:mm", System.Globalization.CultureInfo.InvariantCulture)</small></td>
+                                <td><span class="na-badge na-badge-role-admin">@o.Action</span></td>
+                                <td>@o.UserEmail</td>
+                                <td><small>@(o.EntityType != null ? o.EntityType + " #" + o.EntityId : "-")</small></td>
+                                <td><small>@o.Description</small></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}

@@ -1,0 +1,22 @@
+<style>
+    .na-error-page { position:relative; isolation:isolate; max-width:780px; margin:clamp(2.5rem,8vw,6rem) auto; padding:clamp(2.25rem,6vw,4.5rem) clamp(1.25rem,6vw,4rem); overflow:hidden; text-align:center; border:1px solid rgba(214,134,148,.28); border-radius:32px; background:linear-gradient(145deg,rgba(255,255,255,.98),rgba(255,245,247,.94)); box-shadow:0 24px 70px rgba(91,55,61,.10); }
+    .na-error-page::before { content:"桜"; position:absolute; z-index:-1; right:-1rem; bottom:-4.5rem; color:rgba(239,166,179,.10); font:700 clamp(10rem,28vw,17rem)/1 serif; }
+    .na-error-code { color:var(--na-sakura-dark,#cc4f67); font:800 clamp(5.5rem,16vw,9rem)/.9 var(--na-font-display,sans-serif); letter-spacing:-.07em; text-shadow:5px 5px 0 rgba(244,179,190,.25); }
+    .na-error-mark { display:grid; width:92px; height:92px; margin:0 auto 1.25rem; place-items:center; color:var(--na-sakura-dark,#cc4f67); border-radius:50%; background:rgba(244,179,190,.22); font-size:2.8rem; }
+    .na-error-kicker { margin:1.25rem 0 .65rem; color:var(--na-sakura-dark,#cc4f67); font-size:.76rem; font-weight:800; letter-spacing:.16em; }
+    .na-error-page h1 { margin:0; color:var(--na-ink,#33292b); font-size:clamp(2rem,5vw,3.35rem); letter-spacing:-.035em; }
+    .na-error-ja { margin:.4rem 0 1.15rem; color:#b76b79; font-family:"Noto Serif JP",serif; font-size:1.15rem; }
+    .na-error-copy { max-width:580px; margin:0 auto 1.75rem; color:var(--na-muted,#71676a); font-size:1.05rem; line-height:1.75; }
+    .na-error-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:.8rem; }
+    .na-error-actions a { min-width:160px; }
+    .na-error-back { margin-top:1.35rem; padding:.35rem .7rem; color:#8b6570; border:0; background:transparent; font-weight:650; }
+    .na-error-back:hover { color:var(--na-sakura-dark,#cc4f67); }
+    .na-error-reference { width:fit-content; max-width:100%; margin:1.5rem auto 0; color:#8b7a7f; font-size:.82rem; }
+    .na-error-reference code { display:block; max-width:min(560px,80vw); margin-top:.5rem; overflow-wrap:anywhere; }
+    .na-error-petals span { position:absolute; z-index:-1; width:52px; height:52px; background-color:transparent; background-size:contain; background-repeat:no-repeat; background-position:center; transform:rotate(28deg); }
+    .na-error-petals span:nth-child(1) { top:12%; left:8%;  background-image:url("/images/petal1.png"); }
+    .na-error-petals span:nth-child(2) { top:23%; right:11%; transform:rotate(72deg);  background-image:url("/images/petal2.png"); }
+    .na-error-petals span:nth-child(3) { bottom:15%; left:14%; transform:rotate(-22deg); background-image:url("/images/petal3.png"); }
+    .na-error-petals span:nth-child(4) { right:25%; bottom:8%; transform:rotate(48deg); background-image:url("/images/petal4.png"); }
+    @@media (max-width:575.98px) { .na-error-page { margin:1.25rem auto 5.5rem; border-radius:24px; } .na-error-actions { flex-direction:column; } .na-error-actions a { width:100%; } }
+</style>

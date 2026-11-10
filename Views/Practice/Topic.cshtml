@@ -51,7 +51,7 @@
     <div class="col-6 col-md-4">
         @if (quizzes != null && quizzes.Any())
         {
-            <a asp-controller="Quizzes" asp-action="Take" asp-route-id="@quizzes.First().Id" class="na-mode-card text-decoration-none">
+            <a asp-controller="Quizzes" asp-action="Session" asp-route-mode="take" asp-route-id="@quizzes.First().Id" class="na-mode-card text-decoration-none">
                 <div class="na-mode-icon">📝</div>
                 <div class="na-mode-title">Quiz</div>
                 <small class="na-mode-desc">Test your knowledge</small>

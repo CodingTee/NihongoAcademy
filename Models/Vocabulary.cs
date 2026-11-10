@@ -32,6 +32,10 @@ namespace NihongoAcademy.Models
         [Display(Name = "Example Sentence (Japanese)")]
         public string? ExampleJapanese { get; set; }
 
+        [StringLength(250)]
+        [Display(Name = "Example Reading (Kana)")]
+        public string? ExampleReading { get; set; }
+
         [StringLength(200)]
         [Display(Name = "Example Sentence (English)")]
         public string? ExampleEnglish { get; set; }

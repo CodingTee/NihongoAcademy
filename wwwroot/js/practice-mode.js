@@ -8,17 +8,31 @@
 
     // ── Load vocab data ──
     const dataEl = document.getElementById('mode-vocab-data');
-    const vocabData = dataEl ? JSON.parse(dataEl.textContent) : [];
-    if (!vocabData.length) return;
+    if (!dataEl) return;
+
+    // The payload is server-injected JSON; an unreadable one must log and bail rather
+    // than throw and leave the mode runner half-wired.
+    let vocabData = [];
+    try {
+        vocabData = JSON.parse(dataEl.textContent || '');
+    } catch (error) {
+        console.warn('practice-mode: unreadable injected data', error);
+        return;
+    }
+    if (!Array.isArray(vocabData) || vocabData.length === 0) return;
+
+    // Anything typed by the learner is echoed back into feedback boxes, so it has to
+    // be escaped on the way into every HTML string below.
+    const escapeHtml = (value) => String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 
     // ── Helpers ──
     function speak(text) {
-        if (!window.speechSynthesis) return;
-        const u = new SpeechSynthesisUtterance(text);
-        u.lang = 'ja-JP';
-        u.rate = 0.85;
-        speechSynthesis.cancel();
-        speechSynthesis.speak(u);
+        if (typeof window.speakJapanese === 'function') return window.speakJapanese(text);
     }
 
     function shuffle(arr) {
@@ -79,10 +93,6 @@
         }
     }
 
-    modePlayBtn?.addEventListener('click', () => {
-        if (currentListenVocab) speak(currentListenVocab.Japanese);
-    });
-
     modeNextBtn?.addEventListener('click', () => {
         if (modeNextBtn) modeNextBtn.style.display = 'none';
         listenChooseQuestion();
@@ -111,8 +121,12 @@
         if (dictationFeedback) dictationFeedback.style.display = 'none';
     }
 
+    // One handler only: ModeRunner renders a single mode per page, so this button
+    // replays whichever mode currently owns the stage. Binding it twice made each
+    // click speak two different words.
     modePlayBtn?.addEventListener('click', () => {
-        if (currentDictationVocab) speak(currentDictationVocab.Japanese);
+        if (currentListenVocab) speak(currentListenVocab.Japanese);
+        else if (currentDictationVocab) speak(currentDictationVocab.Japanese);
     });
 
     dictationCheck?.addEventListener('click', () => {
@@ -129,8 +143,8 @@
             } else {
                 dictationFeedback.innerHTML = `<div class="p-3 rounded" style="background:#FFE5E5;color:#D44;">
                     <i class="bi bi-x-circle-fill"></i> Not quite.<br/>
-                    <strong>You wrote:</strong> ${userAnswer || '(empty)'}<br/>
-                    <strong>Correct:</strong> ${correct}<br/>
+                    <strong>You wrote:</strong> ${escapeHtml(userAnswer) || '(empty)'}<br/>
+                    <strong>Correct:</strong> ${escapeHtml(correct)}<br/>
                     <small>${currentDictationVocab.Romaji} — ${currentDictationVocab.English}</small>
                 </div>`;
             }
@@ -205,7 +219,7 @@
                 } else {
                     writingFeedback.innerHTML = `<div class="p-3 rounded" style="background:#FFF8E8;color:#B8860B;">
                         <i class="bi bi-info-circle-fill"></i> Expected: <strong>${target.Japanese}</strong>（${target.Romaji}）<br/>
-                        <small>Your answer: ${userAnswer || '(empty)'}</small>
+                        <small>Your answer: ${escapeHtml(userAnswer) || '(empty)'}</small>
                     </div>`;
                 }
             }
@@ -424,32 +438,52 @@
         recognition.lang = 'ja-JP';
         recognition.interimResults = false;
 
-        recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            pronFeedback.style.display = 'block';
+        // Recognition also ends on its own after silence, producing no result at all.
+        // Restoring the button only inside onresult left it stuck on "Listening...",
+        // so every exit path shares one settle function.
+        let recordingSettled = false;
+        const settleRecording = () => {
+            if (recordingSettled) return;
+            recordingSettled = true;
             pronRecordBtn.disabled = false;
             pronRecordBtn.innerHTML = '<i class="bi bi-mic"></i> Repeat';
+        };
 
-            if (transcript.includes(currentPronVocab.Japanese) || transcript === currentPronVocab.Japanese) {
+        recognition.onresult = (event) => {
+            const first = event.results && event.results.length > 0 ? event.results[0] : null;
+            settleRecording();
+            if (!first || first.length === 0) {
+                pronFeedback.style.display = 'block';
+                pronFeedback.innerHTML = `<div class="p-2 rounded" style="background:#FFF8E8;color:#B8860B;">
+                    Nothing was picked up. Please try again.
+                </div>`;
+                return;
+            }
+
+            const transcript = first[0].transcript || '';
+            pronFeedback.style.display = 'block';
+
+            if (transcript === currentPronVocab.Japanese || transcript.includes(currentPronVocab.Japanese)) {
                 pronFeedback.innerHTML = `<div class="p-3 rounded" style="background:#E5F8E5;color:#2C5F2D;">
-                    <i class="bi bi-check-circle-fill"></i> Great! Recognised: <strong>${transcript}</strong>
+                    <i class="bi bi-check-circle-fill"></i> Great! Recognised: <strong>${escapeHtml(transcript)}</strong>
                 </div>`;
             } else {
                 pronFeedback.innerHTML = `<div class="p-3 rounded" style="background:#FFF8E8;color:#B8860B;">
-                    <i class="bi bi-info-circle-fill"></i> Heard: <strong>${transcript}</strong><br/>
-                    <small>Expected: ${currentPronVocab.Japanese}（${currentPronVocab.Romaji}）</small>
+                    <i class="bi bi-info-circle-fill"></i> Heard: <strong>${escapeHtml(transcript)}</strong><br/>
+                    <small>Expected: ${escapeHtml(currentPronVocab.Japanese)}（${escapeHtml(currentPronVocab.Romaji)}）</small>
                 </div>`;
             }
         };
 
         recognition.onerror = () => {
             pronFeedback.style.display = 'block';
-            pronRecordBtn.disabled = false;
-            pronRecordBtn.innerHTML = '<i class="bi bi-mic"></i> Repeat';
+            settleRecording();
             pronFeedback.innerHTML = `<div class="p-2 rounded" style="background:#FFE5E5;color:#D44;">
                 Could not hear you. Please try again.
             </div>`;
         };
+
+        recognition.onend = settleRecording;
 
         recognition.start();
     });
@@ -463,77 +497,130 @@
     const hwTarget = document.getElementById('hw-target');
     const hwRomaji = document.getElementById('hw-romaji');
     const hwCanvas = document.getElementById('hw-canvas');
+    const hwGuideCanvas = document.getElementById('hw-guide-canvas');
     const hwClear = document.getElementById('hw-clear');
+    const hwUndo = document.getElementById('hw-undo');
+    const hwCheck = document.getElementById('hw-check');
     const hwNext = document.getElementById('hw-next');
     const hwStrokeBtn = document.getElementById('hw-stroke-btn');
+    const hwHear = document.getElementById('hw-hear');
+    const hwMeaning = document.getElementById('hw-meaning');
+    const hwStrokeCount = document.getElementById('hw-stroke-count');
+    const hwFeedback = document.getElementById('hw-feedback');
 
     let hwCtx = null;
+    let hwGuideCtx = null;
     let hwDrawing = false;
     let currentHwVocab = null;
+    let hwGuideVisible = true;
+    let hwSnapshots = [];
+    let hwStrokes = 0;
 
     function hwQuestion() {
         currentHwVocab = randomVocab();
         if (hwTarget) hwTarget.textContent = currentHwVocab.Japanese;
         if (hwRomaji) hwRomaji.textContent = currentHwVocab.Romaji;
+        if (hwMeaning) hwMeaning.textContent = currentHwVocab.English || '';
+        if (hwFeedback) hwFeedback.textContent = '';
+        hwGuideVisible = true;
+        if (hwStrokeBtn) hwStrokeBtn.innerHTML = '<i class="bi bi-eye"></i> Hide guide';
+        drawGuide();
         clearCanvas();
+    }
+
+    function drawGuide() {
+        if (!hwGuideCtx || !hwGuideCanvas) return;
+        hwGuideCtx.clearRect(0, 0, hwGuideCanvas.width, hwGuideCanvas.height);
+        if (!hwGuideVisible || !currentHwVocab) return;
+        hwGuideCtx.save();
+        hwGuideCtx.strokeStyle = '#d8d8d8';
+        hwGuideCtx.lineWidth = 1;
+        hwGuideCtx.setLineDash([7, 7]);
+        hwGuideCtx.beginPath();
+        hwGuideCtx.moveTo(150, 0); hwGuideCtx.lineTo(150, 300);
+        hwGuideCtx.moveTo(0, 150); hwGuideCtx.lineTo(300, 150);
+        hwGuideCtx.stroke();
+        hwGuideCtx.setLineDash([]);
+        hwGuideCtx.fillStyle = 'rgba(80, 80, 80, 0.16)';
+        hwGuideCtx.font = "220px 'Noto Sans JP', sans-serif";
+        hwGuideCtx.textAlign = 'center';
+        hwGuideCtx.textBaseline = 'middle';
+        hwGuideCtx.fillText(currentHwVocab.Japanese, 150, 158, 250);
+        hwGuideCtx.restore();
     }
 
     function clearCanvas() {
         if (!hwCtx) return;
         hwCtx.clearRect(0, 0, hwCanvas.width, hwCanvas.height);
+        hwSnapshots = [];
+        hwStrokes = 0;
+        if (hwStrokeCount) hwStrokeCount.textContent = '0';
+    }
+
+    function canvasPoint(event) {
+        const rect = hwCanvas.getBoundingClientRect();
+        return {
+            x: (event.clientX - rect.left) * hwCanvas.width / rect.width,
+            y: (event.clientY - rect.top) * hwCanvas.height / rect.height
+        };
     }
 
     if (hwCanvas) {
         hwCtx = hwCanvas.getContext('2d');
-        hwCtx.lineWidth = 3;
+        hwGuideCtx = hwGuideCanvas?.getContext('2d') || null;
+        hwCtx.lineWidth = 7;
         hwCtx.lineCap = 'round';
+        hwCtx.lineJoin = 'round';
         hwCtx.strokeStyle = '#C84B31';
 
-        hwCanvas.addEventListener('mousedown', e => {
+        hwCanvas.addEventListener('pointerdown', e => {
+            e.preventDefault();
+            hwCanvas.setPointerCapture(e.pointerId);
             hwDrawing = true;
-            const rect = hwCanvas.getBoundingClientRect();
+            hwSnapshots.push(hwCtx.getImageData(0, 0, hwCanvas.width, hwCanvas.height));
+            hwStrokes++;
+            if (hwStrokeCount) hwStrokeCount.textContent = String(hwStrokes);
+            const point = canvasPoint(e);
             hwCtx.beginPath();
-            hwCtx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+            hwCtx.moveTo(point.x, point.y);
         });
-        hwCanvas.addEventListener('mousemove', e => {
+        hwCanvas.addEventListener('pointermove', e => {
             if (!hwDrawing) return;
-            const rect = hwCanvas.getBoundingClientRect();
-            hwCtx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+            const point = canvasPoint(e);
+            hwCtx.lineTo(point.x, point.y);
             hwCtx.stroke();
         });
-        hwCanvas.addEventListener('mouseup', () => hwDrawing = false);
-        hwCanvas.addEventListener('mouseleave', () => hwDrawing = false);
-
-        // Touch support
-        hwCanvas.addEventListener('touchstart', e => {
-            e.preventDefault();
-            hwDrawing = true;
-            const rect = hwCanvas.getBoundingClientRect();
-            const touch = e.touches[0];
-            hwCtx.beginPath();
-            hwCtx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
-        });
-        hwCanvas.addEventListener('touchmove', e => {
-            e.preventDefault();
-            if (!hwDrawing) return;
-            const rect = hwCanvas.getBoundingClientRect();
-            const touch = e.touches[0];
-            hwCtx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
-            hwCtx.stroke();
-        });
-        hwCanvas.addEventListener('touchend', () => hwDrawing = false);
+        hwCanvas.addEventListener('pointerup', () => { hwDrawing = false; });
+        hwCanvas.addEventListener('pointercancel', () => { hwDrawing = false; });
     }
 
     hwClear?.addEventListener('click', clearCanvas);
+    hwUndo?.addEventListener('click', () => {
+        const previous = hwSnapshots.pop();
+        if (!previous || !hwCtx) return;
+        hwCtx.putImageData(previous, 0, 0);
+        hwStrokes = Math.max(0, hwStrokes - 1);
+        if (hwStrokeCount) hwStrokeCount.textContent = String(hwStrokes);
+    });
     hwNext?.addEventListener('click', hwQuestion);
-
-    // Stroke order button (MVP: just show the character bigger)
-    hwStrokeBtn?.addEventListener('click', () => {
-        if (currentHwVocab && hwTarget) {
-            hwTarget.style.transition = 'transform 0.3s ease';
-            hwTarget.style.transform = 'scale(1.5)';
-            setTimeout(() => { hwTarget.style.transform = 'scale(1)'; }, 600);
+    hwHear?.addEventListener('click', () => { if (currentHwVocab) speak(currentHwVocab.Japanese); });
+    hwCheck?.addEventListener('click', () => {
+        if (!hwStrokes) {
+            if (hwFeedback) hwFeedback.innerHTML = '<span class="text-danger">Write the character before comparing it.</span>';
+            return;
         }
+        hwGuideVisible = true;
+        drawGuide();
+        if (hwStrokeBtn) hwStrokeBtn.innerHTML = '<i class="bi bi-eye"></i> Hide guide';
+        if (hwFeedback) hwFeedback.innerHTML = '<span class="text-success">Compare proportion, position and balance with the pale model. Hide the guide and repeat once from memory.</span>';
+    });
+
+    hwStrokeBtn?.addEventListener('click', () => {
+        hwGuideVisible = !hwGuideVisible;
+        drawGuide();
+        hwStrokeBtn.innerHTML = hwGuideVisible
+            ? '<i class="bi bi-eye"></i> Hide guide'
+            : '<i class="bi bi-eye-slash"></i> Show guide';
     });
 
     if (hwTarget) hwQuestion();

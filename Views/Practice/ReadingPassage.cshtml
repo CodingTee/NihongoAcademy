@@ -1,0 +1,45 @@
+@model NihongoAcademy.Models.ReadingPassageViewModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = Model.Passage.Title;
+}
+
+<nav aria-label="breadcrumb" class="mb-3"><ol class="breadcrumb"><li class="breadcrumb-item"><a asp-action="ReadingLibrary">Graded Reading</a></li><li class="breadcrumb-item active">@Model.Passage.Title</li></ol></nav>
+<div class="d-flex flex-wrap justify-content-between gap-3 mb-4">
+    <div><span class="na-badge">@Model.Passage.Level · @Model.Passage.TextType</span><h2 class="mt-2 mb-0">@Model.Passage.Title</h2><div class="text-na-primary" lang="ja">@Model.Passage.JapaneseTitle</div></div>
+    <div class="text-end"><strong id="reading-status" class="@(Model.IsMastered ? "text-success" : "")">@(Model.IsMastered ? "Stable mastery" : $"{Model.Accuracy}% accuracy")</strong><small class="d-block text-muted">Review correctly on a later date to master</small></div>
+</div>
+
+@if (Model.UnknownPercentage > 20) { <div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> About @Model.UnknownPercentage% of linked vocabulary is not yet stably mastered. Keep the glossary open while reading.</div> }
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <article class="na-card">
+            <div class="d-flex gap-2 justify-content-end flex-wrap mb-3"><button type="button" class="btn-na-outline btn-sm" id="toggle-kana" aria-expanded="false">Full kana · よみかた</button><button type="button" class="btn-na-outline btn-sm" id="toggle-glossary">Vocabulary &amp; reading help</button><button type="button" class="btn-na-outline btn-sm" id="toggle-notes">Sentence help</button><button type="button" class="btn-na-outline btn-sm" data-speak="@Model.Passage.JapaneseText"><i class="bi bi-volume-up"></i> Listen</button></div>
+            <div lang="ja" class="fs-5" style="white-space:pre-line;line-height:2.2">@Model.Passage.JapaneseText</div>
+            <div id="reading-kana" lang="ja" class="mt-3 p-3 rounded bg-light" style="white-space:pre-line;line-height:2;display:none">@Model.Passage.KanaText</div>
+        </article>
+
+        <section class="mt-4"><h4>Comprehension Check <small class="text-muted">読解問題</small></h4>@Html.AntiForgeryToken()
+        @foreach (var question in Model.Passage.Questions.OrderBy(q => q.DisplayOrder))
+        {
+            var options = JsonSerializer.Deserialize<string[]>(question.OptionsJson ?? "[]") ?? Array.Empty<string>();
+            <div class="na-card-flat p-3 mt-3 reading-question" data-question-id="@question.Id">
+                <strong>@question.DisplayOrder. @question.Prompt</strong>
+                @if (question.QuestionType == "choice")
+                { <div class="d-grid gap-2 mt-3">@foreach (var option in options) { <button type="button" class="btn-na-outline reading-choice" data-answer="@option">@option</button> }</div> }
+                else
+                { <div class="input-group mt-3"><input class="form-control reading-input" placeholder="Type a short answer" /><button type="button" class="btn-na-primary reading-submit">Check</button></div> }
+                <div class="reading-feedback mt-2 small" aria-live="polite"></div>
+            </div>
+        }
+        </section>
+    </div>
+    <aside class="col-lg-4">
+        <div class="na-card-flat mb-3" id="reading-glossary" style="display:none"><h5>Vocabulary &amp; Kana Readings</h5><ul class="mb-0">@foreach (var entry in Model.Glossary) { var parts = entry.Split('|', 2); <li><strong lang="ja">@parts[0]</strong>@(parts.Length > 1 ? $" — {parts[1]}" : "")</li> }</ul></div>
+        <div class="na-card-flat mb-3" id="reading-notes" style="display:none"><h5>Sentence Help</h5>@foreach (var entry in Model.Notes) { var parts = entry.Split('|', 2); <div class="mb-3"><strong lang="ja">@parts[0]</strong>@if (parts.Length > 1) { <div class="small text-muted">@parts[1]</div> }</div> }</div>
+        @if (Model.Passage.GrammarPoint != null) { <div class="na-card-flat"><h5>Grammar Link</h5><strong class="text-na-primary">@Model.Passage.GrammarPoint.Pattern</strong><p class="small mb-0 mt-1">@Model.Passage.GrammarPoint.Meaning</p></div> }
+    </aside>
+</div>
+
+@section Scripts { <script>window.__readingPassageId = @Model.Passage.Id; document.getElementById('toggle-kana')?.addEventListener('click', function () { var panel=document.getElementById('reading-kana'); var show=panel.style.display==='none'; panel.style.display=show?'block':'none'; this.setAttribute('aria-expanded', show?'true':'false'); this.textContent=show?'Hide kana · よみかた':'Full kana · よみかた'; });</script><script src="~/js/reading-practice.js" asp-append-version="true"></script> }

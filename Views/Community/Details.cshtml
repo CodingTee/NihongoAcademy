@@ -1,5 +1,6 @@
 @model CommunityPost
 @using NihongoAcademy.Models
+@using NihongoAcademy.Controllers
 @using Microsoft.AspNetCore.Identity
 @inject SignInManager<IdentityUser> SignInManager
 
@@ -7,9 +8,10 @@
     ViewData["Title"] = Model.Title;
     var topLevelComments = (List<CommunityComment>)ViewBag.TopLevelComments;
     var isLiked = (bool)ViewBag.IsLiked;
+    var isBookmarked = (bool)(ViewBag.IsBookmarked ?? false);
     var currentUserId = (string?)ViewBag.CurrentUserId;
     var isOwner = (bool)ViewBag.IsOwner;
-    var avatarMap = (Dictionary<string, string?>)ViewBag.AvatarMap;
+    var avatarMap = (Dictionary<string, CommunityAvatarInfo>)ViewBag.AvatarMap;
 }
 
 @functions {
@@ -20,7 +22,7 @@
         if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
         if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
         if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
-        return date.ToLocalTime().ToString("MMM d");
+        return date.ToLocalTime().ToString("MMM d", System.Globalization.CultureInfo.InvariantCulture);
     }
 
     public string GetUserInitial(string? userName)
@@ -74,14 +76,35 @@
 
     @* ===== Post Detail ===== *@
     <div class="na-card na-post-detail" data-post-id="@Model.Id">
+        @* Moderation banner (visible to moderators and the author of a taken-down post) *@
+        @if ((bool)(ViewBag.PostTakenDown ?? false))
+        {
+            <div class="na-takedown-banner">
+                <i class="bi bi-shield-exclamation"></i>
+                <strong>Removed by moderator.</strong>
+                @if (!string.IsNullOrEmpty(Model.TakenDownReason))
+                { <span>Reason: @Model.TakenDownReason</span> }
+                <span class="text-muted small">This content was taken down for rectification.</span>
+            </div>
+        }
         @* Header *@
         <div class="na-post-header">
-            <div class="na-post-avatar">
-                <div class="na-avatar-sm na-avatar-sm--lg na-avatar-inline" data-size="48"
-                     data-avatar-json="@(avatarMap != null && avatarMap.ContainsKey(Model.UserId) ? avatarMap[Model.UserId] : "{}")">@GetUserInitial(Model.User?.UserName)</div>
-            </div>
+            <a asp-action="UserProfile" asp-route-id="@Model.UserId" class="na-post-avatar text-decoration-none">
+                @{
+                    var postAvatar = avatarMap != null && avatarMap.ContainsKey(Model.UserId) ? avatarMap[Model.UserId] : null;
+                }
+                @if (postAvatar?.UseUploadedImage == true)
+                {
+                    <img src="@postAvatar.AvatarImagePath" alt="" class="na-avatar-sm na-avatar-sm--lg na-avatar-img-sm" />
+                }
+                else
+                {
+                    <div class="na-avatar-sm na-avatar-sm--lg na-avatar-inline" data-size="48"
+                         data-avatar-json="@(postAvatar?.AvatarJson ?? "{}")">@GetUserInitial(Model.User?.UserName)</div>
+                }
+            </a>
             <div class="na-post-meta">
-                <span class="na-post-username">@@@(Model.User?.UserName ?? "learner")</span>
+                <a asp-action="UserProfile" asp-route-id="@Model.UserId" class="na-post-username text-decoration-none text-dark fw-bold">@@@(Model.User?.UserName ?? "learner")</a>
                 <span class="na-post-time">&middot; @TimeAgo(Model.CreatedDate)</span>
                 @if (Model.ModifiedDate.HasValue)
                 {
@@ -91,7 +114,7 @@
         </div>
 
         @* Category + Feedback tags *@
-        <div class="na-post-category">
+        <div class="na-post-category mb-3">
             <span class="na-cat-tag @CategoryTagClass(Model.Category)">
                 <i class="bi @CategoryIcon(Model.Category)"></i> @CategoryLabel(Model.Category)
             </span>
@@ -103,12 +126,25 @@
             }
         </div>
 
+        @* Feedback Wanted Callout Banner *@
+        @if (Model.FeedbackWanted)
+        {
+            <div class="na-correction-banner">
+                <div class="na-correction-banner-title">
+                    <i class="bi bi-stars"></i> Japanese Correction Requested (添削募集中)
+                </div>
+                <p class="na-correction-banner-text">
+                    The author is practicing writing in Japanese and would love your feedback! Native speakers and advanced learners are warmly invited to suggest corrections, natural phrasing, and grammar nuances.
+                </p>
+            </div>
+        }
+
         @* Title *@
         <h3 class="na-post-detail-title">@Model.Title</h3>
 
         @* Content *@
         <div class="na-post-detail-content">
-            @Html.Raw(Model.Content.Replace("\n", "<br/>"))
+            @Html.Raw(TextHelper.ToSafeHtmlLines(Model.Content))
         </div>
 
         @* Action bar *@
@@ -123,8 +159,10 @@
                 <i class="bi bi-chat"></i>
                 <span>@Model.Comments.Count comments</span>
             </span>
-            <button class="na-post-action na-save-btn" onclick="savePost(this)" title="Save">
-                <i class="bi bi-bookmark"></i>
+            <button class="na-post-action na-save-btn @(isBookmarked ? "na-save-btn--active" : "")"
+                    data-post-id="@Model.Id"
+                    onclick="toggleCommunityBookmark(this, @Model.Id)" title="Save post">
+                <i class="bi @(isBookmarked ? "bi-bookmark-fill" : "bi-bookmark")"></i>
             </button>
             @if (isOwner)
             {
@@ -136,12 +174,18 @@
                     </button>
                 </form>
             }
+            else if (SignInManager.IsSignedIn(User))
+            {
+                <a class="na-post-action text-danger" asp-action="Report" asp-route-targetType="Post" asp-route-targetId="@Model.Id" title="Report this post">
+                    <i class="bi bi-flag"></i> Report
+                </a>
+            }
         </div>
     </div>
 
     @* ===== Comments Section ===== *@
     <div class="na-comments-section mt-3">
-        <h5><i class="bi bi-chat-dots"></i> Comments @Model.Comments.Count</h5>
+        <h5><i class="bi bi-chat-dots"></i> Comments (@Model.Comments.Count)</h5>
 
         @* Add comment form *@
         @if (SignInManager.IsSignedIn(User))
@@ -153,11 +197,32 @@
                     <input type="hidden" name="parentCommentId" id="reply-to-id" value="" />
 
                     <div class="d-flex gap-2 align-items-start">
-                        <div class="na-avatar-sm na-avatar-inline" data-size="36"
-                             data-avatar-json="@(avatarMap != null && currentUserId != null && avatarMap.ContainsKey(currentUserId) ? avatarMap[currentUserId] : "{}")">@GetUserInitial(User.Identity?.Name)</div>
+                        @{
+                            var currentAvatar = avatarMap != null && currentUserId != null && avatarMap.ContainsKey(currentUserId) ? avatarMap[currentUserId] : null;
+                        }
+                        <a asp-action="UserProfile" asp-route-id="@currentUserId" class="text-decoration-none" title="View my profile">
+                            @if (currentAvatar?.UseUploadedImage == true)
+                            {
+                                <img src="@currentAvatar.AvatarImagePath" alt="" class="na-avatar-sm na-avatar-img-sm" />
+                            }
+                            else
+                            {
+                                <div class="na-avatar-sm na-avatar-inline" data-size="36"
+                                     data-avatar-json="@(currentAvatar?.AvatarJson ?? "{}")">@GetUserInitial(User.Identity?.Name)</div>
+                            }
+                        </a>
                         <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="small text-muted fw-semibold">Write a response (+5 XP)</span>
+                                @if (Model.FeedbackWanted)
+                                {
+                                    <button type="button" class="na-template-btn" onclick="insertCorrectionTemplate()">
+                                        <i class="bi bi-pencil-square"></i> Use Correction Template
+                                    </button>
+                                }
+                            </div>
                             <textarea name="content" class="form-control na-input" rows="3"
-                                      placeholder="Write a comment..." id="comment-input" required maxlength="2000"></textarea>
+                                      placeholder="Share your thought or advice..." id="comment-input" required maxlength="2000"></textarea>
                             <div id="reply-indicator" class="d-none mt-1">
                                 <span class="text-muted small" id="reply-indicator-text"></span>
                                 <button type="button" class="btn btn-link btn-sm p-0 text-danger" onclick="cancelReply()">Cancel</button>
@@ -166,7 +231,7 @@
                     </div>
                     <div class="text-end mt-2">
                         <button type="submit" class="btn-na-primary btn-sm">
-                            <i class="bi bi-send"></i> Comment
+                            <i class="bi bi-send"></i> Comment (+5 XP)
                         </button>
                     </div>
                 </form>
@@ -175,7 +240,7 @@
         else
         {
             <div class="na-card text-center py-3">
-                <a asp-area="Identity" asp-page="/Account/Login" class="na-link-soft">Sign in</a> to leave a comment.
+                <a asp-area="Identity" asp-page="/Account/Login" class="na-link-soft">Sign in</a> to leave a comment and help fellow learners.
             </div>
         }
 
@@ -185,49 +250,102 @@
             <div class="na-comments-list">
                 @foreach (var comment in topLevelComments)
                 {
-                    <div class="na-comment na-card" data-comment-id="@comment.Id">
+                    <div class="na-comment na-card @(comment.IsTakenDown ? "na-comment--takedown" : "")" data-comment-id="@comment.Id">
+                        @if ((bool)(ViewBag.IsModerator ?? false) && comment.IsTakenDown)
+                        {
+                            <div class="na-takedown-banner na-takedown-banner--sm">
+                                <i class="bi bi-shield-exclamation"></i> Removed by moderator
+                                @if (!string.IsNullOrEmpty(comment.TakenDownReason)) { <span>· @comment.TakenDownReason</span> }
+                            </div>
+                        }
                         <div class="na-comment-header">
-                            <div class="na-avatar-sm na-avatar-inline" data-size="36"
-                                 data-avatar-json="@(avatarMap != null && avatarMap.ContainsKey(comment.UserId) ? avatarMap[comment.UserId] : "{}")">@GetUserInitial(comment.User?.UserName)</div>
-                            <div class="na-comment-meta">
-                                <span class="na-comment-username">@@@(comment.User?.UserName ?? "learner")</span>
+                            <a asp-action="UserProfile" asp-route-id="@comment.UserId" class="text-decoration-none">
+                                @{
+                                    var commentAvatar = avatarMap != null && avatarMap.ContainsKey(comment.UserId) ? avatarMap[comment.UserId] : null;
+                                }
+                                @if (commentAvatar?.UseUploadedImage == true)
+                                {
+                                    <img src="@commentAvatar.AvatarImagePath" alt="" class="na-avatar-sm na-avatar-img-sm" />
+                                }
+                                else
+                                {
+                                    <div class="na-avatar-sm na-avatar-inline" data-size="32"
+                                         data-avatar-json="@(commentAvatar?.AvatarJson ?? "{}")">@GetUserInitial(comment.User?.UserName)</div>
+                                }
+                            </a>
+                            <div>
+                                <a asp-action="UserProfile" asp-route-id="@comment.UserId" class="na-comment-username text-decoration-none text-dark fw-bold">@@@(comment.User?.UserName ?? "learner")</a>
                                 <span class="na-comment-time">&middot; @TimeAgo(comment.CreatedDate)</span>
                             </div>
                         </div>
                         <div class="na-comment-body">
-                            @Html.Raw(comment.Content.Replace("\n", "<br/>"))
+                            @Html.Raw(TextHelper.ToSafeHtmlLines(comment.Content))
                         </div>
                         <div class="na-comment-actions">
                             @if (SignInManager.IsSignedIn(User))
                             {
-                                <button class="na-post-action na-reply-btn" onclick="replyTo(@comment.Id, '@comment.User?.UserName')">
+                                <button type="button" class="na-comment-reply-btn" onclick="replyTo(@comment.Id, '@(comment.User?.UserName ?? "learner")')">
                                     <i class="bi bi-reply"></i> Reply
                                 </button>
-                            }
-                            @if (comment.UserId == currentUserId)
-                            {
-                                <span class="text-muted small">(your comment)</span>
+                                if (comment.UserId != currentUserId)
+                                {
+                                    <a class="na-comment-reply-btn text-danger" asp-action="Report" asp-route-targetType="Comment" asp-route-targetId="@comment.Id" title="Report this comment">
+                                        <i class="bi bi-flag"></i> Report
+                                    </a>
+                                }
+                                if (comment.UserId == currentUserId || (bool)(ViewBag.IsModerator ?? false))
+                                {
+                                    <form asp-action="DeleteComment" asp-route-id="@comment.Id" method="post" class="d-inline" onsubmit="return confirm('Delete this comment?');">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="na-comment-reply-btn text-danger" style="background:none;border:none;padding:0;" title="Delete comment">
+                                            <i class="bi bi-trash3"></i> Delete
+                                        </button>
+                                    </form>
+                                }
                             }
                         </div>
 
-                        @* Replies (1 level) *@
+                        @* Nested replies *@
                         @if (comment.Replies.Any())
                         {
-                            <div class="na-replies">
+                            <div class="na-replies-list">
                                 @foreach (var reply in comment.Replies.OrderBy(r => r.CreatedDate))
                                 {
                                     <div class="na-reply">
                                         <div class="na-comment-header">
-                                            <div class="na-avatar-sm na-avatar-sm--sm na-avatar-inline" data-size="28"
-                                                 data-avatar-json="@(avatarMap != null && avatarMap.ContainsKey(reply.UserId) ? avatarMap[reply.UserId] : "{}")">@GetUserInitial(reply.User?.UserName)</div>
-                                            <div class="na-comment-meta">
-                                                <span class="na-comment-username">@@@(reply.User?.UserName ?? "learner")</span>
+                                            <a asp-action="UserProfile" asp-route-id="@reply.UserId" class="text-decoration-none">
+                                                @{
+                                                    var replyAvatar = avatarMap != null && avatarMap.ContainsKey(reply.UserId) ? avatarMap[reply.UserId] : null;
+                                                }
+                                                @if (replyAvatar?.UseUploadedImage == true)
+                                                {
+                                                    <img src="@replyAvatar.AvatarImagePath" alt="" class="na-avatar-sm na-avatar-img-sm" style="width:24px;height:24px;" />
+                                                }
+                                                else
+                                                {
+                                                    <div class="na-avatar-sm na-avatar-inline" data-size="24"
+                                                         data-avatar-json="@(replyAvatar?.AvatarJson ?? "{}")">@GetUserInitial(reply.User?.UserName)</div>
+                                                }
+                                            </a>
+                                            <div>
+                                                <a asp-action="UserProfile" asp-route-id="@reply.UserId" class="na-comment-username text-decoration-none text-dark fw-bold">@@@(reply.User?.UserName ?? "learner")</a>
                                                 <span class="na-comment-time">&middot; @TimeAgo(reply.CreatedDate)</span>
                                             </div>
                                         </div>
-                                        <div class="na-comment-body na-reply-body">
-                                            @Html.Raw(reply.Content.Replace("\n", "<br/>"))
+                                        <div class="na-comment-body">
+                                            @Html.Raw(TextHelper.ToSafeHtmlLines(reply.Content))
                                         </div>
+                                        @if (SignInManager.IsSignedIn(User) && (reply.UserId == currentUserId || (bool)(ViewBag.IsModerator ?? false)))
+                                        {
+                                            <div class="na-comment-actions mt-1">
+                                                <form asp-action="DeleteComment" asp-route-id="@reply.Id" method="post" class="d-inline" onsubmit="return confirm('Delete this reply?');">
+                                                    @Html.AntiForgeryToken()
+                                                    <button type="submit" class="na-comment-reply-btn text-danger" style="background:none;border:none;padding:0;" title="Delete reply">
+                                                        <i class="bi bi-trash3"></i> Delete
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        }
                                     </div>
                                 }
                             </div>
@@ -236,54 +354,65 @@
                 }
             </div>
         }
-        else if (SignInManager.IsSignedIn(User))
+        else
         {
-            <div class="text-center py-4 text-muted">
-                <i class="bi bi-chat" style="font-size: 2rem; opacity: 0.3;"></i>
-                <p class="mt-2 small">No comments yet. Be the first!</p>
+            <div class="text-center text-muted py-4 small">
+                No comments yet. Be the first to share an answer or advice!
             </div>
         }
     </div>
 </div>
 
 @section Scripts {
-    <script src="~/js/avatar-builder.js"></script>
+    <script src="~/js/avatar-builder.js" asp-append-version="true"></script>
     <script>
-        // Render all inline avatars from data-avatar-json
-        document.addEventListener('DOMContentLoaded', function () {
-            if (!window.AvatarBuilder) return;
-            document.querySelectorAll('.na-avatar-inline').forEach(function (el) {
-                try {
-                    var json = el.dataset.avatarJson || '{}';
-                    var config = JSON.parse(json);
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.AvatarBuilder) {
+                document.querySelectorAll('.na-avatar-inline').forEach(function(el) {
+                    var jsonStr = el.dataset.avatarJson;
                     var size = parseInt(el.dataset.size, 10) || 36;
-                    var merged = Object.assign({}, AvatarBuilder.defaults, config);
-                    AvatarBuilder.renderAvatar(merged, el);
-                    el.style.width = size + 'px';
-                    el.style.height = size + 'px';
-                    el.style.overflow = 'hidden';
-                    el.style.borderRadius = '50%';
-                    el.style.flexShrink = '0';
-                } catch (e) {}
-            });
+                    if (jsonStr) {
+                        try {
+                            var config = JSON.parse(jsonStr);
+                            AvatarBuilder.renderInto(el, config, size);
+                        } catch(e) {}
+                    }
+                });
+            }
         });
 
         function toggleCommunityLike(btn, postId) {
-            var token = getAntiForgeryToken();
-            if (!token) return;
+            var icon = btn.querySelector('i');
+            var isLiked = icon.classList.contains('bi-heart-fill');
+            var token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+            // One toggle per button at a time, and a failure puts the heart back exactly
+            // where it was instead of leaving the icon disagreeing with the server.
+            if (btn.dataset.busy === '1') return;
+            btn.dataset.busy = '1';
+
+            if (isLiked) {
+                icon.className = 'bi bi-heart';
+                btn.classList.remove('na-like-btn--active');
+            } else {
+                icon.className = 'bi bi-heart-fill';
+                btn.classList.add('na-like-btn--active');
+            }
 
             fetch('/Community/ToggleLike', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
-                    'RequestVerificationToken': token
+                    'RequestVerificationToken': token || ''
                 },
                 body: 'postId=' + postId
             })
-            .then(function(r) { return r.json(); })
+            .then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
             .then(function(data) {
                 if (data.success) {
-                    var icon = btn.querySelector('i');
                     var count = btn.querySelector('.na-like-count');
                     if (data.isLiked) {
                         btn.classList.add('na-like-btn--active');
@@ -295,18 +424,80 @@
                     if (count) count.textContent = data.likeCount;
                 }
             })
-            .catch(function() {});
+            .catch(function() {
+                if (isLiked) {
+                    icon.className = 'bi bi-heart-fill';
+                    btn.classList.add('na-like-btn--active');
+                } else {
+                    icon.className = 'bi bi-heart';
+                    btn.classList.remove('na-like-btn--active');
+                }
+            })
+            .then(function() { btn.dataset.busy = '0'; });
         }
 
-        function savePost(btn) {
+        function toggleCommunityBookmark(btn, postId) {
             var icon = btn.querySelector('i');
-            if (icon.classList.contains('bi-bookmark-fill')) {
+            var isBookmarked = icon.classList.contains('bi-bookmark-fill');
+            var token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+            if (btn.dataset.busy === '1') return;
+            btn.dataset.busy = '1';
+
+            if (isBookmarked) {
                 icon.className = 'bi bi-bookmark';
                 btn.classList.remove('na-save-btn--active');
             } else {
                 icon.className = 'bi bi-bookmark-fill';
                 btn.classList.add('na-save-btn--active');
             }
+
+            fetch('/Community/ToggleBookmark', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': token || ''
+                },
+                body: 'postId=' + postId
+            })
+            .then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function(data) {
+                if (!data.success) {
+                    if (isBookmarked) {
+                        icon.className = 'bi bi-bookmark-fill';
+                        btn.classList.add('na-save-btn--active');
+                    } else {
+                        icon.className = 'bi bi-bookmark';
+                        btn.classList.remove('na-save-btn--active');
+                    }
+                    if (data.error) alert(data.error);
+                }
+            })
+            .catch(function() {
+                if (isBookmarked) {
+                    icon.className = 'bi bi-bookmark-fill';
+                    btn.classList.add('na-save-btn--active');
+                } else {
+                    icon.className = 'bi bi-bookmark';
+                    btn.classList.remove('na-save-btn--active');
+                }
+            })
+            .then(function() { btn.dataset.busy = '0'; });
+        }
+
+        function insertCorrectionTemplate() {
+            var textarea = document.getElementById('comment-input');
+            if (!textarea) return;
+            var template = "✏️ **Correction / 添削アドバイス**:\n• **Original (原文)**: \n• **Natural (自然な表現)**: \n• **Explanation (解説・ニュアンス)**: \n";
+            if (textarea.value.trim().length > 0) {
+                textarea.value += "\n\n" + template;
+            } else {
+                textarea.value = template;
+            }
+            textarea.focus();
         }
 
         function replyTo(commentId, userName) {

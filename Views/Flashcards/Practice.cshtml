@@ -81,10 +81,10 @@
             <i class="bi bi-arrow-left"></i> Previous
         </button>
         <div class="d-flex gap-2">
-            <button class="btn-na-outline" style="border-color: #D44; color: #D44;" onclick="markSRS(1)" title="I didn't know this — review again in 10 min">
+            <button class="btn-na-outline" style="border-color: #ee96a4; color: #ee96a4;" onclick="markSRS(1)" title="I didn't know this — review again in 10 min">
                 <i class="bi bi-x-circle"></i> Again
             </button>
-            <button class="btn-na-outline" style="border-color: #e6a817; color: #e6a817;" onclick="markSRS(2)" title="Difficult — short interval">
+            <button class="btn-na-outline" style="border-color: #ee96a4; color: #ee96a4;" onclick="markSRS(2)" title="Difficult — short interval">
                 <i class="bi bi-emoji-frown"></i> Hard
             </button>
             <button class="btn-na-outline" style="border-color: var(--na-secondary); color: var(--na-secondary);" onclick="markSRS(3)" title="Good — standard SM-2 interval">
@@ -97,6 +97,9 @@
         <button id="next-card" class="btn-na-outline" onclick="nextCard()">
             Next <i class="bi bi-arrow-right"></i>
         </button>
+    </div>
+    <div class="text-center mt-2">
+        <small class="text-muted">Again = 10 min · Hard = short · Good = 1 day · Easy = longer</small>
     </div>
 </div>
 
@@ -115,6 +118,7 @@
                 english: @Html.Raw(Json.Serialize(card.English)),
                 partOfSpeech: @Html.Raw(Json.Serialize(card.PartOfSpeech ?? "")),
                 exampleJapanese: @Html.Raw(Json.Serialize(card.ExampleJapanese ?? "")),
+                exampleReading: @Html.Raw(Json.Serialize(card.ExampleReading ?? "")),
                 exampleEnglish: @Html.Raw(Json.Serialize(card.ExampleEnglish ?? ""))
             },
             </text>
@@ -125,4 +129,6 @@
             initFlashcards(flashcardData);
         });
     </script>
+    @* Space / 1-4 / arrows / V / X — the flashcard keyboard layer *@
+    <script src="~/js/flashcard-keys.js" asp-append-version="true"></script>
 }

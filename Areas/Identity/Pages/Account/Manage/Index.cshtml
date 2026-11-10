@@ -8,42 +8,100 @@
 <partial name="_StatusMessage" for="StatusMessage" />
 
 <div>
-    <h4 class="mb-4">Profile</h4>
+    <h4 class="mb-4">Profile Settings</h4>
 
-    <form id="profile-form" method="post">
+    <form id="profile-form" method="post" enctype="multipart/form-data" novalidate>
         <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
 
-        <!-- Avatar builder: grid 2-column layout -->
+        <!-- ===== Community avatar: Upload / Generate tabs ===== -->
         <div class="na-avatar-builder mb-4">
-            <div class="avatar-customizer-layout">
-                <!-- Left: preview + randomize -->
-                <div class="avatar-preview-column">
-                    <div class="avatar-preview-card">
-                        <div class="avatar-preview-title">Avatar Preview</div>
-                        <div class="avatar-preview-stage">
-                            <div id="avatar-preview" data-size="220"></div>
-                        </div>
-                    </div>
-                    <button type="button" id="avatar-random" class="btn-na-outline btn-sm avatar-randomize-button">
-                        <i class="bi bi-shuffle"></i> Randomize
-                    </button>
-                </div>
-                <!-- Right: controls -->
-                <div class="avatar-controls-column">
-                    <div id="avatar-controls"></div>
+            <div class="na-avatar-section-heading">
+                <div>
+                    <h5>Global profile avatar</h5>
+                    <p>Shown across the top navigation bar, your profile, and community posts. Choose between custom 2D avatar or uploaded photo.</p>
                 </div>
             </div>
-        </div>
-        <input type="hidden" asp-for="Input.AvatarJson" id="avatar-json" value="@Model.Input.AvatarJson" />
+            <div class="na-avatar-tabs" role="tablist">
+                <button type="button" class="na-avatar-tab @(Model.CurrentAvatarMode == "uploaded" ? "" : "is-active")" data-target="tab-generate" data-avatar-mode="generated">
+                    <i class="bi bi-palette"></i> Create avatar
+                </button>
+                <button type="button" class="na-avatar-tab @(Model.CurrentAvatarMode == "uploaded" ? "is-active" : "")" data-target="tab-upload" data-avatar-mode="uploaded">
+                    <i class="bi bi-upload"></i> Upload photo
+                </button>
+            </div>
 
-        <!-- Account info -->
-        <div class="mb-3">
-            <label asp-for="Username" class="form-label na-form-label">Username</label>
-            <input asp-for="Username" class="form-control" disabled />
+            <!-- Upload tab -->
+            <div class="na-avatar-tabpane @(Model.CurrentAvatarMode == "uploaded" ? "is-active" : "")" id="tab-upload">
+                <div class="na-avatar-upload">
+                    <div class="na-avatar-upload-preview" id="avatar-preview-box">
+                        @if (!string.IsNullOrEmpty(Model.CurrentAvatarImagePath))
+                        {
+                            <img src="@Model.CurrentAvatarImagePath" alt="Current avatar" class="na-avatar-img" id="current-avatar-img" />
+                        }
+                        else
+                        {
+                            <div class="na-avatar-upload-empty" id="current-avatar-empty"><i class="bi bi-image"></i><span>No photo yet</span></div>
+                        }
+                    </div>
+                    <div class="na-avatar-upload-controls">
+                        <label class="btn-na-outline btn-sm">
+                            <i class="bi bi-folder2-open"></i> Choose image
+                            <input type="file" id="avatar-file" name="Input.AvatarFile" accept="image/*" hidden />
+                        </label>
+                        <div class="na-field-feedback" id="feedback-avatar-file"></div>
+                        <div id="avatar-upload-status"></div>
+                        <p class="na-avatar-upload-hint">JPG, PNG, GIF or WebP · max 3 MB. Automatically saved to your community profile upon selection.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create tab (community avatar builder) -->
+            <div class="na-avatar-tabpane @(Model.CurrentAvatarMode == "uploaded" ? "" : "is-active")" id="tab-generate">
+                <div class="avatar-customizer-layout">
+                    <div class="avatar-preview-column">
+                        <div class="avatar-preview-card">
+                            <div class="avatar-preview-title">Community Avatar Preview</div>
+                            <div class="avatar-preview-stage">
+                                <div id="avatar-preview" data-size="220"></div>
+                            </div>
+                        </div>
+                        <button type="button" id="avatar-random" class="btn-na-outline btn-sm avatar-randomize-button">
+                            <i class="bi bi-shuffle"></i> Randomize
+                        </button>
+                    </div>
+                    <div class="avatar-controls-column">
+                        <div id="avatar-controls"></div>
+                    </div>
+                </div>
+            </div>
+            <input type="hidden" asp-for="Input.AvatarJson" id="avatar-json" value="@Model.Input.AvatarJson" />
+            <input type="hidden" asp-for="Input.AvatarMode" id="avatar-mode" value="@Model.Input.AvatarMode" />
+        </div>
+
+        <!-- ===== Identity ===== -->
+        <h5 class="mt-2">Personal Identity</h5>
+        <div class="row mb-3">
+            <div class="col-md-6 na-field-wrap">
+                <label asp-for="Input.Username" class="form-label na-form-label">Username / Handle <span class="text-danger">*</span></label>
+                <div class="input-group">
+                    <span class="input-group-text bg-light text-muted fw-bold">&#64;</span>
+                    <input asp-for="Input.Username" class="form-control" id="manage-username" autocomplete="username" />
+                </div>
+                <div class="na-field-feedback" id="feedback-manage-username"></div>
+                <span asp-validation-for="Input.Username" class="text-danger small d-block mt-1"></span>
+                <small class="text-muted d-block mt-1">Unique handle for community posts and leaderboards (3-32 characters).</small>
+            </div>
+            <div class="col-md-6 na-field-wrap">
+                <label asp-for="Input.DisplayName" class="form-label na-form-label">Display name</label>
+                <input asp-for="Input.DisplayName" class="form-control" id="manage-displayname" placeholder="Shown publicly instead of your username" />
+                <div class="na-field-feedback" id="feedback-manage-displayname"></div>
+                <span asp-validation-for="Input.DisplayName" class="text-danger small d-block mt-1"></span>
+                <small class="text-muted d-block mt-1">Friendly nickname (2-50 characters).</small>
+            </div>
         </div>
 
         <div class="mb-3">
-            <label asp-for="Email" class="form-label na-form-label">Email</label>
+            <label asp-for="Email" class="form-label na-form-label">Email address</label>
             <div class="input-group">
                 <input asp-for="Email" class="form-control" disabled />
                 @if (!Model.IsEmailConfirmed)
@@ -51,28 +109,400 @@
                     <a id="email-verification" asp-page="./Email" class="btn-na-outline">Send verification</a>
                 }
             </div>
+            <small class="text-muted">Primary account email used for sign-in and security notifications.</small>
         </div>
 
-        <div class="mb-4">
-            <label asp-for="Input.PhoneNumber" class="form-label na-form-label"></label>
-            <input asp-for="Input.PhoneNumber" class="form-control" placeholder="Please enter your phone number." />
-            <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
+        <div class="mb-3 na-field-wrap">
+            <label asp-for="Input.PhoneNumber" class="form-label na-form-label">Phone number</label>
+            <input asp-for="Input.PhoneNumber" class="form-control" id="manage-phone" placeholder="e.g. +1 555-123-4567 (optional)" />
+            <div class="na-field-feedback" id="feedback-manage-phone"></div>
+            <span asp-validation-for="Input.PhoneNumber" class="text-danger small d-block mt-1"></span>
         </div>
 
-        <button id="update-profile-button" type="submit" class="btn-na-primary">
+        <div class="mb-4 na-field-wrap">
+            <label asp-for="Input.Bio" class="form-label na-form-label">Bio</label>
+            <textarea asp-for="Input.Bio" class="form-control" id="manage-bio" rows="3" maxlength="240" placeholder="A short sentence about you and why you're learning Japanese."></textarea>
+            <div class="d-flex justify-content-between align-items-center mt-1">
+                <div class="na-field-feedback" id="feedback-manage-bio"></div>
+                <div class="na-field-counter" id="bio-counter">0 / 240</div>
+            </div>
+            <span asp-validation-for="Input.Bio" class="text-danger small d-block"></span>
+        </div>
+
+        <!-- ===== Preferences ===== -->
+        <h5 class="mt-2">Preferences</h5>
+        <div class="row mb-3">
+            <div class="col-md-4 na-field-wrap">
+                <label asp-for="Input.NativeLanguage" class="form-label">Native language</label>
+                <select asp-for="Input.NativeLanguage" class="form-select" id="manage-native-lang">
+                    <option value="">Choose…</option>
+                    <option>English</option><option value="中文">中文 (Chinese)</option><option value="日本語">日本語 (Japanese)</option>
+                    <option>Español</option><option>Français</option><option>Deutsch</option><option>한국어</option><option>Other</option>
+                </select>
+            </div>
+            <div class="col-md-4 na-field-wrap">
+                <label asp-for="Input.Country" class="form-label">Country</label>
+                <select asp-for="Input.Country" class="form-select" id="manage-country">
+                    <option value="">Choose…</option>
+                    <option>Japan</option><option>China</option><option>United States</option>
+                    <option>United Kingdom</option><option>South Korea</option><option>Canada</option>
+                    <option>Australia</option><option>Singapore</option><option>Malaysia</option><option>Other</option>
+                </select>
+            </div>
+            <div class="col-md-4 na-field-wrap">
+                <label asp-for="Input.ThemePreference" class="form-label">Theme</label>
+                <select asp-for="Input.ThemePreference" class="form-select">
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                    <option value="system">System</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Study preferences -->
+        <h5 class="mt-2">Study preferences</h5>
+        <div class="mb-3 na-field-wrap">
+            <label class="form-label d-flex align-items-center justify-content-between mb-1">
+                <span>Learning goals <span class="text-muted fw-normal small">(select all that apply)</span></span>
+                <span class="badge bg-light text-muted border fw-normal" style="font-size: 0.72rem;"><i class="bi bi-check2-square text-na-primary"></i> Multi-select</span>
+            </label>
+            <div class="d-flex flex-wrap gap-2 pt-1">
+                <label class="na-checkbox-pill @(Model.Input.LearningGoals.Contains("Travel & culture") ? "is-checked" : "")">
+                    <input type="checkbox" name="Input.LearningGoals" value="Travel & culture" @(Model.Input.LearningGoals.Contains("Travel & culture") ? "checked" : "") onchange="this.closest('.na-checkbox-pill').classList.toggle('is-checked', this.checked)" hidden />
+                    <i class="bi bi-airplane"></i> Travel &amp; culture
+                </label>
+                <label class="na-checkbox-pill @(Model.Input.LearningGoals.Contains("Work & career") ? "is-checked" : "")">
+                    <input type="checkbox" name="Input.LearningGoals" value="Work & career" @(Model.Input.LearningGoals.Contains("Work & career") ? "checked" : "") onchange="this.closest('.na-checkbox-pill').classList.toggle('is-checked', this.checked)" hidden />
+                    <i class="bi bi-briefcase"></i> Work &amp; career
+                </label>
+                <label class="na-checkbox-pill @(Model.Input.LearningGoals.Contains("Study & exams") ? "is-checked" : "")">
+                    <input type="checkbox" name="Input.LearningGoals" value="Study & exams" @(Model.Input.LearningGoals.Contains("Study & exams") ? "checked" : "") onchange="this.closest('.na-checkbox-pill').classList.toggle('is-checked', this.checked)" hidden />
+                    <i class="bi bi-mortarboard"></i> Study &amp; exams
+                </label>
+                <label class="na-checkbox-pill @(Model.Input.LearningGoals.Contains("Anime & entertainment") ? "is-checked" : "")">
+                    <input type="checkbox" name="Input.LearningGoals" value="Anime & entertainment" @(Model.Input.LearningGoals.Contains("Anime & entertainment") ? "checked" : "") onchange="this.closest('.na-checkbox-pill').classList.toggle('is-checked', this.checked)" hidden />
+                    <i class="bi bi-controller"></i> Anime &amp; entertainment
+                </label>
+            </div>
+            <span asp-validation-for="Input.LearningGoals" class="text-danger small d-block mt-1"></span>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6 na-field-wrap">
+                <label asp-for="Input.CurrentLevel" class="form-label">Current level</label>
+                <select asp-for="Input.CurrentLevel" class="form-select">
+                    <option value="">Choose…</option><option>Absolute beginner</option><option>Knows hiragana</option><option>Conversational basics</option><option>Intermediate or above</option>
+                </select>
+            </div>
+            <div class="col-md-6 na-field-wrap">
+                <label asp-for="Input.AgeGroup" class="form-label">Age group</label>
+                <select asp-for="Input.AgeGroup" class="form-select">
+                    <option value="">Choose…</option><option>Under 18</option><option>18 – 24</option><option>25 – 34</option><option>35 or older</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-check form-switch mb-4">
+            <input asp-for="Input.DailyReminder" class="form-check-input" id="daily-reminder" />
+            <label class="form-check-label" for="daily-reminder">Send me a daily learning reminder</label>
+        </div>
+
+        <button id="update-profile-button" type="submit" class="btn-na-primary py-2 px-4">
             <i class="bi bi-check-lg"></i> Save profile
         </button>
     </form>
 </div>
 
 @section Scripts {
+    <partial name="_ValidationScriptsPartial" />
     <script src="~/js/avatar-builder.js" asp-append-version="true"></script>
     <script>
-        AvatarBuilder.init({
-            preview: "#avatar-preview",
-            controls: "#avatar-controls",
-            input: "#avatar-json",
-            randomButton: "#avatar-random"
+        document.addEventListener('DOMContentLoaded', function () {
+            // Initialize 2D avatar builder
+            if (window.AvatarBuilder) {
+                AvatarBuilder.init({
+                    preview: "#avatar-preview",
+                    controls: "#avatar-controls",
+                    input: "#avatar-json",
+                    randomButton: "#avatar-random"
+                });
+            }
+
+            // Avatar tab switching
+            document.querySelectorAll(".na-avatar-tab").forEach(function (tab) {
+                tab.addEventListener("click", function () {
+                    var target = tab.dataset.target;
+                    var modeInput = document.getElementById("avatar-mode");
+                    document.querySelectorAll(".na-avatar-tab").forEach(function (t) { t.classList.remove("is-active"); });
+                    document.querySelectorAll(".na-avatar-tabpane").forEach(function (p) { p.classList.remove("is-active"); });
+                    tab.classList.add("is-active");
+                    document.getElementById(target).classList.add("is-active");
+                    if (modeInput && tab.dataset.avatarMode) modeInput.value = tab.dataset.avatarMode;
+                });
+            });
+
+            // ============================================================
+            // REAL-TIME INLINE FIELD VALIDATION & INSTANT AVATAR UPLOAD
+            // ============================================================
+            var usernameInput = document.getElementById('manage-username');
+            var displayNameInput = document.getElementById('manage-displayname');
+            var phoneInput = document.getElementById('manage-phone');
+            var bioInput = document.getElementById('manage-bio');
+            var bioCounter = document.getElementById('bio-counter');
+            var avatarFileInput = document.getElementById('avatar-file');
+            var profileForm = document.getElementById('profile-form');
+
+            function setFieldFeedback(inputEl, feedbackEl, isValid, message, isChecking) {
+                if (!feedbackEl) return;
+                feedbackEl.classList.remove('is-valid', 'is-invalid', 'is-checking', 'is-visible');
+                inputEl.classList.remove('is-valid', 'is-invalid');
+
+                if (isChecking) {
+                    feedbackEl.classList.add('is-checking', 'is-visible');
+                    feedbackEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> ' + message;
+                    return;
+                }
+
+                if (isValid) {
+                    inputEl.classList.add('is-valid');
+                    feedbackEl.classList.add('is-valid', 'is-visible');
+                    feedbackEl.innerHTML = '<i class="bi bi-check-circle-fill"></i> ' + message;
+                } else {
+                    inputEl.classList.add('is-invalid');
+                    feedbackEl.classList.add('is-invalid', 'is-visible');
+                    feedbackEl.innerHTML = '<i class="bi bi-exclamation-circle-fill"></i> ' + message;
+                }
+            }
+
+            // --- 1. Real-time Username Validation ---
+            var usernameTimer = null;
+            var isUsernameValid = true;
+
+            function validateUsernameLive() {
+                var val = usernameInput.value.trim();
+                var feedback = document.getElementById('feedback-manage-username');
+
+                if (!val) {
+                    isUsernameValid = false;
+                    setFieldFeedback(usernameInput, feedback, false, 'Username cannot be empty.');
+                    return;
+                }
+                if (val.length < 3 || val.length > 32) {
+                    isUsernameValid = false;
+                    setFieldFeedback(usernameInput, feedback, false, 'Username must be between 3 and 32 characters (currently ' + val.length + ').');
+                    return;
+                }
+                var regex = /^[a-zA-Z0-9_.@@+-]+$/;
+                if (!regex.test(val)) {
+                    isUsernameValid = false;
+                    setFieldFeedback(usernameInput, feedback, false, 'Only letters, numbers, dot (.), hyphen (-) or underscore (_) allowed.');
+                    return;
+                }
+
+                clearTimeout(usernameTimer);
+                setFieldFeedback(usernameInput, feedback, true, 'Checking availability...', true);
+                usernameTimer = setTimeout(function () {
+                    fetch('?handler=CheckUsername&username=' + encodeURIComponent(val))
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            if (data.available) {
+                                isUsernameValid = true;
+                                setFieldFeedback(usernameInput, feedback, true, 'Username is valid and available!');
+                            } else {
+                                isUsernameValid = false;
+                                setFieldFeedback(usernameInput, feedback, false, data.message || 'This username is already taken.');
+                            }
+                        })
+                        .catch(function () {
+                            isUsernameValid = true;
+                            setFieldFeedback(usernameInput, feedback, true, 'Username format is valid.');
+                        });
+                }, 350);
+            }
+
+            if (usernameInput) {
+                usernameInput.addEventListener('input', validateUsernameLive);
+                usernameInput.addEventListener('blur', validateUsernameLive);
+            }
+
+            // --- 2. Real-time Display Name Validation ---
+            var isDisplayNameValid = true;
+            function validateDisplayNameLive() {
+                var val = displayNameInput.value.trim();
+                var feedback = document.getElementById('feedback-manage-displayname');
+                if (!val) {
+                    // Optional on manage page
+                    isDisplayNameValid = true;
+                    if (feedback) feedback.classList.remove('is-visible');
+                    displayNameInput.classList.remove('is-invalid', 'is-valid');
+                    return;
+                }
+                if (val.length < 2 || val.length > 50) {
+                    isDisplayNameValid = false;
+                    setFieldFeedback(displayNameInput, feedback, false, 'Display name must be between 2 and 50 characters (currently ' + val.length + ').');
+                    return;
+                }
+                isDisplayNameValid = true;
+                setFieldFeedback(displayNameInput, feedback, true, 'Display name looks great!');
+            }
+
+            if (displayNameInput) {
+                displayNameInput.addEventListener('input', validateDisplayNameLive);
+                displayNameInput.addEventListener('blur', validateDisplayNameLive);
+            }
+
+            // --- 3. Real-time Phone Number Validation ---
+            var isPhoneValid = true;
+            function validatePhoneLive() {
+                var val = phoneInput.value.trim();
+                var feedback = document.getElementById('feedback-manage-phone');
+                if (!val) {
+                    isPhoneValid = true;
+                    if (feedback) feedback.classList.remove('is-visible');
+                    phoneInput.classList.remove('is-invalid', 'is-valid');
+                    return;
+                }
+                var phoneRegex = /^[+]?[\d\s\-()]{7,20}$/;
+                if (!phoneRegex.test(val)) {
+                    isPhoneValid = false;
+                    setFieldFeedback(phoneInput, feedback, false, 'Please enter a valid phone number format (e.g. +1 555-123-4567).');
+                    return;
+                }
+                isPhoneValid = true;
+                setFieldFeedback(phoneInput, feedback, true, 'Valid phone number format.');
+            }
+
+            if (phoneInput) {
+                phoneInput.addEventListener('input', validatePhoneLive);
+                phoneInput.addEventListener('blur', validatePhoneLive);
+            }
+
+            // --- 4. Real-time Bio Validation & Counter ---
+            function updateBioCounter() {
+                var len = bioInput.value.length;
+                if (bioCounter) {
+                    bioCounter.textContent = len + ' / 240';
+                    bioCounter.classList.toggle('is-warning', len > 240);
+                }
+                var feedback = document.getElementById('feedback-manage-bio');
+                if (len > 240) {
+                    setFieldFeedback(bioInput, feedback, false, 'Bio cannot exceed 240 characters.');
+                } else if (feedback && len <= 240) {
+                    feedback.classList.remove('is-visible');
+                    bioInput.classList.remove('is-invalid');
+                }
+            }
+
+            if (bioInput) {
+                updateBioCounter();
+                bioInput.addEventListener('input', updateBioCounter);
+            }
+
+            // --- 5. Avatar File Live Validation & Instant AJAX Save ---
+            if (avatarFileInput) {
+                avatarFileInput.addEventListener('change', function () {
+                    var file = avatarFileInput.files && avatarFileInput.files[0];
+                    var feedback = document.getElementById('feedback-avatar-file');
+                    var status = document.getElementById('avatar-upload-status');
+                    var previewBox = document.getElementById('avatar-preview-box');
+                    var modeInput = document.getElementById('avatar-mode');
+
+                    if (!file) return;
+
+                    // Check size (< 3MB)
+                    if (file.size > 3 * 1024 * 1024) {
+                        avatarFileInput.value = '';
+                        setFieldFeedback(avatarFileInput, feedback, false, 'File too large (' + (file.size / 1024 / 1024).toFixed(1) + ' MB). Maximum allowed size is 3 MB.');
+                        if (status) status.innerHTML = '';
+                        return;
+                    }
+
+                    // Check type
+                    var allowedExts = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                    var ext = file.name.split('.').pop().toLowerCase();
+                    if (allowedExts.indexOf(ext) === -1) {
+                        avatarFileInput.value = '';
+                        setFieldFeedback(avatarFileInput, feedback, false, 'Invalid format (.' + ext + '). Only JPG, PNG, GIF or WebP are allowed.');
+                        if (status) status.innerHTML = '';
+                        return;
+                    }
+
+                    setFieldFeedback(avatarFileInput, feedback, true, 'Photo verified: ' + file.name + ' (' + (file.size / 1024).toFixed(0) + ' KB)');
+                    if (modeInput) modeInput.value = 'uploaded';
+
+                    // Instant local preview
+                    var reader = new FileReader();
+                    reader.onload = function (e) {
+                        if (previewBox) {
+                            previewBox.innerHTML = '<img src="' + e.target.result + '" alt="Avatar preview" class="na-avatar-img" id="current-avatar-img" />';
+                        }
+                    };
+                    reader.readAsDataURL(file);
+
+                    // Instant background AJAX upload & save to ensure the photo is never lost!
+                    if (status) {
+                        status.innerHTML = '<span class="na-avatar-status-pill is-loading"><span class="spinner-border spinner-border-sm me-1" role="status"></span> Uploading &amp; saving photo...</span>';
+                    }
+
+                    var formData = new FormData();
+                    formData.append('avatarFile', file);
+                    var token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+                    fetch('?handler=UploadAvatar', {
+                        method: 'POST',
+                        body: formData,
+                        headers: token ? { 'RequestVerificationToken': token } : {}
+                    })
+                    .then(function (r) { return r.json(); })
+                    .then(function (res) {
+                        if (res.success) {
+                            if (status) {
+                                status.innerHTML = '<span class="na-avatar-status-pill is-success"><i class="bi bi-check-circle-fill me-1"></i> Photo saved to profile!</span>';
+                            }
+                            if (previewBox && res.avatarUrl) {
+                                previewBox.innerHTML = '<img src="' + res.avatarUrl + '" alt="Avatar preview" class="na-avatar-img" id="current-avatar-img" />';
+                            }
+                        } else {
+                            if (status) {
+                                status.innerHTML = '<span class="na-avatar-status-pill is-error"><i class="bi bi-exclamation-circle-fill me-1"></i> ' + (res.message || 'Upload failed.') + '</span>';
+                            }
+                        }
+                    })
+                    .catch(function () {
+                        if (status) {
+                            status.innerHTML = '<span class="na-avatar-status-pill is-success"><i class="bi bi-check-circle-fill me-1"></i> Ready to save with profile form.</span>';
+                        }
+                    });
+                });
+            }
+
+            // --- 6. Form Submit Validation Guard ---
+            if (profileForm) {
+                profileForm.addEventListener('submit', function (e) {
+                    var errors = [];
+
+                    validateUsernameLive();
+                    validateDisplayNameLive();
+                    validatePhoneLive();
+                    updateBioCounter();
+
+                    if (!isUsernameValid) errors.push(usernameInput);
+                    if (!isDisplayNameValid) errors.push(displayNameInput);
+                    if (!isPhoneValid) errors.push(phoneInput);
+                    if (bioInput.value.length > 240) errors.push(bioInput);
+
+                    if (errors.length > 0) {
+                        e.preventDefault();
+                        var firstErr = errors[0];
+                        if (firstErr) {
+                            firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            firstErr.classList.add('na-input-shake');
+                            setTimeout(function () { firstErr.classList.remove('na-input-shake'); }, 400);
+                            if (firstErr.focus) firstErr.focus();
+                        }
+                    }
+                });
+            }
         });
     </script>
 }

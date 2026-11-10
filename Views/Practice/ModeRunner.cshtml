@@ -164,20 +164,30 @@
         case "handwriting":
             <div class="text-center mb-3">
                 <h5>Handwriting</h5>
-                <p class="text-muted">Practice stroke order for kana and kanji.</p>
+                <p class="text-muted">Trace, compare, then write kana and kanji from memory.</p>
             </div>
             <div class="row justify-content-center">
                 <div class="col-md-6">
                     <div class="na-card-flat p-4 text-center mb-3">
                         <div id="hw-target" style="font-size:4rem;font-weight:600;color:var(--na-primary);" class="mb-2"></div>
                         <div id="hw-romaji" class="text-muted mb-2"></div>
-                        <button class="btn-na-outline btn-sm" id="hw-stroke-btn"><i class="bi bi-play-fill"></i> Show Stroke Order</button>
+                        <div id="hw-meaning" class="small text-muted mb-3"></div>
+                        <button type="button" class="btn-na-outline btn-sm" id="hw-hear"><i class="bi bi-volume-up"></i> Hear</button>
+                        <button type="button" class="btn-na-outline btn-sm" id="hw-stroke-btn"><i class="bi bi-eye"></i> Hide guide</button>
                     </div>
-                    <canvas id="hw-canvas" width="300" height="300" style="border:2px solid var(--na-border);border-radius:12px;cursor:crosshair;display:block;margin:0 auto;background:#fff;"></canvas>
+                    <p class="small text-muted text-center">Trace the pale model first, then hide it and write from memory. The grid helps you compare size and balance.</p>
+                    <div class="handwriting-canvas-shell">
+                        <canvas id="hw-guide-canvas" width="300" height="300" aria-hidden="true"></canvas>
+                        <canvas id="hw-canvas" width="300" height="300" aria-label="Handwriting practice canvas"></canvas>
+                    </div>
+                    <div class="small text-muted text-center mt-2">Strokes drawn: <strong id="hw-stroke-count">0</strong></div>
                     <div class="text-center mt-3">
-                        <button class="btn-na-outline btn-sm" id="hw-clear">Clear</button>
-                        <button class="btn-na-primary btn-sm" id="hw-next">Next</button>
+                        <button type="button" class="btn-na-outline btn-sm" id="hw-undo"><i class="bi bi-arrow-counterclockwise"></i> Undo</button>
+                        <button type="button" class="btn-na-outline btn-sm" id="hw-clear">Clear</button>
+                        <button type="button" class="btn-na-primary btn-sm" id="hw-check">Compare</button>
+                        <button type="button" class="btn-na-primary btn-sm" id="hw-next">Next</button>
                     </div>
+                    <div id="hw-feedback" class="text-center mt-3" aria-live="polite"></div>
                 </div>
             </div>
             break;
@@ -202,7 +212,7 @@
     <script id="mode-vocab-data" type="application/json">
         @Html.Raw(System.Text.Json.JsonSerializer.Serialize(vocab.Select(v => new {
             v.Id, v.Japanese, v.Romaji, v.English, v.PartOfSpeech,
-            v.ExampleJapanese, v.ExampleEnglish
+            v.ExampleJapanese, v.ExampleReading, v.ExampleEnglish
         })))
     </script>
 }

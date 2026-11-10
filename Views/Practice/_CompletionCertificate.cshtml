@@ -1,0 +1,31 @@
+@model NihongoAcademy.Models.A1CapstoneViewModel
+
+<section class="na-result-summary mb-4" aria-labelledby="result-summary-title">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <h3 id="result-summary-title" class="h5 mb-1">Completion summary <span class="na-subtitle-jp">修了結果</span></h3>
+            <p class="small text-muted mb-0">This result is calculated from saved stable mastery and assessment records.</p>
+        </div>
+        <span class="na-badge @(Model.IsComplete ? "bg-success text-white" : "")">@(Model.IsComplete ? "Verified complete" : $"{Model.CompletedRequirementCount}/5 complete")</span>
+    </div>
+    <dl class="na-result-grid mt-3 mb-0">
+        <div><dt>Learner</dt><dd>@Model.LearnerName</dd></div>
+        <div><dt>Level</dt><dd>@Model.LevelLabel</dd></div>
+        <div><dt>Stable lessons</dt><dd>@Model.StableLessonCount/@Model.RequiredLessonCount</dd></div>
+        <div><dt>Final assessment</dt><dd>@Model.BestFinalQuizScore%</dd></div>
+    </dl>
+</section>
+
+@if (Model.IsComplete)
+{
+    <section class="na-certificate mb-4" aria-labelledby="certificate-title">
+        <div class="na-certificate-mark" aria-hidden="true">日</div>
+        <p class="text-uppercase small fw-semibold mb-2">NihongoAcademy · Certificate of Stable Completion</p>
+        <h2 id="certificate-title">@Model.LevelLabel Japanese Foundation</h2>
+        <p class="mb-1">This certifies that</p>
+        <div class="na-certificate-name">@Model.LearnerName</div>
+        <p>has demonstrated stable lesson mastery and practical ability in listening, reading, speaking and writing.</p>
+        <div class="d-flex justify-content-center gap-5 flex-wrap small mt-4"><span>Issued @Model.GeneratedAt.ToString("dd MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture)</span><span>Verification: live learning record</span></div>
+        <button type="button" class="btn-na-primary btn-sm mt-4 na-no-print" onclick="window.print()"><i class="bi bi-printer"></i> Print certificate</button>
+    </section>
+}

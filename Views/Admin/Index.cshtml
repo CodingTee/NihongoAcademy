@@ -1,31 +1,46 @@
 @model IEnumerable<Microsoft.AspNetCore.Identity.IdentityUser>
 
 @{
-    ViewData["Title"] = "Admin Panel";
+    ViewData["Title"] = "Admin";
+    var isSuperAdmin = User.IsInRole("SuperAdmin");
 }
 
-<div class="row mb-4">
-    <div class="col-12">
-        <nav aria-label="breadcrumb" class="mb-2">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a asp-controller="Home" asp-action="Index">Home</a></li>
-                <li class="breadcrumb-item active">Admin Panel</li>
-            </ol>
-        </nav>
-        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-            <div>
-                <h2><i class="bi bi-shield-lock na-page-icon"></i> Admin Panel <span class="na-subtitle-jp">管理パネル</span></h2>
-                <p class="text-muted">Manage platform content, users, and view statistics.</p>
-            </div>
-            <form asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })" class="d-inline align-self-center">
-                @Html.AntiForgeryToken()
-                <button type="submit" class="btn-na-outline btn-sm" title="登出账号">
-                    <i class="bi bi-box-arrow-right"></i> Logout
-                </button>
-            </form>
-        </div>
-    </div>
+@await Html.PartialAsync("_AdminPageHeader", new NihongoAcademy.Models.AdminPageHeaderModel
+{
+    Trail =
+    {
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Admin" }
+    },
+    Icon = "bi-shield-lock",
+    Title = "Admin Dashboard",
+    TitleJp = "管理パネル",
+    Lead = "Manage platform content, users, and review reported content.",
+    ActionsHtml = isSuperAdmin
+        ? "<span class=\"na-badge na-badge-role-super\"><i class=\"bi bi-stars\"></i> Super Admin</span>"
+        : "<span class=\"na-badge na-badge-role-admin\"><i class=\"bi bi-shield\"></i> Admin (content only)</span>"
+})
+
+<div class="d-flex justify-content-end mb-3">
+    <form asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="@Url.Action("Index", "Home", new { area = "" })">
+        @Html.AntiForgeryToken()
+        <button type="submit" class="btn-na-outline btn-sm" title="Sign out">
+            <i class="bi bi-box-arrow-right"></i> Logout
+        </button>
+    </form>
 </div>
+
+<section class="na-card-flat mb-4" aria-labelledby="quality-overview-title">
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+        <div><h4 id="quality-overview-title" class="h5 mb-1"><i class="bi bi-clipboard2-check"></i> Curriculum Quality</h4><p class="small text-muted mb-0">Live coverage indicators backed by the same startup validation used by the application.</p></div>
+        <span class="na-badge bg-success text-white"><i class="bi bi-check-circle"></i> Startup validation passed</span>
+    </div>
+    <div class="na-quality-grid mt-3">
+        <div><strong>@ViewBag.CoreLessons</strong><span>published core lessons</span></div>
+        <div><strong>@ViewBag.LessonActivities</strong><span>structured activities</span></div>
+        <div><strong>@ViewBag.ReadingHelpActivities</strong><span>activities with reading help</span></div>
+        <div><strong>@ViewBag.LinkedIntegratedTasks/@ViewBag.IntegratedTasks</strong><span>skill tasks linked to lessons</span></div>
+    </div>
+</section>
 
 <div class="row mb-4">
     <div class="col-md-3 col-6 mb-3">
@@ -59,82 +74,35 @@
 </div>
 
 <div class="row">
-    <div class="col-md-3">
-        <div class="na-card-flat admin-sidebar">
-            <h6 class="text-muted mb-3">Content Management</h6>
-            <a asp-controller="AdminLessons" asp-action="Index" class="nav-link">
-                <i class="bi bi-journal-text"></i> Lessons
-            </a>
-            <a asp-controller="AdminVocabulary" asp-action="Index" class="nav-link">
-                <i class="bi bi-card-text"></i> Vocabulary
-            </a>
-            <a asp-controller="AdminQuizzes" asp-action="Index" class="nav-link">
-                <i class="bi bi-patch-question"></i> Quizzes
-            </a>
-            <a asp-controller="AdminCategories" asp-action="Index" class="nav-link">
-                <i class="bi bi-grid-3x3-gap"></i> Categories
-            </a>
-        </div>
-    </div>
-
-    <div class="col-md-9">
+    <div class="col-12">
         <div class="na-card-flat mb-4">
-            <h5><i class="bi bi-people"></i> User Management</h5>
+            <h5 class="mb-0"><i class="bi bi-grid-1x2"></i> Quick actions</h5>
             <hr />
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead>
-                        <tr>
-                            <th>Email</th>
-                            <th>Roles</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var user in Model)
-                        {
-                            var roles = ViewBag.UserRoles[user.Id] as IList<string>;
-                            <tr>
-                                <td>
-                                    @user.Email
-                                    @if (user.EmailConfirmed)
-                                    {
-                                        <i class="bi bi-patch-check-fill text-success small"></i>
-                                    }
-                                </td>
-                                <td>
-                                    @if (roles != null)
-                                    {
-                                        foreach (var role in roles)
-                                        {
-                                            <span class="na-badge" style="background: @(role == "Admin" ? "#FFE5E5" : "#E5F0FF"); color: @(role == "Admin" ? "#C84B31" : "#2C5F8A");">
-                                                @role
-                                            </span>
-                                        }
-                                    }
-                                </td>
-                                <td>
-                                    <form asp-action="ToggleAdminRole" method="post" class="d-inline">
-                                        @Html.AntiForgeryToken()
-                                        <input type="hidden" name="userId" value="@user.Id" />
-                                        @if (roles != null && roles.Contains("Admin"))
-                                        {
-                                            <button type="submit" class="btn btn-sm btn-na-outline" onclick="return confirm('Remove Admin role from @user.Email?')">
-                                                <i class="bi bi-dash-circle"></i> Demote
-                                            </button>
-                                        }
-                                        else
-                                        {
-                                            <button type="submit" class="btn btn-sm btn-na-primary">
-                                                <i class="bi bi-shield-check"></i> Promote
-                                            </button>
-                                        }
-                                    </form>
-                                </td>
-                            </tr>
-                        }
-                    </tbody>
-                </table>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <a asp-controller="AdminModeration" asp-action="Index" class="na-quick-card">
+                        <i class="bi bi-flag-fill"></i>
+                        <span>Review reports</span>
+                        <small>@((int)(ViewBag.PendingReportCount ?? 0)) pending</small>
+                    </a>
+                </div>
+                <div class="col-md-4">
+                    <a asp-controller="AdminLogs" asp-action="Index" class="na-quick-card">
+                        <i class="bi bi-clock-history"></i>
+                        <span>Audit logs</span>
+                        <small>Logins &amp; operations</small>
+                    </a>
+                </div>
+                @if (isSuperAdmin)
+                {
+                    <div class="col-md-4">
+                        <a asp-controller="AdminAccounts" asp-action="Index" class="na-quick-card">
+                            <i class="bi bi-people-fill"></i>
+                            <span>User accounts</span>
+                            <small>Roles, reset, disable</small>
+                        </a>
+                    </div>
+                }
             </div>
         </div>
 
@@ -163,11 +131,11 @@
                                         <td>@a.User?.Email</td>
                                         <td>@a.Quiz?.Title</td>
                                         <td>
-                                            <strong style="color: @(a.IsPassed ? "var(--na-secondary)" : "#D44");">
+                                            <strong style="color: @(a.IsPassed ? "var(--na-secondary)" : "#ee96a4");">
                                                 @a.ScorePercentage%
                                             </strong>
                                         </td>
-                                        <td><small>@a.AttemptDate.ToString("MMM dd, HH:mm")</small></td>
+                                        <td><small>@a.AttemptDate.ToString("MMM dd, HH:mm", System.Globalization.CultureInfo.InvariantCulture)</small></td>
                                     </tr>
                                 }
                             </tbody>

@@ -47,21 +47,7 @@
 </div>
 @if (masteryEvaluation != null)
 {
-    <div id="mastery-metrics" class="row g-2 mb-4">
-        @foreach (var mode in new[] { ("recognition", "Recognition"), ("listening", "Listening"), ("recall", "Recall") })
-        {
-            var metric = masteryEvaluation.Results.GetValueOrDefault(mode.Item1);
-            <div class="col-md-4">
-                <div class="na-card-flat p-3 h-100" data-mastery-mode="@mode.Item1">
-                    <div class="d-flex justify-content-between"><strong>@mode.Item2</strong><span class="mastery-accuracy">@(metric?.Accuracy ?? 0)%</span></div>
-                    <div class="small text-muted mt-1">
-                        <span class="mastery-coverage">@(metric?.Covered ?? 0)</span>/@itemCount items ·
-                        <span class="mastery-attempts">@(metric?.Count ?? 0)</span> attempts
-                    </div>
-                </div>
-            </div>
-        }
-    </div>
+    <partial name="_MasteryProgressPartial" model="@(new NihongoAcademy.Models.MasteryProgressViewModel { Evaluation = masteryEvaluation, ItemCount = itemCount, RequiresProduction = requiresProduction })" />
 }
 
 @* ===== EXERCISE TABS ===== *@
@@ -77,6 +63,10 @@
     @if (activities.Any(a => a.ActivityType == "sentence-building"))
     {
         <button class="na-tab" data-tab="sentence-building"><i class="bi bi-bricks"></i> Sentence Builder</button>
+    }
+    @if (activities.Any(a => a.ActivityType == "correction"))
+    {
+        <button class="na-tab" data-tab="correction"><i class="bi bi-pencil-square"></i> Fix the Error</button>
     }
     <button class="na-tab @(!activities.Any(a => a.ActivityType == "dialogue") ? "na-tab--active" : "")" data-tab="flashcards"><i class="bi bi-card-text"></i> Flashcards</button>
     <button class="na-tab" data-tab="recognition"><i class="bi bi-eye"></i> Recognition</button>
@@ -100,8 +90,33 @@
             <div class="na-card-flat p-4 mb-3">
                 <h5>Real-life scene</h5>
                 <p class="text-muted">@activity.Prompt</p>
-                <button type="button" class="na-speak-btn mb-3" data-speak="@activity.JapaneseText" title="Play dialogue"><i class="bi bi-volume-up-fill"></i></button>
+                <div class="row g-2 mb-3">
+                    <div class="col-md-6">
+                        <div class="small text-muted mb-1">Learner speed</div>
+                        @if (!string.IsNullOrWhiteSpace(activity.SlowAudioUrl))
+                        {
+                            <audio controls preload="none" class="w-100" src="@activity.SlowAudioUrl">Learner-speed Japanese audio</audio>
+                            <button type="button" class="btn btn-link btn-sm p-0 mt-1" data-speak="@activity.JapaneseText" data-rate="0.72"><i class="bi bi-shield-check"></i> System voice backup</button>
+                        }
+                        else
+                        { <button type="button" class="btn-na-outline btn-sm" data-speak="@activity.JapaneseText" data-rate="0.72"><i class="bi bi-volume-down-fill"></i> System voice</button> }
+                    </div>
+                    <div class="col-md-6">
+                        <div class="small text-muted mb-1">Natural speed</div>
+                        @if (!string.IsNullOrWhiteSpace(activity.NaturalAudioUrl))
+                        {
+                            <audio controls preload="none" class="w-100" src="@activity.NaturalAudioUrl">Natural-speed Japanese audio</audio>
+                            <button type="button" class="btn btn-link btn-sm p-0 mt-1" data-speak="@activity.JapaneseText" data-rate="0.95"><i class="bi bi-shield-check"></i> System voice backup</button>
+                        }
+                        else
+                        { <button type="button" class="btn-na-outline btn-sm" data-speak="@activity.JapaneseText" data-rate="0.95"><i class="bi bi-volume-up-fill"></i> System voice</button> }
+                    </div>
+                </div>
                 <div class="p-3 bg-light rounded" style="white-space:pre-line" lang="ja">@activity.JapaneseText</div>
+                @if (!string.IsNullOrWhiteSpace(activity.ReadingSupportText))
+                {
+                    <details class="mt-2 reading-support"><summary><i class="bi bi-spellcheck"></i> Reading help · よみかた</summary><div class="mt-2 p-2 rounded" style="white-space:pre-line" lang="ja">@activity.ReadingSupportText</div></details>
+                }
                 <details class="mt-3"><summary>Show meaning</summary><div class="mt-2" style="white-space:pre-line">@activity.EnglishText</div></details>
             </div>
         }
@@ -117,15 +132,56 @@
             <div class="na-card-flat p-4 mb-3 activity-card" data-activity-id="@activity.Id" data-activity-type="comprehension">
                 @if (!string.IsNullOrWhiteSpace(activity.JapaneseText))
                 {
-                    <button type="button" class="na-speak-btn mb-3" data-speak="@activity.JapaneseText" title="Play audio"><i class="bi bi-volume-up-fill"></i></button>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        @if (!string.IsNullOrWhiteSpace(activity.SlowAudioUrl))
+                        {
+                            <audio controls preload="none" src="@activity.SlowAudioUrl" aria-label="Learner-speed Japanese audio"></audio>
+                            <button type="button" class="btn-na-outline btn-sm" data-speak="@activity.JapaneseText" data-rate="0.72"><i class="bi bi-shield-check"></i> System backup</button>
+                        }
+                        else
+                        { <button type="button" class="btn-na-outline btn-sm" data-speak="@activity.JapaneseText" data-rate="0.72"><i class="bi bi-volume-down-fill"></i> Learner speed · system voice</button> }
+                        @if (!string.IsNullOrWhiteSpace(activity.NaturalAudioUrl))
+                        {
+                            <audio controls preload="none" src="@activity.NaturalAudioUrl" aria-label="Natural-speed Japanese audio"></audio>
+                            <button type="button" class="btn-na-outline btn-sm" data-speak="@activity.JapaneseText" data-rate="0.95"><i class="bi bi-shield-check"></i> System backup</button>
+                        }
+                        else
+                        { <button type="button" class="btn-na-outline btn-sm" data-speak="@activity.JapaneseText" data-rate="0.95"><i class="bi bi-volume-up-fill"></i> Natural speed · system voice</button> }
+                    </div>
                 }
                 <h5>@activity.Prompt</h5>
+                @if (!string.IsNullOrWhiteSpace(activity.ReadingSupportText))
+                {
+                    <details class="mb-2 reading-support"><summary><i class="bi bi-spellcheck"></i> Reading help · よみかた</summary><div class="mt-2" style="white-space:pre-line" lang="ja">@activity.ReadingSupportText</div></details>
+                }
                 <div class="d-grid gap-2 mt-3">
                     @foreach (var option in options)
                     {
                         <button type="button" class="btn-na-outline activity-answer" data-answer="@option">@option</button>
                     }
                 </div>
+                <div class="activity-feedback mt-3"></div>
+            </div>
+        }
+    </div>
+}
+
+@if (activities.Any(a => a.ActivityType == "correction"))
+{
+    <div id="tab-correction" class="na-practice-tab" style="display:none;">
+        @foreach (var activity in activities.Where(a => a.ActivityType == "correction"))
+        {
+            <div class="na-card-flat p-4 mb-3 activity-card" data-activity-id="@activity.Id" data-activity-type="correction">
+                <span class="na-badge mb-2" style="background:#FFF0EE;color:var(--na-primary-dark);">Input required · no choices</span>
+                <h5>@activity.Prompt</h5>
+                <div class="p-3 bg-light rounded mt-3" lang="ja">@activity.JapaneseText</div>
+                @if (!string.IsNullOrWhiteSpace(activity.ReadingSupportText))
+                {
+                    <details class="mt-2 reading-support"><summary><i class="bi bi-spellcheck"></i> Reading help · よみかた</summary><div class="mt-2" lang="ja">@activity.ReadingSupportText</div></details>
+                }
+                <label class="form-label mt-3">Corrected Japanese sentence</label>
+                <input class="form-control activity-input" lang="ja" autocomplete="off" placeholder="Type the complete corrected sentence" />
+                <button type="button" class="btn-na-primary activity-submit mt-3">Check correction</button>
                 <div class="activity-feedback mt-3"></div>
             </div>
         }
@@ -140,6 +196,10 @@
             var tokens = System.Text.Json.JsonSerializer.Deserialize<string[]>(activity.OptionsJson ?? "[]") ?? Array.Empty<string>();
             <div class="na-card-flat p-4 mb-3 activity-card" data-activity-id="@activity.Id" data-activity-type="sentence-building">
                 <h5>@activity.Prompt</h5>
+                @if (!string.IsNullOrWhiteSpace(activity.ReadingSupportText))
+                {
+                    <details class="reading-support"><summary><i class="bi bi-spellcheck"></i> Reading help · よみかた</summary><div class="mt-2" lang="ja">@activity.ReadingSupportText</div></details>
+                }
                 <input class="form-control activity-input mt-3" lang="ja" placeholder="Type the complete Japanese sentence" />
                 <div class="small text-muted mt-2">Word bank: @string.Join("　", tokens)</div>
                 <button type="button" class="btn-na-primary activity-submit mt-3">Check sentence</button>
@@ -154,7 +214,12 @@
     <div id="tab-production" class="na-practice-tab" style="display:none;">
         <div class="na-card-flat p-4">
             <h5>Use Japanese for the situation</h5>
-            @if (lesson?.Title.Contains("Introduce yourself") == true)
+            @if (lesson?.Title.Contains("Greetings for the situation") == true)
+            {
+                <p>Write three different greetings: one for your teacher in the morning, one for a first meeting, and one polite leave-taking.</p>
+                <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="先生、おはようございます。…"></textarea>
+            }
+            else if (lesson?.Title.Contains("Introduce yourself") == true)
             {
                 <p>Write or say a first-meeting introduction containing a greeting, your name, where you are from, your role, and a suitable closing.</p>
                 <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="はじめまして。…"></textarea>
@@ -168,6 +233,76 @@
             {
                 <p>Introduce one family member or friend. Include the relationship or name, a role, and one quality.</p>
                 <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="これは わたしの ともだちです。…"></textarea>
+            }
+            else if (lesson?.Title.Contains("Identify everyday things") == true)
+            {
+                <p>Imagine three objects on a table. Ask what one is, identify another, and ask who owns the third.</p>
+                <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="これは何ですか。それは…"></textarea>
+            }
+            else if (lesson?.Title.Contains("numbers, ages and prices") == true)
+            {
+                <p>Write your age, ask the price of an item, and respond with a price of at least three digits.</p>
+                <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="わたしは…歳です。これはいくらですか。…円です。"></textarea>
+            }
+            else if (lesson?.Title.Contains("Tell time") == true)
+            {
+                <p>Write a three-part schedule with a day, starting time and ending time, then ask when another activity begins.</p>
+                <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="月曜日の九時から…までです。…はいつですか。"></textarea>
+            }
+            else if (lesson?.Title.Contains("daily routine") == true)
+            {
+                <p>Describe four actions in your day. Include two clock times, one destination and one negative routine.</p>
+                <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="毎朝七時におきます。…"></textarea>
+            }
+            else if (lesson?.Title.Contains("Find people and things") == true)
+            {
+                <p>Describe where one person, one animal and two objects are. Choose います and あります correctly.</p>
+                <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="教室に先生がいます。つくえの上に…"></textarea>
+            }
+            else if (lesson?.Title.Contains("Describe places and objects") == true)
+            {
+                <p>Describe a familiar place with two positive qualities, one negative quality and one connected adjective sentence.</p>
+                <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="この町はしずかで、きれいです。…"></textarea>
+            }
+            else if (lesson?.Title.Contains("likes and abilities") == true)
+            {
+                <p>State two things you like, one thing you can do and one thing you cannot do. Ask the listener one question.</p>
+                <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="音楽が好きです。料理ができます。…"></textarea>
+            }
+            else if (lesson?.Title.Contains("requests and ask permission") == true)
+            {
+                <p>Write one polite request, one permission question and one prohibition for a classroom or public place.</p>
+                <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="ちょっと待ってください。ここで…てもいいですか。"></textarea>
+            }
+            else if (lesson?.Title.Contains("Order food and drinks") == true)
+            {
+                <p>Role-play a complete order with two different items, quantities, a drink and a request for the total.</p>
+                <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="ラーメンを一つと、お茶を二杯お願いします。…"></textarea>
+            }
+            else if (lesson?.Title.Contains("Shop for an item") == true)
+            {
+                <p>Ask for an item in a colour or size, ask the price, choose it and state how you will pay.</p>
+                <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="青はありますか。いくらですか。これにします。…"></textarea>
+            }
+            else if (lesson?.Title.Contains("Travel and ask directions") == true)
+            {
+                <p>Ask how to reach a place, then write a two-step direction and name the transport you will use.</p>
+                <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="駅から…までどうやって行きますか。まっすぐ行って…"></textarea>
+            }
+            else if (lesson?.Title.Contains("Invite someone") == true)
+            {
+                <p>Invite someone to an activity, propose a day and time, then write both an accepting and a polite declining response.</p>
+                <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="いっしょに…ませんか。いいですね。／すみません、…はちょっと。"></textarea>
+            }
+            else if (lesson?.Title.Contains("past day") == true)
+            {
+                <p>Describe yesterday using two positive past actions, one negative past action and one past adjective.</p>
+                <textarea id="production-input" class="form-control" rows="5" lang="ja" placeholder="きのう公園に行きました。…しませんでした。楽しかったです。"></textarea>
+            }
+            else if (lesson?.Title.Contains("real-life mission") == true)
+            {
+                <p>Complete the mission in Japanese: introduce yourself, arrange a meeting, ask directions, order something and repair one misunderstanding.</p>
+                <textarea id="production-input" class="form-control" rows="7" lang="ja" placeholder="はじめまして。…もう一度ゆっくりお願いします。"></textarea>
             }
             else
             {
@@ -219,6 +354,14 @@
                     {
                         <div class="flashcard-example" id="fc-ex">
                             @vocabulary.First().ExampleJapanese<br />
+                            @if (!string.IsNullOrWhiteSpace(vocabulary.First().ExampleReading) && vocabulary.First().ExampleReading != vocabulary.First().ExampleJapanese)
+                            {
+                                <small class="text-na-primary" id="fc-reading">@vocabulary.First().ExampleReading</small><br />
+                            }
+                            else
+                            {
+                                <small class="text-na-primary" id="fc-reading"></small>
+                            }
                             <small>@vocabulary.First().ExampleEnglish</small>
                         </div>
                     }
@@ -226,30 +369,40 @@
             </div>
         </div>
 
-        <div class="d-flex justify-content-center align-items-center gap-3 mt-3">
+        <div class="d-flex justify-content-center align-items-center gap-3 mt-3" id="fc-nav">
             <button class="btn-na-outline btn-sm" id="fc-prev"><i class="bi bi-arrow-left"></i></button>
             <small class="text-muted" id="fc-counter">1 / @vocabulary.Count()</small>
             <button class="btn-na-outline btn-sm" id="fc-next"><i class="bi bi-arrow-right"></i></button>
         </div>
 
-        <div class="d-flex justify-content-center gap-2 mt-3">
-            <button class="btn-na-outline btn-sm fc-rate" data-quality="1">Again</button>
-            <button class="btn-na-outline btn-sm fc-rate" data-quality="2">Hard</button>
-            <button class="btn-na-primary btn-sm fc-rate" data-quality="3">Good</button>
-            <button class="btn-na-outline btn-sm fc-rate" data-quality="4">Easy</button>
+        <div class="d-flex justify-content-center gap-2 mt-3" id="fc-rating">
+            <button class="btn-na-outline btn-sm fc-rate" data-quality="1" title="Didn't know it: review again in 10 minutes">Again</button>
+            <button class="btn-na-outline btn-sm fc-rate" data-quality="2" title="Knew it but with effort: short interval">Hard</button>
+            <button class="btn-na-outline btn-sm fc-rate" data-quality="3" title="Remembered it: standard interval (1 day the first time)">Good</button>
+            <button class="btn-na-outline btn-sm fc-rate" data-quality="4" title="Too easy: longer interval">Easy</button>
+        </div>
+        <div class="text-center mt-2">
+            <small class="text-muted">Again = 10 min · Hard = short · Good = 1 day · Easy = longer</small>
+        </div>
+
+        <div id="fc-complete" class="text-center py-4" style="display:none;">
+            <i class="bi bi-check-circle-fill text-success" style="font-size:2.5rem;"></i>
+            <h5 class="mt-2">Lesson flashcards complete!</h5>
+            <p class="text-muted">Your ratings were saved. Come back later to review the words you marked Again.</p>
+            <button class="btn-na-primary btn-sm" id="fc-restart">Study Again</button>
         </div>
 
         @* Hidden data for JS *@
         <script id="lesson-vocab-data" type="application/json">
             @Html.Raw(System.Text.Json.JsonSerializer.Serialize(vocabulary.Select(v => new {
                 v.Id, v.Japanese, v.Romaji, v.English, v.PartOfSpeech, IsReview = false,
-                v.ExampleJapanese, v.ExampleEnglish
+                v.ExampleJapanese, v.ExampleReading, v.ExampleEnglish
             })))
         </script>
         <script id="lesson-review-vocab-data" type="application/json">
             @Html.Raw(System.Text.Json.JsonSerializer.Serialize(reviewVocabulary.Select(v => new {
                 v.Id, v.Japanese, v.Romaji, v.English, v.PartOfSpeech, IsReview = true,
-                v.ExampleJapanese, v.ExampleEnglish
+                v.ExampleJapanese, v.ExampleReading, v.ExampleEnglish
             })))
         </script>
     }
@@ -323,7 +476,7 @@
             <i class="bi bi-patch-question" style="font-size:2rem; color:var(--na-primary);"></i>
             <h5 class="mt-2">Mini Quiz</h5>
             <p class="text-muted">5 questions to test your understanding</p>
-            <a asp-controller="Quizzes" asp-action="Take" asp-route-id="@quizzes.First().Id" class="btn-na-primary">
+            <a asp-controller="Quizzes" asp-action="Session" asp-route-mode="take" asp-route-id="@quizzes.First().Id" class="btn-na-primary">
                 <i class="bi bi-play-fill"></i> Start Mini Quiz
             </a>
         </div>

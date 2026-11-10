@@ -1,0 +1,82 @@
+@* Persistent admin workbench sidebar (red box). Rendered by _Layout for every Admin* controller.
+     Clicking a link loads the target into the content pane (see wwwroot/js/admin-shell.js). *@
+@{
+    var currentPath = Context.Request.Path.ToString();
+    var currentFull = currentPath + Context.Request.QueryString.ToString();
+    var isSuper = User.IsInRole("SuperAdmin");
+    var pending = (int?)(ViewBag.PendingReportCount) ?? 0;
+    // exact path+query match; a plain-path link also matches the same path carrying any query string
+    string NavActive(string href)
+    {
+        if (string.Equals(href, currentFull, StringComparison.OrdinalIgnoreCase)) return "active";
+        if (!href.Contains('?') && string.Equals(href, currentPath, StringComparison.OrdinalIgnoreCase)) return "active";
+        return "";
+    }
+}
+<aside class="na-admin-sidebar admin-sidebar na-card-flat" id="naAdminSidebar" aria-label="Admin navigation">
+    <div class="na-admin-sidebar-head">
+        <span class="na-admin-sidebar-brand">
+            <i class="bi bi-shield-lock" aria-hidden="true"></i>
+            <span class="na-admin-nav-label">
+                <strong>Admin</strong>
+                <small>@(isSuper ? "Super Admin" : "Content Admin")</small>
+            </span>
+        </span>
+        <button type="button" id="naAdminSidebarToggle" class="na-admin-sidebar-toggle"
+                title="Toggle sidebar (Ctrl+B)" aria-expanded="true" aria-label="Toggle sidebar">
+            <i class="bi bi-chevron-double-left" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <a asp-controller="Admin" asp-action="Index" class="nav-link @NavActive("/Admin")">
+        <i class="bi bi-grid-1x2" aria-hidden="true"></i><span class="na-admin-nav-label">Dashboard</span>
+    </a>
+
+    <h6 class="na-admin-sidebar-title text-muted na-admin-nav-label">Content Management</h6>
+    <a asp-controller="AdminContent" asp-action="Index" asp-route-type="lesson" class="nav-link @NavActive("/AdminContent?type=lesson")">
+        <i class="bi bi-journal-text" aria-hidden="true"></i><span class="na-admin-nav-label">Lessons</span>
+    </a>
+    <a asp-controller="AdminContent" asp-action="Index" asp-route-type="vocabulary" class="nav-link @NavActive("/AdminContent?type=vocabulary")">
+        <i class="bi bi-card-text" aria-hidden="true"></i><span class="na-admin-nav-label">Vocabulary</span>
+    </a>
+    <a asp-controller="AdminContent" asp-action="Index" asp-route-type="quiz" class="nav-link @NavActive("/AdminContent?type=quiz")">
+        <i class="bi bi-patch-question" aria-hidden="true"></i><span class="na-admin-nav-label">Quizzes</span>
+    </a>
+    <a asp-controller="AdminContent" asp-action="Index" asp-route-type="category" class="nav-link @NavActive("/AdminContent?type=category")">
+        <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i><span class="na-admin-nav-label">Categories</span>
+    </a>
+    <a asp-controller="AdminAudio" asp-action="Index" class="nav-link @NavActive("/AdminAudio")">
+        <i class="bi bi-soundwave" aria-hidden="true"></i><span class="na-admin-nav-label">Audio Coverage</span>
+    </a>
+    <a asp-controller="Admin" asp-action="ProgressTesting" class="nav-link @NavActive("/Admin/ProgressTesting")">
+        <i class="bi bi-signpost-split" aria-hidden="true"></i><span class="na-admin-nav-label">Progress Testing</span>
+    </a>
+
+    <h6 class="na-admin-sidebar-title text-muted na-admin-nav-label mt-3">Moderation &amp; Ops</h6>
+    <a asp-controller="AdminModeration" asp-action="Index" class="nav-link @NavActive("/AdminModeration")">
+        <i class="bi bi-flag" aria-hidden="true"></i><span class="na-admin-nav-label">Content Reports</span>
+        @if (pending > 0)
+        {
+            <span class="na-sidebar-badge">@pending</span>
+        }
+    </a>
+    <a asp-controller="AdminComments" asp-action="Index" class="nav-link @NavActive("/AdminComments")">
+        <i class="bi bi-chat-left-text" aria-hidden="true"></i><span class="na-admin-nav-label">Comments</span>
+    </a>
+    <a asp-controller="AdminBroadcast" asp-action="Index" class="nav-link @NavActive("/AdminBroadcast")">
+        <i class="bi bi-megaphone" aria-hidden="true"></i><span class="na-admin-nav-label">Announcements</span>
+    </a>
+    <a asp-controller="AdminLogs" asp-action="Index" class="nav-link @NavActive("/AdminLogs")">
+        <i class="bi bi-clock-history" aria-hidden="true"></i><span class="na-admin-nav-label">Audit Logs</span>
+    </a>
+    @if (isSuper)
+    {
+        <a asp-controller="AdminAccounts" asp-action="Index" class="nav-link @NavActive("/AdminAccounts")">
+            <i class="bi bi-people-fill" aria-hidden="true"></i><span class="na-admin-nav-label">User Accounts</span>
+        </a>
+    }
+
+    <div class="na-admin-sidebar-foot na-admin-nav-label">
+        <span><kbd>Ctrl</kbd>+<kbd>B</kbd> Collapse sidebar</span>
+    </div>
+</aside>

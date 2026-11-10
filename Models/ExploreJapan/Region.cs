@@ -34,11 +34,35 @@ namespace NihongoAcademy.Models.ExploreJapan
         /// <summary>Best time to visit (e.g. "July–August for festivals").</summary>
         public string BestSeason { get; set; } = "";
 
+        /// <summary>Winter (冬/Fuyu) card on the festivals page — month range, e.g. "12月–2月".</summary>
+        public string WinterMonths { get; set; } = "";
+
+        /// <summary>Winter card English subtitle, e.g. "December to February".</summary>
+        public string WinterSub { get; set; } = "";
+
+        /// <summary>Winter card 2-sentence description (what winter actually feels like here).</summary>
+        public string WinterNote { get; set; } = "";
+
+        /// <summary>Summer (夏/Natsu) card on the festivals page — month range, e.g. "7月–8月".</summary>
+        public string SummerMonths { get; set; } = "";
+
+        /// <summary>Summer card English subtitle, e.g. "July and August".</summary>
+        public string SummerSub { get; set; } = "";
+
+        /// <summary>Summer card 2-sentence description (what summer actually feels like here).</summary>
+        public string SummerNote { get; set; } = "";
+
         /// <summary>Headline tagline shown on the region tile.</summary>
         public string Tagline { get; set; } = "";
 
         /// <summary>Long paragraph (2–3 sentences) shown on the detail page.</summary>
         public string Description { get; set; } = "";
+
+        /// <summary>
+        /// Key phrases inside <see cref="Description"/> that should be visually
+        /// highlighted on the detail page (bolded in the source Region Guide document).
+        /// </summary>
+        public List<string> OverviewHighlights { get; set; } = new();
 
         /// <summary>3–5 must-see sights, each with optional ja-name.</summary>
         public List<RegionPoint> Highlights { get; set; } = new();
@@ -49,8 +73,21 @@ namespace NihongoAcademy.Models.ExploreJapan
         /// <summary>2–3 famous matsuri / seasonal events.</summary>
         public List<RegionPoint> Festivals { get; set; } = new();
 
+        /// <summary>
+        /// Trivia cards for the "Fun &amp; curious" block near the foot of the page.
+        /// Text-only on purpose (no photos) so the section reads differently from
+        /// the photo-heavy blocks above. Empty = the block is not rendered at all.
+        /// </summary>
+        public List<RegionFact> FunFacts { get; set; } = new();
+
         /// <summary>How to get there (e.g. airports, shinkansen lines).</summary>
         public string Access { get; set; } = "";
+
+        /// <summary>
+        /// Key phrases inside <see cref="Access"/> that should be visually
+        /// highlighted on the detail page (bolded in the source Region Guide document).
+        /// </summary>
+        public List<string> AccessHighlights { get; set; } = new();
 
         /// <summary>Accent CSS class fragment (e.g. "na-primary").</summary>
         public string Accent { get; set; } = "na-primary";
@@ -87,5 +124,24 @@ namespace NihongoAcademy.Models.ExploreJapan
         public string TitleJa { get; set; } = "";
         public string? Note { get; set; }
         public string? Url { get; set; }
+
+        /// <summary>
+        /// Optional date / season line shown as a badge on festival cards
+        /// (e.g. "Early February"). Left empty for sights and dishes.
+        /// </summary>
+        public string? When { get; set; }
+
+        /// <summary>
+        /// Filename of the main photo for this sight / festival, stored in
+        /// wwwroot/Japance Image. Leave empty when a region has no photos yet —
+        /// the detail page then falls back to an illustrated tile.
+        /// </summary>
+        public string? Image { get; set; }
+
+        /// <summary>
+        /// Optional second shot of the same subject (variant frame). Shown as its
+        /// own slide in the interactive showcase.
+        /// </summary>
+        public string? ExtraImage { get; set; }
     }
 }

@@ -10,6 +10,9 @@ namespace NihongoAcademy.Controllers
     [Authorize]
     public class QuizzesController : Controller
     {
+        private const string A1FinalTitle = "A1 Final Can-do Assessment";
+        private const string KanjiFinalTitle = "N5 Kanji Final Assessment";
+        private const string A2FinalTitle = "A2 Final Can-do Assessment";
         private readonly ApplicationDbContext _context;
         private readonly UserManager<IdentityUser> _userManager;
 
@@ -35,9 +38,19 @@ namespace NihongoAcademy.Controllers
                     .Where(a => a.UserId == userId)
                     .ToListAsync();
                 ViewBag.UserAttempts = attempts;
+                ViewBag.LockedQuizIds = await GetLockedQuizIdsAsync(quizzes, userId);
             }
 
             return View(quizzes);
+        }
+
+        // A quiz is one dynamic session page whose state is selected by mode.
+        public async Task<IActionResult> Session(string mode = "take", int? id = null)
+        {
+            if (mode.Equals("history", StringComparison.OrdinalIgnoreCase))
+                return await History();
+            if (!id.HasValue) return RedirectToAction(nameof(Index));
+            return await Take(id.Value);
         }
 
         public async Task<IActionResult> Take(int id)
@@ -48,8 +61,16 @@ namespace NihongoAcademy.Controllers
                 .FirstOrDefaultAsync(q => q.Id == id && q.IsPublished);
 
             if (quiz == null) return NotFound();
+            var userId = _userManager.GetUserId(User);
+            if (userId == null) return Challenge();
+            var lockMessage = await GetLockMessageAsync(quiz.Title, userId);
+            if (lockMessage != null)
+            {
+                TempData["Error"] = lockMessage;
+                return RedirectToAction(nameof(Index));
+            }
 
-            return View(quiz);
+            return View(nameof(Take), quiz);
         }
 
         [HttpPost]
@@ -61,7 +82,12 @@ namespace NihongoAcademy.Controllers
                 .FirstOrDefaultAsync(q => q.Id == quizId && q.IsPublished);
 
             if (quiz == null) return NotFound();
+            var userId = _userManager.GetUserId(User);
+            if (userId == null) return Challenge();
+            if (await GetLockMessageAsync(quiz.Title, userId) != null)
+                return Forbid();
 
+            answers ??= new List<int>();
             int totalQuestions = quiz.Questions.Count;
             int correctAnswers = 0;
 
@@ -79,7 +105,7 @@ namespace NihongoAcademy.Controllers
 
             var attempt = new QuizAttempt
             {
-                UserId = _userManager.GetUserId(User)!,
+                UserId = userId,
                 QuizId = quizId,
                 TotalQuestions = totalQuestions,
                 CorrectAnswers = correctAnswers,
@@ -114,7 +140,56 @@ namespace NihongoAcademy.Controllers
                 .OrderByDescending(a => a.AttemptDate)
                 .ToListAsync();
 
-            return View(attempts);
+            return View(nameof(History), attempts);
+        }
+
+        private async Task<HashSet<int>> GetLockedQuizIdsAsync(IEnumerable<Quiz> quizzes, string userId)
+        {
+            var locked = new HashSet<int>();
+            if (!await HasCompletedCategoryAsync(userId, "A1 Course", "A1:"))
+            {
+                var finalQuiz = quizzes.FirstOrDefault(q => q.Title == A1FinalTitle);
+                if (finalQuiz != null) locked.Add(finalQuiz.Id);
+            }
+            if (!await HasCompletedCategoryAsync(userId, "Kanji", "Kanji Foundations:"))
+            {
+                var finalQuiz = quizzes.FirstOrDefault(q => q.Title == KanjiFinalTitle);
+                if (finalQuiz != null) locked.Add(finalQuiz.Id);
+            }
+            if (!await HasCompletedCategoryAsync(userId, "A2 Course", "A2:"))
+            {
+                var finalQuiz = quizzes.FirstOrDefault(q => q.Title == A2FinalTitle);
+                if (finalQuiz != null) locked.Add(finalQuiz.Id);
+            }
+            return locked;
+        }
+
+        private async Task<string?> GetLockMessageAsync(string quizTitle, string userId)
+        {
+            if (quizTitle == A1FinalTitle && !await HasCompletedCategoryAsync(userId, "A1 Course", "A1:"))
+                return "Complete every A1 course lesson with stable mastery before taking the final assessment.";
+            if (quizTitle == KanjiFinalTitle && !await HasCompletedCategoryAsync(userId, "Kanji", "Kanji Foundations:"))
+                return "Complete every kanji lesson with stable mastery before taking the N5 kanji assessment.";
+            if (quizTitle == A2FinalTitle && !await HasCompletedCategoryAsync(userId, "A2 Course", "A2:"))
+                return "Complete every A2 course lesson with stable mastery before taking the A2 final assessment.";
+            return null;
+        }
+
+        /// <summary>
+        /// True when every published lesson in the category has reached stable mastery.
+        /// The expected count is read from the database rather than hardcoded: a baked-in
+        /// number would silently lock the final assessment forever once content changed.
+        /// </summary>
+        private async Task<bool> HasCompletedCategoryAsync(string userId, string categoryName, string titlePrefix)
+        {
+            var lessonIds = await _context.Lessons
+                .Where(l => l.IsPublished && l.Category!.Name == categoryName && l.Title.StartsWith(titlePrefix))
+                .Select(l => l.Id)
+                .ToListAsync();
+            if (lessonIds.Count == 0) return false;
+            var masteredCount = await _context.LessonProgress.CountAsync(p =>
+                p.UserId == userId && p.IsCompleted && lessonIds.Contains(p.LessonId));
+            return masteredCount == lessonIds.Count;
         }
     }
 

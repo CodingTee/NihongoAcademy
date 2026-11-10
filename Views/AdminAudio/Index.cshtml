@@ -1,0 +1,75 @@
+@model NihongoAcademy.Models.AudioCoverageViewModel
+@{
+    ViewData["Title"] = "Audio Coverage";
+    var showingMissing = string.Equals(ViewBag.Status as string, "missing", StringComparison.OrdinalIgnoreCase);
+}
+
+@await Html.PartialAsync("_AdminPageHeader", new NihongoAcademy.Models.AdminPageHeaderModel
+{
+    Trail =
+    {
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Admin", Url = Url.Action("Index", "Admin") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Audio Coverage" }
+    },
+    Icon = "bi-soundwave",
+    Title = "Audio Coverage",
+    TitleJp = "音声管理",
+    Lead = "Optional recorded-audio coverage. System voice keeps every listed activity usable without MP3 files.",
+    Actions =
+    {
+        new NihongoAcademy.Models.AdminPageHeaderAction
+        {
+            Text = "All",
+            Url = Url.Action("Index", "AdminAudio"),
+            Outline = !showingMissing,
+            CssClass = "btn-sm"
+        },
+        new NihongoAcademy.Models.AdminPageHeaderAction
+        {
+            Text = "System voice only",
+            Url = Url.Action("Index", "AdminAudio", new { status = "missing" }),
+            Outline = showingMissing,
+            CssClass = "btn-sm"
+        }
+    }
+})
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4"><div class="dashboard-metric"><div class="metric-value">@Model.CoveragePercentage%</div><div class="metric-label">Optional recording coverage</div></div></div>
+    <div class="col-md-4"><div class="dashboard-metric"><div class="metric-value">@Model.AvailableFileCount</div><div class="metric-label">Recorded sources</div></div></div>
+    <div class="col-md-4"><div class="dashboard-metric"><div class="metric-value">@(Model.RequiredFileCount - Model.AvailableFileCount)</div><div class="metric-label">Using system voice</div></div></div>
+</div>
+
+<div class="alert alert-info">
+    <i class="bi bi-folder2-open"></i>
+    <strong>No recording is required.</strong> Every item below has slow and natural-speed system-voice controls. If you add MP3 files under <code>wwwroot/audio/lessons/{lessonId}/</code>, they are detected automatically as an optional audio-quality upgrade.
+</div>
+
+<div class="na-card-flat table-responsive">
+    <table class="table table-hover align-middle mb-0">
+        <thead><tr><th>Lesson / activity</th><th>Japanese</th><th>Learner speed</th><th>Natural speed</th></tr></thead>
+        <tbody>
+        @foreach (var item in Model.Items)
+        {
+            <tr>
+                <td><strong>@item.LessonTitle</strong><small class="d-block text-muted">#@item.ActivityId · @item.ActivityType</small></td>
+                <td lang="ja" style="max-width:280px">@item.JapanesePreview</td>
+                <td>
+                    <span class="@(item.SlowExists ? "text-success" : "text-na-primary")"><i class="bi @(item.SlowExists ? "bi-check-circle-fill" : "bi-volume-up-fill")"></i> @(item.SlowExists ? item.SlowExternal ? "External recording" : "Recorded audio" : "System voice fallback")</span>
+                    <code class="d-block small text-break">@item.SlowUrl</code>
+                    @if (item.SlowExists) { <audio controls preload="none" class="w-100 mt-1" src="@item.SlowUrl"></audio> }
+                </td>
+                <td>
+                    <span class="@(item.NaturalExists ? "text-success" : "text-na-primary")"><i class="bi @(item.NaturalExists ? "bi-check-circle-fill" : "bi-volume-up-fill")"></i> @(item.NaturalExists ? item.NaturalExternal ? "External recording" : "Recorded audio" : "System voice fallback")</span>
+                    <code class="d-block small text-break">@item.NaturalUrl</code>
+                    @if (item.NaturalExists) { <audio controls preload="none" class="w-100 mt-1" src="@item.NaturalUrl"></audio> }
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    @if (!Model.Items.Any())
+    {
+        <div class="text-center text-muted p-5">All activities in this filter have optional recorded audio.</div>
+    }
+</div>

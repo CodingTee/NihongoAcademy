@@ -107,11 +107,7 @@
             if (q.type === 'listening') {
                 // Auto-play for listening questions
                 const match = q.q.match(/🔊\s*'(.+?)'/);
-                if (match && 'speechSynthesis' in window) {
-                    const u = new SpeechSynthesisUtterance(match[1]);
-                    u.lang = 'ja-JP';
-                    speechSynthesis.speak(u);
-                }
+                if (match && typeof window.speakJapanese === 'function') window.speakJapanese(match[1]);
             }
         }
 

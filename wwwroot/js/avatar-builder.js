@@ -21,7 +21,7 @@
         backgrounds: [
             { value: "none", label: "None", color: "transparent" },
             { value: "#FFF0F3", label: "Pink", color: "#FFF0F3" },
-            { value: "#FFF8E1", label: "Cream", color: "#FFF8E1" },
+            { value: "#F0F3F6", label: "Cream", color: "#F0F3F6" },
             { value: "#F5EDE0", label: "Beige", color: "#F5EDE0" },
             { value: "#E3F2FD", label: "Sky Blue", color: "#E3F2FD" },
             { value: "#E8F5E9", label: "Sage Green", color: "#E8F5E9" },
@@ -34,10 +34,25 @@
     // All values are based on a 120 × 120 avatar.
     // ======================================================
 
+    // Avatar configs come straight out of the database and are learner-authored, so
+    // every field is clamped against the known option list before it lands in the SVG.
+    var HEX_COLOR = /^#[0-9A-Fa-f]{6}$/;
+
+    function pickAllowed(value, allowed, fallback) {
+        var v = typeof value === "string" ? value.trim() : "";
+        return allowed.indexOf(v) !== -1 ? v : fallback;
+    }
+
+    function pickColor(value, fallback, allowNone) {
+        var v = typeof value === "string" ? value.trim() : "";
+        if (allowNone && v === "none") return "none";
+        return HEX_COLOR.test(v) ? v : fallback;
+    }
+
     var hairImages = {
         "short-bob": {
             src: "/images/avatar/hair/short-bob.png",
-            // 更宽一点 + 往左一点，盖住耳朵白边
+            // A bit wider + shifted left to cover the ear white edges
             x: 1,
             y: -5,
             width: 116,
@@ -54,7 +69,7 @@
 
         "spiky": {
             src: "/images/avatar/hair/spiky.png",
-            // 往左一点点
+            // Nudge left slightly
             x: 6,
             y: -6,
             width: 101,
@@ -64,13 +79,13 @@
         "ponytail": {
             src: "/images/avatar/hair/ponytail.png",
 
-            // 往左一点点
+            // Nudge left slightly
             x: 4,
 
-            // 放大时往上一点维持中心
+            // Nudge up slightly when scaling to keep centered
             y: -4,
 
-            // 只放大一点点
+            // Scale up only slightly
             width: 120,
             height: 118
         },
@@ -110,10 +125,10 @@
             top: 0.262,
             bottom: 0.738,
 
-            // 再宽一点，专门补左右耳朵白边
+            // Wider still, specifically to patch the left/right ear white edges
             rx: 0.316,
 
-            // 不要再偏左了，回中一点
+            // No more left bias; move back toward center
             cxOffset: 0,
 
             eyeY: 0.512,
@@ -122,7 +137,7 @@
         },
 
         "long-wavy": {
-            // expression 往上一点点
+            // Nudge the expression up slightly
             top: 0.220,
             bottom: 0.736,
             rx: 0.250,
@@ -220,19 +235,19 @@
 
         config = config || {};
 
-        config.skinTone = config.skinTone || "#F2C3AF";
-        config.hairColor = config.hairColor || "#5B3927";
-        config.hairStyle = config.hairStyle || "short-bob";
-        config.expression = config.expression || "smile";
-        config.accessory = config.accessory || "";
-        config.background = config.background || "none";
+        config.skinTone = pickColor(config.skinTone, "#C9CCCF");
+        config.hairColor = pickColor(config.hairColor, "#5B3927");
+        config.hairStyle = pickAllowed(config.hairStyle, options.hairStyles, "short-bob");
+        config.expression = pickAllowed(config.expression, options.expressions, "smile");
+        config.accessory = pickAllowed(config.accessory, options.accessories, "none");
+        config.background = pickColor(config.background, "none", true);
 
 
         // ==================================================
         // BASIC AVATAR COORDINATES
         // ==================================================
 
-        var size = parseInt(container.dataset.size, 10) || 120;
+        var size = Math.min(512, Math.max(16, parseInt(container.dataset.size, 10) || 120));
 
         var cx = size / 2;
         var cy = size / 2;
@@ -755,7 +770,7 @@
 
         else if (config.accessory === "headphones") {
 
-            // Headphones 微微往左、往上
+            // Headphones: shift slightly left and up
             var headphoneOffsetX = -size * 0.020;
             var headphoneOffsetY = -size * 0.020;
 
@@ -1159,10 +1174,27 @@
         update();
     }
 
+    function renderInto(container, config, size) {
+        if (!container) return;
+        var merged = Object.assign({}, defaults, config || {});
+        renderAvatar(merged, container);
+        if (size) {
+            container.style.width = size + 'px';
+            container.style.height = size + 'px';
+            container.style.overflow = 'hidden';
+            container.style.borderRadius = '50%';
+            container.style.flexShrink = '0';
+            container.style.display = 'inline-flex';
+            container.style.alignItems = 'center';
+            container.style.justifyContent = 'center';
+        }
+    }
+
     window.AvatarBuilder = {
         defaults: defaults,
         options: options,
         renderAvatar: renderAvatar,
+        renderInto: renderInto,
         init: initAvatarBuilder
     };
 })();

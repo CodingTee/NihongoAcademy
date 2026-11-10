@@ -4,12 +4,27 @@
     ViewData["Title"] = "Create Vocabulary";
 }
 
-<h2><i class="bi bi-plus-circle"></i> Create Vocabulary Card</h2>
+@await Html.PartialAsync("_AdminPageHeader", new NihongoAcademy.Models.AdminPageHeaderModel
+{
+    Trail =
+    {
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Admin", Url = Url.Action("Index", "Admin") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Vocabulary", Url = Url.Action("Index", "AdminContent", new { type = "vocabulary" }) },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Create Word" }
+    },
+    Icon = "bi-plus-circle",
+    Title = "Create Vocabulary Card",
+    TitleJp = "単語作成",
+    Actions =
+    {
+        new NihongoAcademy.Models.AdminPageHeaderAction { Text = "Back to Vocabulary", Url = Url.Action("Index", "AdminContent", new { type = "vocabulary" }), Icon = "bi-arrow-left", Outline = true }
+    }
+})
 
 <div class="row">
-    <div class="col-md-8">
+    <div class="col-12">
         <div class="na-card-flat">
-            <form asp-action="Create">
+            <form asp-controller="AdminVocabulary" asp-action="Create">
                 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
                 <div class="mb-3">
@@ -49,6 +64,8 @@
                 <div class="mb-3">
                     <label asp-for="ExampleJapanese" class="form-label"></label>
                     <input asp-for="ExampleJapanese" class="form-control" placeholder="例文（日本語）" />
+                    <label asp-for="ExampleReading" class="form-label mt-2"></label>
+                    <input asp-for="ExampleReading" class="form-control" placeholder="れいぶん（よみかた）" />
                 </div>
 
                 <div class="mb-3">
@@ -77,7 +94,7 @@
 
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn-na-primary"><i class="bi bi-check-circle"></i> Create</button>
-                    <a asp-action="Index" class="btn-na-outline">Cancel</a>
+                    <a asp-controller="AdminContent" asp-action="Index" asp-route-type="vocabulary" class="btn-na-outline">Cancel</a>
                 </div>
             </form>
         </div>

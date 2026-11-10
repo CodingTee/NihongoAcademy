@@ -1,25 +1,92 @@
-﻿@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Identity
+@using NihongoAcademy.Data
+@using Microsoft.EntityFrameworkCore
 @inject SignInManager<IdentityUser> SignInManager
 @inject UserManager<IdentityUser> UserManager
+@inject ApplicationDbContext DbContext
 
 @if (SignInManager.IsSignedIn(User))
 {
     var email = User.Identity?.Name ?? "User";
     var initials = string.Concat(email.TakeWhile(c => c != '@').Take(2)).ToUpper();
     if (initials.Length == 0) initials = "U";
+    var userId = UserManager.GetUserId(User);
+    var profile = userId == null ? null : await DbContext.UserProfiles.AsNoTracking().FirstOrDefaultAsync(p => p.UserId == userId);
 
     <ul class="navbar-nav">
-        @if (User.IsInRole("Admin"))
+        @if (User.IsInRole("Admin") || User.IsInRole("SuperAdmin"))
         {
             <li class="nav-item">
-                <a class="na-admin-pill" asp-area="" asp-controller="Admin" asp-action="Index" title="管理面板 Admin Panel">
-                    <i class="bi bi-shield-lock-fill"></i> <span class="d-none d-sm-inline">Admin Panel</span>
+                <a class="na-admin-pill" asp-area="" asp-controller="Admin" asp-action="Index" title="Admin panel">
+                    <i class="bi bi-shield-lock-fill"></i> <span class="d-none d-sm-inline">Admin</span>
                 </a>
             </li>
         }
+        @* Notification Bell *@
+        <li class="nav-item dropdown na-notif-menu me-2">
+            <a class="nav-link na-nav-icon-btn na-notif-toggle position-relative" href="#" id="notifDropdown" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Notifications & Messages">
+                <i class="bi bi-bell"></i>
+                <span class="na-notif-badge" id="naNotifBadge" style="display:none;">0</span>
+            </a>
+            <div class="dropdown-menu dropdown-menu-end na-dropdown na-notif-dropdown p-0 shadow" aria-labelledby="notifDropdown">
+                @* Dual Tab Header *@
+                <div class="na-notif-tabs d-flex border-bottom bg-light">
+                    <button type="button" class="btn btn-sm flex-fill py-2 fw-semibold na-notif-tab-btn active" id="btnTabAlerts" onclick="switchNotifTab('alerts', event)">
+                        <i class="bi bi-bell-fill me-1 text-danger"></i> Alerts
+                        <span class="badge bg-danger rounded-pill ms-1" id="tabAlertsCount" style="display:none;font-size:0.68rem;">0</span>
+                    </button>
+                    <button type="button" class="btn btn-sm flex-fill py-2 fw-semibold na-notif-tab-btn" id="btnTabMessages" onclick="switchNotifTab('messages', event)">
+                        <i class="bi bi-chat-dots-fill me-1 text-primary"></i> Messages
+                        <span class="badge bg-primary rounded-pill ms-1" id="tabDmsCount" style="display:none;font-size:0.68rem;">0</span>
+                    </button>
+                </div>
+
+                @* Panel 1: Alerts *@
+                <div id="panelAlerts">
+                    <div class="na-notif-header d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+                        <span class="text-muted small fw-semibold">Notifications</span>
+                        <button type="button" class="btn btn-link btn-sm text-decoration-none p-0 na-notif-mark-all" id="naMarkAllReadBtn">Mark all read</button>
+                    </div>
+                    <div class="na-notif-list" id="naNotifList">
+                        <div class="text-center text-muted py-4 small">Loading notifications...</div>
+                    </div>
+                    <div class="p-2 text-center border-top bg-light">
+                        <a asp-controller="Community" asp-action="Index" class="small text-muted text-decoration-none">Explore Community</a>
+                    </div>
+                </div>
+
+                @* Panel 2: Messages *@
+                <div id="panelMessages" style="display:none;">
+                    <div class="na-notif-header d-flex justify-content-between align-items-center px-3 py-2 border-bottom bg-white">
+                        <span class="text-muted small fw-semibold"><i class="bi bi-chat-heart text-primary me-1"></i>Recent Chats</span>
+                        <span class="text-muted" style="font-size:0.72rem;">Direct Messages</span>
+                    </div>
+                    <div class="na-dm-list" id="naDmList" style="max-height:280px;overflow-y:auto;">
+                        <div class="text-center text-muted py-4 small">Loading messages...</div>
+                    </div>
+                    <div class="p-2 text-center border-top bg-light">
+                        <a asp-controller="Community" asp-action="UserProfile" asp-route-id="@userId" class="small text-muted text-decoration-none">
+                            <i class="bi bi-people-fill me-1 text-na-primary"></i>View all Study Buddies
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </li>
+
         <li class="nav-item dropdown na-user-menu">
-            <a class="nav-link na-user-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                <span class="na-avatar">@initials</span>
+            <a class="nav-link na-user-toggle" href="#" id="userDropdown" data-tour="nav-user" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                @if (profile?.AvatarMode == "uploaded" && !string.IsNullOrWhiteSpace(profile.AvatarImagePath))
+                {
+                    <img src="@profile.AvatarImagePath" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;" />
+                }
+                else if (profile != null && !string.IsNullOrWhiteSpace(profile.AvatarJson))
+                {
+                    <div class="na-avatar-inline" data-size="36" data-avatar-json="@profile.AvatarJson">@initials</div>
+                }
+                else
+                {
+                    <span class="na-avatar">@initials</span>
+                }
             </a>
             <ul class="dropdown-menu dropdown-menu-end na-dropdown" aria-labelledby="userDropdown">
                 <li class="dropdown-header">
@@ -31,7 +98,17 @@
                         <i class="bi bi-person"></i> My profile
                     </a>
                 </li>
-                @if (User.IsInRole("Admin"))
+                <li>
+                    <a class="dropdown-item" asp-controller="Community" asp-action="UserProfile" asp-route-id="@userId">
+                        <i class="bi bi-person-lines-fill"></i> Community profile
+                    </a>
+                </li>
+                <li>
+                    <button type="button" class="dropdown-item" onclick="window.SakuraTour && window.SakuraTour.start(true)">
+                        <i class="bi bi-compass"></i> Campus tour
+                    </button>
+                </li>
+                @if (User.IsInRole("Admin") || User.IsInRole("SuperAdmin"))
                 {
                     <li>
                         <a class="dropdown-item" asp-area="" asp-controller="Admin" asp-action="Index">
@@ -40,7 +117,7 @@
                     </li>
                 }
                 <li>
-                    <a class="dropdown-item" asp-area="" asp-controller="Home" asp-action="About">
+                    <a class="dropdown-item" asp-area="" asp-controller="Home" asp-action="Info" asp-route-section="about">
                         <i class="bi bi-info-circle"></i> About
                     </a>
                 </li>
@@ -60,10 +137,7 @@ else
 {
     <ul class="navbar-nav">
         <li class="nav-item">
-            <a class="nav-link na-nav-link-sm" asp-area="Identity" asp-page="/Account/Login">Login</a>
-        </li>
-        <li class="nav-item">
-            <a class="btn-na-primary btn-sm ms-1" asp-area="Identity" asp-page="/Account/Register">Sign up</a>
+            <a class="btn-na-primary na-login-btn" asp-area="Identity" asp-page="/Account/Login">Login</a>
         </li>
     </ul>
 }

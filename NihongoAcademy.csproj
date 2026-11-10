@@ -12,10 +12,15 @@
     <Compile Remove="scripts\**" />
     <Content Remove="scripts\**" />
     <None Remove="scripts\**" />
+    <Compile Remove="NihongoAcademy.Tests\**" />
+    <Content Remove="NihongoAcademy.Tests\**" />
+    <None Remove="NihongoAcademy.Tests\**" />
+    <Compile Remove="NihongoAcademy.UITests\**" />
+    <Content Remove="NihongoAcademy.UITests\**" />
+    <None Remove="NihongoAcademy.UITests\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="8.0.29" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.29" />
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.29" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.29" />

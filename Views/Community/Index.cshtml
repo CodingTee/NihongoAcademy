@@ -32,6 +32,8 @@
     };
 }
 
+@Html.AntiForgeryToken()
+
 @functions {
     public string TimeAgo(DateTime date)
     {
@@ -40,7 +42,7 @@
         if (diff.TotalMinutes < 60) return $"{(int)diff.TotalMinutes}m ago";
         if (diff.TotalHours < 24) return $"{(int)diff.TotalHours}h ago";
         if (diff.TotalDays < 7) return $"{(int)diff.TotalDays}d ago";
-        return date.ToLocalTime().ToString("MMM d");
+        return date.ToLocalTime().ToString("MMM d", System.Globalization.CultureInfo.InvariantCulture);
     }
 
     public string CategoryTagClass(CommunityCategory cat)
@@ -76,63 +78,149 @@
 
 <div class="na-community">
     @* ===== Header ===== *@
-    <div class="na-community-header">
-        <h1><i class="bi bi-people na-page-icon"></i> Community <span class="na-subtitle-jp">コミュニティ</span></h1>
-        <p class="na-community-subtitle">Learn, share, and grow together. 一緒に学び、成長しましょう。</p>
-    </div>
+    <section class="na-page-hero-v2" aria-label="Community">
+        <div class="na-hero-v2-deco" aria-hidden="true">
+            <span class="na-hero-v2-glyph na-hero-v2-glyph--a">友</span>
+            <span class="na-hero-v2-glyph na-hero-v2-glyph--b">話</span>
+            <span class="na-hero-v2-glyph na-hero-v2-glyph--c">み</span>
+            <span class="na-hero-v2-glyph na-hero-v2-glyph--d">コ</span>
+            <span class="na-hero-v2-petal"></span>
+            <span class="na-hero-v2-petal"></span>
+            <span class="na-hero-v2-petal"></span>
+            <span class="na-hero-v2-petal"></span>
+        </div>
+        <div class="na-page-hero-v2-inner">
+            <span class="na-page-hero-v2-eyebrow"><i class="bi bi-people"></i> Learn &amp; Share Together</span>
+            <h1 class="na-page-hero-v2-title">Community <span>コミュニティ</span></h1>
+            <p class="na-page-hero-v2-lead">Connect with fellow learners, get answers to grammar questions, share study tips, and practice Japanese.</p>
+        </div>
+    </section>
 
-    @* ===== Category Tabs ===== *@
-    <div class="na-community-tabs">
-        <div class="na-tabs-scroll">
+    @* ===== Row 1: Category Underline Tabs ===== *@
+    <div class="na-community-tabs-bar mb-3" data-tour="tour-community-tabs">
+        <div class="na-tabs-underline-scroll">
             @foreach (var cat in categoryList)
             {
                 var isActive = Model.CurrentCategory == cat;
-                <a asp-action="Index" asp-route-category="@cat"
-                   class="na-tab @(isActive ? "na-tab--active" : "")">
+                <a asp-action="Index" asp-route-category="@cat" asp-route-search="@Model.SearchQuery" asp-route-sort="@Model.SortBy"
+                   class="na-tab-underline @(isActive ? "is-active" : "")">
                     <i class="bi @CategoryIcon(cat)"></i>
-                    @categoryLabels[cat]
+                    <span>@categoryLabels[cat]</span>
                     @if (!string.IsNullOrEmpty(categoryJp[cat]))
                     {
-                        <span class="na-tab-jp">@categoryJp[cat]</span>
+                        <small class="na-tab-underline-jp">@categoryJp[cat]</small>
                     }
                 </a>
             }
         </div>
     </div>
 
+    @* ===== Row 2: Control Bar (Left: Filter Chips, Right: Compact Search) ===== *@
+    <div class="na-community-control-bar mb-3" data-tour="tour-community-filters">
+        <div class="na-control-subfilters">
+            <a asp-action="Index" asp-route-category="@Model.CurrentCategory" asp-route-search="@Model.SearchQuery" asp-route-sort="latest"
+               class="na-filter-chip @(Model.SortBy == "latest" ? "is-active" : "")">
+                <i class="bi bi-clock-history"></i> Latest
+            </a>
+
+            <a asp-action="Index" asp-route-category="@Model.CurrentCategory" asp-route-search="@Model.SearchQuery" asp-route-sort="popular"
+               class="na-filter-chip @(Model.SortBy == "popular" ? "is-active" : "")">
+                <i class="bi bi-fire"></i> Popular
+            </a>
+
+            <a asp-action="Index" asp-route-category="@Model.CurrentCategory" asp-route-search="@Model.SearchQuery" asp-route-sort="unanswered"
+               class="na-filter-chip @(Model.SortBy == "unanswered" ? "is-active" : "")">
+                <i class="bi bi-chat-square-dots"></i> Unanswered
+                @if (Model.UnansweredCount > 0)
+                {
+                    <span class="na-chip-badge">@Model.UnansweredCount</span>
+                }
+            </a>
+
+            <a asp-action="Index" asp-route-category="@Model.CurrentCategory" asp-route-search="@Model.SearchQuery" asp-route-sort="feedback"
+               class="na-filter-chip @(Model.SortBy == "feedback" ? "is-active" : "")">
+                <i class="bi bi-stars"></i> Feedback Wanted
+                @if (Model.FeedbackCount > 0)
+                {
+                    <span class="na-chip-badge">@Model.FeedbackCount</span>
+                }
+            </a>
+
+            @if (SignInManager.IsSignedIn(User))
+            {
+                <a asp-action="Index" asp-route-category="@Model.CurrentCategory" asp-route-search="@Model.SearchQuery" asp-route-sort="saved"
+                   class="na-filter-chip @(Model.SortBy == "saved" ? "is-active" : "")">
+                    <i class="bi bi-bookmark-heart"></i> Saved
+                    @if (Model.SavedCount > 0)
+                    {
+                        <span class="na-chip-badge">@Model.SavedCount</span>
+                    }
+                </a>
+            }
+        </div>
+
+        @* Compact Search on the right *@
+        <form method="get" asp-action="Index" class="na-control-search-form" data-tour="tour-community-search">
+            <input type="hidden" name="category" value="@Model.CurrentCategory" />
+            <input type="hidden" name="sort" value="@Model.SortBy" />
+            <i class="bi bi-search na-control-search-icon"></i>
+            <input type="text" name="search" value="@Model.SearchQuery" class="na-control-search-input" placeholder="Search discussions or #tags..." autocomplete="off" />
+            @if (!string.IsNullOrWhiteSpace(Model.SearchQuery))
+            {
+                <a asp-action="Index" asp-route-category="@Model.CurrentCategory" asp-route-sort="@Model.SortBy" class="na-control-search-clear" title="Clear search">
+                    <i class="bi bi-x-circle-fill"></i>
+                </a>
+            }
+        </form>
+    </div>
+
+    @* Active Search Indicator *@
+    @if (!string.IsNullOrWhiteSpace(Model.SearchQuery))
+    {
+        <div class="d-flex align-items-center justify-content-between mb-3 px-1">
+            <div class="small text-muted">
+                <i class="bi bi-search me-1"></i> Showing results for <strong class="text-dark">"@Model.SearchQuery"</strong> (@Model.TotalPosts found)
+            </div>
+            <a asp-action="Index" asp-route-category="@Model.CurrentCategory" asp-route-sort="@Model.SortBy" class="small na-link-soft">
+                Clear filter
+            </a>
+        </div>
+    }
+
     <div class="na-community-layout">
         @* ===== Main Feed ===== *@
-        <div class="na-community-main">
+        <div class="na-community-main" data-na-list data-na-list-item="a.na-post-link">
             @* Create post prompt *@
             @if (SignInManager.IsSignedIn(User))
             {
                 var currentUserId = UserManager.GetUserId(User) ?? "";
-                var currentUserAvatarJson = Model.AuthorAvatars.ContainsKey(currentUserId) 
+                var currentUserAvatar = Model.AuthorAvatars.ContainsKey(currentUserId) 
                     ? Model.AuthorAvatars[currentUserId] : null;
-                <div class="na-create-prompt na-card">
-                    <div class="na-create-prompt-avatar">
-                        <div class="na-avatar-sm na-avatar-inline" data-size="36"
-                             data-avatar-json="@(currentUserAvatarJson ?? "{}")">U</div>
-                    </div>
-                    <a asp-action="Create" class="na-create-prompt-input">
-                        Ask a Japanese question or share a study tip...
+                <div class="na-create-prompt na-card mb-4" data-tour="tour-community-create">
+                    <a asp-action="UserProfile" asp-route-id="@currentUserId" class="na-create-prompt-avatar text-decoration-none" title="View my profile (@(User.Identity?.Name))">
+                        @if (currentUserAvatar?.UseUploadedImage == true)
+                        {
+                            <img src="@currentUserAvatar.AvatarImagePath" alt="" class="na-avatar-sm na-avatar-img-sm" />
+                        }
+                        else
+                        {
+                            <div class="na-avatar-sm na-avatar-inline" data-size="36"
+                                 data-avatar-json="@(currentUserAvatar?.AvatarJson ?? "{}")">@GetUserInitial(User.Identity?.Name)</div>
+                        }
                     </a>
-                    <a asp-action="Create" class="btn-na-primary btn-sm">
+                    <a asp-action="Hub" asp-route-mode="create" class="na-create-prompt-input">
+                        Ask a Japanese question or share a study tip... (+10 XP)
+                    </a>
+                    <a asp-action="Hub" asp-route-mode="create" class="btn-na-primary btn-sm">
                         <i class="bi bi-plus-lg"></i> Create Post
                     </a>
-                </div>
-                <div class="na-create-chips">
-                    <a asp-action="Create" asp-route-category="@CommunityCategory.General" class="na-chip na-chip--sm">Community</a>
-                    <a asp-action="Create" asp-route-category="@CommunityCategory.Study" class="na-chip na-chip--sm">Study</a>
-                    <a asp-action="Create" asp-route-category="@CommunityCategory.Questions" class="na-chip na-chip--sm">Questions</a>
-                    <a asp-action="Create" asp-route-category="@CommunityCategory.Japan" class="na-chip na-chip--sm">Japan</a>
                 </div>
             }
             else
             {
                 <div class="na-create-prompt na-card">
                     <div class="text-center w-100 py-2">
-                        <a asp-area="Identity" asp-page="/Account/Login" class="na-link-soft">Sign in</a> to post and interact with the community.
+                        <a asp-area="Identity" asp-page="/Account/Login" class="na-link-soft">Sign in</a> to post, like, and interact with the community.
                     </div>
                 </div>
             }
@@ -141,31 +229,66 @@
             @if (!Model.Posts.Any())
             {
                 <div class="na-card text-center py-5">
-                    <i class="bi bi-chat-square-text" style="font-size: 3rem; color: var(--na-text-muted); opacity: 0.4;"></i>
-                    <h5 class="mt-3 text-muted">No posts yet</h5>
-                    <p class="text-muted small">Be the first to share something!</p>
-                    @if (SignInManager.IsSignedIn(User))
+                    @if (!string.IsNullOrWhiteSpace(Model.SearchQuery))
                     {
-                        <a asp-action="Create" class="btn-na-primary mt-2">Create the First Post</a>
+                        <i class="bi bi-search" style="font-size: 3rem; color: var(--na-text-muted); opacity: 0.35;"></i>
+                        <h5 class="mt-3 text-muted">No discussions found</h5>
+                        <p class="text-muted small">We couldn't find any posts matching "<strong>@Model.SearchQuery</strong>".</p>
+                        <a asp-action="Index" asp-route-category="@Model.CurrentCategory" class="btn-na-outline btn-sm mt-2">Clear Search</a>
+                    }
+                    else if (Model.SortBy == "unanswered")
+                    {
+                        <i class="bi bi-check-all" style="font-size: 3rem; color: #9A7BC4; opacity: 0.4;"></i>
+                        <h5 class="mt-3 text-muted">All caught up!</h5>
+                        <p class="text-muted small">No unanswered questions in this category right now.</p>
+                        <a asp-action="Index" asp-route-category="@Model.CurrentCategory" asp-route-sort="latest" class="btn-na-outline btn-sm mt-2">View Latest Posts</a>
+                    }
+                    else if (Model.SortBy == "saved")
+                    {
+                        <i class="bi bi-bookmark-heart" style="font-size: 3rem; color: var(--na-primary); opacity: 0.35;"></i>
+                        <h5 class="mt-3 text-muted">No saved posts yet</h5>
+                        <p class="text-muted small">Tap the bookmark icon on any helpful discussion or study tip to save it here for later reference!</p>
+                        <a asp-action="Index" asp-route-category="@Model.CurrentCategory" asp-route-sort="latest" class="btn-na-outline btn-sm mt-2">Browse Community</a>
+                    }
+                    else
+                    {
+                        <i class="bi bi-chat-square-text" style="font-size: 3rem; color: var(--na-text-muted); opacity: 0.4;"></i>
+                        <h5 class="mt-3 text-muted">No posts yet</h5>
+                        <p class="text-muted small">Be the first to share something!</p>
+                        @if (SignInManager.IsSignedIn(User))
+                        {
+                            <a asp-action="Hub" asp-route-mode="create" class="btn-na-primary mt-2">Create the First Post</a>
+                        }
                     }
                 </div>
             }
 
+            @{ var firstPost = true; }
             @foreach (var post in Model.Posts)
             {
                 var isLiked = Model.LikedPostIds.Contains(post.Id);
+                var isBookmarked = Model.BookmarkedPostIds.Contains(post.Id);
                 var likeCount = Model.PostLikeCounts.ContainsKey(post.Id) ? Model.PostLikeCounts[post.Id] : 0;
                 var commentCount = Model.PostCommentCounts.ContainsKey(post.Id) ? Model.PostCommentCounts[post.Id] : 0;
-                var avatarJson = Model.AuthorAvatars.ContainsKey(post.UserId) ? Model.AuthorAvatars[post.UserId] : null;
-                <div class="na-post-card na-card" data-post-id="@post.Id">
+                var avatar = Model.AuthorAvatars.ContainsKey(post.UserId) ? Model.AuthorAvatars[post.UserId] : null;
+                var postTourAttr = firstPost ? "data-tour=\"tour-community-first-post\"" : "";
+                firstPost = false;
+                <div class="na-post-card na-card" data-post-id="@post.Id" @Html.Raw(postTourAttr)>
                     @* Post header: avatar + username + time *@
                     <div class="na-post-header">
-                        <div class="na-post-avatar">
-                            <div class="na-avatar-sm na-avatar-inline" data-size="36"
-                                 data-avatar-json="@(avatarJson ?? "{}")">@GetUserInitial(post.User?.UserName)</div>
-                        </div>
+                        <a asp-action="UserProfile" asp-route-id="@post.UserId" class="na-post-avatar text-decoration-none">
+                            @if (avatar?.UseUploadedImage == true)
+                            {
+                                <img src="@avatar.AvatarImagePath" alt="" class="na-avatar-sm na-avatar-img-sm" />
+                            }
+                            else
+                            {
+                                <div class="na-avatar-sm na-avatar-inline" data-size="36"
+                                     data-avatar-json="@(avatar?.AvatarJson ?? "{}")">@GetUserInitial(post.User?.UserName)</div>
+                            }
+                        </a>
                         <div class="na-post-meta">
-                            <span class="na-post-username">@@@(post.User?.UserName ?? "learner")</span>
+                            <a asp-action="UserProfile" asp-route-id="@post.UserId" class="na-post-username text-decoration-none text-dark fw-bold">@@@(post.User?.UserName ?? "learner")</a>
                             <span class="na-post-time">&middot; @TimeAgo(post.CreatedDate)</span>
                         </div>
                     </div>
@@ -181,10 +304,16 @@
                                 <i class="bi bi-stars"></i> Feedback Wanted
                             </span>
                         }
+                        @if (commentCount == 0)
+                        {
+                            <span class="badge rounded-pill bg-light text-muted border small" style="font-size: 0.72rem;">
+                                Unanswered
+                            </span>
+                        }
                     </div>
 
                     @* Title + content preview *@
-                    <a asp-action="Details" asp-route-id="@post.Id" class="na-post-link">
+                    <a asp-action="Hub" asp-route-mode="post" asp-route-id="@post.Id" class="na-post-link">
                         <h5 class="na-post-title">@post.Title</h5>
                         <p class="na-post-preview">
                             @(post.Content.Length > 160 ? post.Content.Substring(0, 160) + "..." : post.Content)
@@ -199,12 +328,14 @@
                             <i class="bi @(isLiked ? "bi-heart-fill" : "bi-heart")"></i>
                             <span class="na-like-count">@likeCount</span>
                         </button>
-                        <a asp-action="Details" asp-route-id="@post.Id" class="na-post-action">
+                        <a asp-action="Hub" asp-route-mode="post" asp-route-id="@post.Id" class="na-post-action">
                             <i class="bi bi-chat"></i>
                             <span>@commentCount</span>
                         </a>
-                        <button class="na-post-action na-save-btn" onclick="savePost(this)" title="Save">
-                            <i class="bi bi-bookmark"></i>
+                        <button class="na-post-action na-save-btn @(isBookmarked ? "na-save-btn--active" : "")"
+                                data-post-id="@post.Id"
+                                onclick="toggleCommunityBookmark(this, @post.Id)" title="Save post">
+                            <i class="bi @(isBookmarked ? "bi-bookmark-fill" : "bi-bookmark")"></i>
                         </button>
                     </div>
                 </div>
@@ -217,7 +348,7 @@
                 <div class="na-pagination mt-3">
                     @if (Model.Page > 1)
                     {
-                        <a asp-action="Index" asp-route-category="@Model.CurrentCategory" asp-route-page="@(Model.Page - 1)"
+                        <a asp-action="Index" asp-route-category="@Model.CurrentCategory" asp-route-search="@Model.SearchQuery" asp-route-sort="@Model.SortBy" asp-route-page="@(Model.Page - 1)"
                            class="btn-na-outline btn-sm">
                             <i class="bi bi-chevron-left"></i> Previous
                         </a>
@@ -225,7 +356,7 @@
                     <span class="text-muted small">Page @Model.Page of @totalPages</span>
                     @if (Model.Page < totalPages)
                     {
-                        <a asp-action="Index" asp-route-category="@Model.CurrentCategory" asp-route-page="@(Model.Page + 1)"
+                        <a asp-action="Index" asp-route-category="@Model.CurrentCategory" asp-route-search="@Model.SearchQuery" asp-route-sort="@Model.SortBy" asp-route-page="@(Model.Page + 1)"
                            class="btn-na-outline btn-sm">
                             Next <i class="bi bi-chevron-right"></i>
                         </a>
@@ -262,122 +393,226 @@
             <div class="na-card na-sidebar-card">
                 <h6><i class="bi bi-shield-check"></i> Community Guidelines</h6>
                 <ul class="na-guidelines-list">
-                    <li><i class="bi bi-heart"></i> Be respectful</li>
-                    <li><i class="bi bi-bookmark"></i> Stay on topic</li>
-                    <li><i class="bi bi-hand-thumbs-up"></i> Help each other learn</li>
-                    <li><i class="bi bi-translate"></i> Japanese welcome!</li>
+                    <li><i class="bi bi-heart"></i> Be kind &amp; respectful</li>
+                    <li><i class="bi bi-bookmark"></i> Stay on topic with Japanese</li>
+                    <li><i class="bi bi-hand-thumbs-up"></i> Help answer beginners' questions (+5 XP)</li>
+                    <li><i class="bi bi-translate"></i> Japanese practice welcome!</li>
                 </ul>
             </div>
 
-            @* Popular Learners *@
-            @if (Model.PopularLearners.Any())
+            @* Weekly Leaderboard Card *@
+            @if (Model.WeeklyLeaderboard?.TopEntries.Any() == true)
             {
                 <div class="na-card na-sidebar-card">
-                    <h6><i class="bi bi-star"></i> Popular Learners</h6>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0"><i class="bi bi-trophy-fill text-warning"></i> Weekly Leaderboard</h6>
+                        <a asp-action="Leaderboard" class="na-link-soft small" style="font-weight:600;">All <i class="bi bi-chevron-right"></i></a>
+                    </div>
                     <div class="na-popular-list">
-                        @foreach (var learner in Model.PopularLearners)
+                        @foreach (var entry in Model.WeeklyLeaderboard.TopEntries)
                         {
-                            <a asp-action="Index" asp-route-category="@Model.CurrentCategory" class="na-popular-item">
-                                <div class="na-avatar-sm na-avatar-sm--md na-avatar-inline" data-size="40"
-                                     data-avatar-json="@(learner.AvatarJson ?? "{}")">@GetUserInitial(learner.UserName)</div>
-                                <div>
-                                    <span class="na-popular-name">@@@learner.UserName</span>
-                                    <span class="na-popular-count">@learner.PostCount posts</span>
+                            var rankIcon = entry.Rank == 1 ? "🥇" : entry.Rank == 2 ? "🥈" : entry.Rank == 3 ? "🥉" : $"#{entry.Rank}";
+                            <div class="d-flex align-items-center justify-content-between py-2 border-bottom @(entry.IsCurrentUser ? "rounded px-2" : "")" style="@(entry.IsCurrentUser ? "background:#FFF5F7;" : "")">
+                                <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                    <span style="font-size:0.95rem;min-width:24px;text-align:center;font-weight:700;">@rankIcon</span>
+                                    <a asp-action="UserProfile" asp-route-id="@entry.UserId" class="text-decoration-none d-flex align-items-center gap-2 overflow-hidden">
+                                        @if (entry.AvatarMode == "uploaded" && !string.IsNullOrWhiteSpace(entry.AvatarImagePath))
+                                        {
+                                            <img src="@entry.AvatarImagePath" alt="" class="na-avatar-sm na-avatar-img-sm" style="width:32px;height:32px;" />
+                                        }
+                                        else
+                                        {
+                                            <div class="na-avatar-sm na-avatar-inline" data-size="32"
+                                                 data-avatar-json="@(entry.AvatarJson ?? "{}")">@GetUserInitial(entry.UserName)</div>
+                                        }
+                                        <div class="text-truncate">
+                                            <span class="d-block text-truncate fw-semibold" style="font-size:0.85rem;color:var(--na-text);">@entry.DisplayName</span>
+                                            <span class="text-muted small" style="font-size:0.75rem;">@@@entry.UserName</span>
+                                        </div>
+                                    </a>
                                 </div>
-                            </a>
+                                <span class="badge rounded-pill text-nowrap ms-2" style="background:#FFF0F3;color:#ee96a4;border:1px solid #FFD6DE;font-weight:600;font-size:0.78rem;">
+                                    @entry.WeeklyXp XP
+                                </span>
+                            </div>
                         }
                     </div>
+
+                    @if (SignInManager.IsSignedIn(User) && Model.WeeklyLeaderboard.CurrentUserEntry != null)
+                    {
+                        <div class="mt-3 pt-2 text-center">
+                            <small class="text-muted d-block mb-2">
+                                Your standing: <strong>#@Model.WeeklyLeaderboard.UserSummary.CurrentRank</strong> with <strong>@Model.WeeklyLeaderboard.UserSummary.WeeklyXp XP</strong>
+                            </small>
+                            <div class="d-flex gap-2">
+                                <a asp-action="UserProfile" asp-route-id="@(UserManager.GetUserId(User))" class="btn btn-sm btn-na-outline flex-fill" style="font-size:0.8rem;">
+                                    <i class="bi bi-person-circle"></i> My Profile
+                                </a>
+                                <a asp-controller="Practice" asp-action="SentenceBuilder" class="btn btn-sm btn-na-outline flex-fill" style="font-size:0.8rem;" title="Build Sentences (+15 XP)">
+                                    <i class="bi bi-puzzle"></i> +15 XP
+                                </a>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="mt-3 pt-1">
+                            <a asp-action="Leaderboard" class="btn btn-sm btn-na-outline w-100" style="font-size:0.8rem;">
+                                View Full Rankings
+                            </a>
+                        </div>
+                    }
                 </div>
             }
-
-            @* Friends (placeholder) *@
-            <div class="na-card na-sidebar-card">
-                <h6><i class="bi bi-people"></i> Friends</h6>
-                <p class="text-muted small text-center py-2">
-                    <a href="#" class="na-community-friends-btn">
-                        <i class="bi bi-person-plus"></i> Friends
-                    </a>
-                    <br /><br />
-                    <small>Add friends and share posts. Coming soon.</small>
-                </p>
-            </div>
         </aside>
     </div>
 </div>
 
 @section Scripts {
-    <script src="~/js/avatar-builder.js"></script>
+    <script src="~/js/avatar-builder.js" asp-append-version="true"></script>
     <script>
-        // Render all inline avatars from data-avatar-json
-        document.addEventListener('DOMContentLoaded', function () {
-            if (!window.AvatarBuilder) return;
-            document.querySelectorAll('.na-avatar-inline').forEach(function (el) {
-                try {
-                    var json = el.dataset.avatarJson || '{}';
-                    var config = JSON.parse(json);
+        document.addEventListener('DOMContentLoaded', function() {
+            // Render 2D avatars in post cards
+            if (window.AvatarBuilder) {
+                document.querySelectorAll('.na-avatar-inline').forEach(function(el) {
+                    var jsonStr = el.dataset.avatarJson;
                     var size = parseInt(el.dataset.size, 10) || 36;
-                    // Merge with defaults
-                    var merged = Object.assign({}, AvatarBuilder.defaults, config);
-                    AvatarBuilder.renderAvatar(merged, el);
-                    el.style.width = size + 'px';
-                    el.style.height = size + 'px';
-                    el.style.overflow = 'hidden';
-                    el.style.borderRadius = '50%';
-                    el.style.flexShrink = '0';
-                } catch (e) {
-                    // Fallback: keep the text initial
-                }
-            });
+                    if (jsonStr) {
+                        try {
+                            var config = JSON.parse(jsonStr);
+                            AvatarBuilder.renderInto(el, config, size);
+                        } catch(e) {}
+                    }
+                });
+            }
         });
 
+        // AJAX Like toggle
         function toggleCommunityLike(btn, postId) {
-            var token = getAntiForgeryToken();
-            if (!token) return;
+            var icon = btn.querySelector('i');
+            var countSpan = btn.querySelector('.na-like-count');
+            var isCurrentlyLiked = icon.classList.contains('bi-heart-fill');
+            var currentCount = parseInt(countSpan.textContent, 10) || 0;
+            var token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+            // Ignore repeat clicks while this toggle is in flight: two overlapping
+            // requests cancel out server-side but would leave the counter diverged.
+            if (btn.dataset.busy === '1') return;
+            btn.dataset.busy = '1';
+
+            function revertLike() {
+                if (isCurrentlyLiked) {
+                    icon.className = 'bi bi-heart-fill';
+                    btn.classList.add('na-like-btn--active');
+                } else {
+                    icon.className = 'bi bi-heart';
+                    btn.classList.remove('na-like-btn--active');
+                }
+                countSpan.textContent = currentCount;
+            }
+
+            // Optimistic update
+            if (isCurrentlyLiked) {
+                icon.className = 'bi bi-heart';
+                btn.classList.remove('na-like-btn--active');
+                countSpan.textContent = Math.max(0, currentCount - 1);
+            } else {
+                icon.className = 'bi bi-heart-fill';
+                btn.classList.add('na-like-btn--active');
+                countSpan.textContent = currentCount + 1;
+            }
 
             fetch('/Community/ToggleLike', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
-                    'RequestVerificationToken': token
+                    'RequestVerificationToken': token || ''
                 },
                 body: 'postId=' + postId
             })
-            .then(function(r) { return r.json(); })
+            .then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
             .then(function(data) {
                 if (data.success) {
-                    var icon = btn.querySelector('i');
-                    var count = btn.querySelector('.na-like-count');
+                    countSpan.textContent = data.likeCount;
                     if (data.isLiked) {
-                        btn.classList.add('na-like-btn--active');
                         icon.className = 'bi bi-heart-fill';
+                        btn.classList.add('na-like-btn--active');
                     } else {
-                        btn.classList.remove('na-like-btn--active');
                         icon.className = 'bi bi-heart';
+                        btn.classList.remove('na-like-btn--active');
                     }
-                    if (count) count.textContent = data.likeCount;
+                } else {
+                    // Revert
+                    revertLike();
+                    if (data.error) alert(data.error);
                 }
             })
-            .catch(function() {});
+            .catch(function() { revertLike(); })
+            .then(function() { btn.dataset.busy = '0'; });
         }
 
-        function savePost(btn) {
+        // AJAX Bookmark / Save toggle with persistent database storage
+        function toggleCommunityBookmark(btn, postId) {
             var icon = btn.querySelector('i');
-            if (icon.classList.contains('bi-bookmark-fill')) {
+            var isCurrentlyBookmarked = icon.classList.contains('bi-bookmark-fill');
+            var token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+            // See toggleCommunityLike: one toggle at a time per button.
+            if (btn.dataset.busy === '1') return;
+            btn.dataset.busy = '1';
+
+            function revertBookmark() {
+                if (isCurrentlyBookmarked) {
+                    icon.className = 'bi bi-bookmark-fill';
+                    btn.classList.add('na-save-btn--active');
+                } else {
+                    icon.className = 'bi bi-bookmark';
+                    btn.classList.remove('na-save-btn--active');
+                }
+            }
+
+            // Optimistic UI update
+            if (isCurrentlyBookmarked) {
                 icon.className = 'bi bi-bookmark';
                 btn.classList.remove('na-save-btn--active');
             } else {
                 icon.className = 'bi bi-bookmark-fill';
                 btn.classList.add('na-save-btn--active');
             }
-            // Save to localStorage
+
+            // Also keep local fallback
             try {
-                var postId = btn.closest('.na-post-card').dataset.postId;
                 var saved = JSON.parse(localStorage.getItem('na-saved-posts') || '[]');
-                var idx = saved.indexOf(postId);
-                if (idx >= 0) saved.splice(idx, 1);
-                else saved.push(postId);
+                var idx = saved.indexOf(String(postId));
+                if (isCurrentlyBookmarked && idx >= 0) saved.splice(idx, 1);
+                else if (!isCurrentlyBookmarked && idx === -1) saved.push(String(postId));
                 localStorage.setItem('na-saved-posts', JSON.stringify(saved));
             } catch(e) {}
+
+            fetch('/Community/ToggleBookmark', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': token || ''
+                },
+                body: 'postId=' + postId
+            })
+            .then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function(data) {
+                if (!data.success) {
+                    // Revert
+                    revertBookmark();
+                    if (data.error) alert(data.error);
+                }
+            })
+            .catch(function() { revertBookmark(); })
+            .then(function() { btn.dataset.busy = '0'; });
         }
     </script>
 }

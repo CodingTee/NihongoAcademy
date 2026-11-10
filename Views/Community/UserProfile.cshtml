@@ -1,0 +1,486 @@
+@model NihongoAcademy.Controllers.CommunityUserProfileViewModel
+@{
+    ViewData["Title"] = $"{Model.DisplayName}'s Profile";
+
+    string TimeAgo(DateTime dt)
+    {
+        var span = DateTime.UtcNow - dt;
+        if (span.TotalMinutes < 1) return "just now";
+        if (span.TotalMinutes < 60) return $"{(int)span.TotalMinutes}m ago";
+        if (span.TotalHours < 24) return $"{(int)span.TotalHours}h ago";
+        if (span.TotalDays < 7) return $"{(int)span.TotalDays}d ago";
+        return dt.ToString("MMM d", System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    string GetUserInitial(string? userName)
+    {
+        if (string.IsNullOrEmpty(userName)) return "?";
+        return userName.Substring(0, 1).ToUpper();
+    }
+}
+
+<div class="na-community-profile-page">
+    @* Back Link *@
+    <div class="mb-3">
+        <a asp-action="Index" class="na-link-soft">
+            <i class="bi bi-arrow-left"></i> Back to Community Feed
+        </a>
+    </div>
+
+    @* User Profile Card *@
+    <div class="na-card na-profile-hero mb-4">
+        <div class="na-profile-hero-inner">
+            <div class="na-profile-avatar-large">
+                @if (Model.AvatarInfo.UseUploadedImage)
+                {
+                    <img src="@Model.AvatarInfo.AvatarImagePath" alt="@Model.DisplayName" class="na-avatar-xl na-avatar-img-xl" />
+                }
+                else
+                {
+                    <div class="na-avatar-xl na-avatar-inline" data-size="96"
+                         data-avatar-json="@(Model.AvatarInfo.AvatarJson ?? "{}")">@GetUserInitial(Model.UserName)</div>
+                }
+            </div>
+
+            <div class="na-profile-details">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-1">
+                    <div>
+                        <h2 class="na-profile-name mb-0">@Model.DisplayName</h2>
+                        <span class="na-profile-handle text-muted">@@@Model.UserName</span>
+                    </div>
+
+                    @if (Model.IsCurrentUser)
+                    {
+                        <a asp-area="Identity" asp-page="/Account/Manage/Index" class="btn-na-outline btn-sm">
+                            <i class="bi bi-pencil"></i> Edit Profile
+                        </a>
+                    }
+                    else
+                    {
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            <button id="btnStudyBuddy" onclick="toggleStudyBuddy('@Model.UserId')" class="btn btn-sm @(Model.IsStudyBuddy ? "btn-na-secondary" : "btn-na-primary") shadow-sm" style="font-weight:600;">
+                                <i class="bi @(Model.IsMutualStudyBuddy ? "bi-flower1 text-warning" : Model.IsStudyBuddy ? "bi-check2" : "bi-person-plus-fill")" id="iconStudyBuddy"></i>
+                                <span id="txtStudyBuddy">@(Model.IsMutualStudyBuddy ? "Mutual Buddies 🌸" : Model.IsStudyBuddy ? "Study Buddy ✓" : "Add Study Buddy")</span>
+                            </button>
+                            <button type="button" 
+                                    id="btnProfileMessage" 
+                                    data-user-id="@Model.UserId" 
+                                    data-display-name="@(Model.DisplayName ?? Model.UserName)" 
+                                    data-user-name="@Model.UserName" 
+                                    data-is-mutual="@(Model.IsMutualStudyBuddy ? "true" : "false")"
+                                    class="btn btn-sm btn-na-outline shadow-sm" 
+                                    style="font-weight:600;">
+                                <i class="bi bi-chat-dots-fill"></i> Message
+                            </button>
+                            <button id="btnSendCheer" onclick="sendStudyCheer('@Model.UserId')" class="btn btn-sm btn-light border shadow-sm" title="Send a cherry blossom cheer (がんばって！ +5 XP)">
+                                🌸 <span class="d-none d-sm-inline">Ganbatte!</span>
+                            </button>
+                        </div>
+                    }
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(Model.Bio))
+                {
+                    <p class="na-profile-bio mb-3">@Model.Bio</p>
+                }
+                else
+                {
+                    <p class="na-profile-bio text-muted fst-italic mb-3">Learning Japanese step by step with NihongoAcademy.</p>
+                }
+
+                @* Badges & Tags *@
+                <div class="na-profile-tags">
+                    @if (!string.IsNullOrWhiteSpace(Model.CommonGoalMatch))
+                    {
+                        <span class="na-badge na-badge-pill" style="background:#FFF0F3;color:#ee96a4;border:1px solid #FFD6DE;font-weight:600;">
+                            @Model.CommonGoalMatch
+                        </span>
+                    }
+                    <span class="na-badge na-badge-pill">
+                        <i class="bi bi-people"></i> <span id="lblBuddyCount">@Model.StudyBuddyCount</span> Study Buddies
+                    </span>
+                    @if (!string.IsNullOrWhiteSpace(Model.CurrentLevel))
+                    {
+                        <span class="na-badge na-badge-pill"><i class="bi bi-bar-chart-steps"></i> @Model.CurrentLevel</span>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Model.LearningGoal))
+                    {
+                        @foreach (var goal in Model.LearningGoal.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                        {
+                            <span class="na-badge na-badge-pill na-badge-goal"><i class="bi bi-compass"></i> @goal</span>
+                        }
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Model.Country))
+                    {
+                        <span class="na-badge na-badge-pill"><i class="bi bi-geo-alt"></i> @Model.Country</span>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(Model.NativeLanguage))
+                    {
+                        <span class="na-badge na-badge-pill"><i class="bi bi-translate"></i> Speaks @Model.NativeLanguage</span>
+                    }
+                    <span class="na-badge na-badge-pill text-muted"><i class="bi bi-calendar3"></i> Joined @Model.MemberSince.ToString("MMM yyyy", System.Globalization.CultureInfo.InvariantCulture)</span>
+                </div>
+            </div>
+        </div>
+
+        @* Quick Stats Bar *@
+        <div class="na-profile-stats-row">
+            <div class="na-profile-stat-box">
+                <span class="na-profile-stat-val" style="color:#ee96a4;">🌸 @Model.TotalXp</span>
+                <span class="na-profile-stat-lbl">Total XP (@Model.WeeklyXp this week)</span>
+            </div>
+            <div class="na-profile-stat-box">
+                <span class="na-profile-stat-val">@Model.Posts.Count</span>
+                <span class="na-profile-stat-lbl">Posts</span>
+            </div>
+            <div class="na-profile-stat-box">
+                <span class="na-profile-stat-val">@Model.TotalLikesReceived</span>
+                <span class="na-profile-stat-lbl">Hearts Received</span>
+            </div>
+            <div class="na-profile-stat-box">
+                <span class="na-profile-stat-val">@Model.CompletedLessonsCount</span>
+                <span class="na-profile-stat-lbl">Lessons Completed</span>
+            </div>
+        </div>
+    </div>
+
+    @* Achievements & Badges Showcase *@
+    @if (Model.Badges.Any())
+    {
+        <div class="na-card mb-4 p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0"><i class="bi bi-award text-warning"></i> Badges & Achievements</h5>
+                <span class="badge bg-light text-dark border">
+                    @Model.Badges.Count(b => b.IsUnlocked) of @Model.Badges.Count Unlocked
+                </span>
+            </div>
+            <div class="row g-3">
+                @foreach (var badge in Model.Badges)
+                {
+                    <div class="col-md-4 col-sm-6">
+                        <div class="na-badge-card p-3 rounded border h-100 d-flex align-items-center gap-3 @(badge.IsUnlocked ? "na-badge-unlocked" : "na-badge-locked")">
+                            <div class="na-badge-card-icon" style="background: @(badge.IsUnlocked ? badge.Color + "20" : "#f1f2f6"); color: @(badge.IsUnlocked ? badge.Color : "#a4b0be");">
+                                <i class="bi @badge.Icon"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <strong class="na-badge-card-title text-truncate d-block">@badge.Title</strong>
+                                    @if (badge.IsUnlocked)
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success small" title="Unlocked"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-lock-fill text-muted small" title="Locked"></i>
+                                    }
+                                </div>
+                                <small class="text-muted d-block na-badge-card-desc">@badge.Description</small>
+                                <span class="na-badge-card-status small fw-bold" style="color: @(badge.IsUnlocked ? "#27ae60" : "#747d8c");">
+                                    @badge.ProgressText
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @* Study Buddies Showcase *@
+    <div class="na-card mb-4 p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">
+                <i class="bi bi-flower1 text-warning"></i> Study Buddies 🌸
+                <span class="badge bg-light text-muted border ms-1" style="font-size:0.8rem;">@Model.Buddies.Count</span>
+            </h5>
+            @if (Model.IsCurrentUser)
+            {
+                <span class="text-muted small">Peers you are studying together with</span>
+            }
+        </div>
+
+        @if (Model.Buddies.Any())
+        {
+            <div class="row g-3">
+                @foreach (var buddy in Model.Buddies)
+                {
+                    <div class="col-md-4 col-sm-6">
+                        <div class="p-3 rounded-3 border bg-white h-100 d-flex align-items-center justify-content-between gap-2 shadow-sm">
+                            <div class="d-flex align-items-center gap-2 min-w-0">
+                                @if (buddy.AvatarInfo.AvatarMode == "uploaded" && !string.IsNullOrWhiteSpace(buddy.AvatarInfo.AvatarImagePath))
+                                {
+                                    <img src="@buddy.AvatarInfo.AvatarImagePath" alt="@buddy.DisplayName" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;" />
+                                }
+                                else if (!string.IsNullOrWhiteSpace(buddy.AvatarInfo.AvatarJson))
+                                {
+                                    <div class="na-avatar-inline" data-size="40" data-avatar-json="@buddy.AvatarInfo.AvatarJson">
+                                        @buddy.DisplayName.FirstOrDefault().ToString().ToUpper()
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div style="width:40px;height:40px;border-radius:50%;background:#ee96a4;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:bold;flex-shrink:0;">
+                                        @buddy.DisplayName.FirstOrDefault().ToString().ToUpper()
+                                    </div>
+                                }
+                                <div class="min-w-0">
+                                    <div class="d-flex align-items-center gap-1">
+                                        <a asp-action="UserProfile" asp-route-id="@buddy.UserId" class="fw-bold text-dark text-decoration-none text-truncate d-block" style="font-size:0.88rem;" title="@buddy.DisplayName">
+                                            @buddy.DisplayName
+                                        </a>
+                                        @if (buddy.IsMutual)
+                                        {
+                                            <span title="Mutual Study Buddy" style="font-size:0.75rem;">🌸</span>
+                                        }
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2 text-muted" style="font-size:0.75rem;">
+                                        <span><i class="bi bi-bar-chart-steps"></i> @buddy.CurrentLevel</span>
+                                        <span>·</span>
+                                        <span class="text-na-primary fw-semibold">🌸 @buddy.TotalXp XP</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex flex-column gap-1 flex-shrink-0">
+                                <button type="button" class="btn btn-sm btn-na-outline py-1 px-2" style="font-size:0.75rem;" onclick="window.GlobalStudyChat && window.GlobalStudyChat.open('@buddy.UserId', '@buddy.DisplayName', '@buddy.UserName', @(buddy.IsMutual.ToString().ToLower()))" title="Chat">
+                                    <i class="bi bi-chat-dots-fill"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-light border py-1 px-2" style="font-size:0.75rem;" onclick="sendStudyCheer('@buddy.UserId')" title="Ganbatte! (+2 XP)">
+                                    🌸
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-4 text-muted">
+                <i class="bi bi-people text-muted d-block fs-3 mb-2"></i>
+                <p class="mb-1 fw-semibold">No study buddies yet</p>
+                <small class="text-muted d-block mb-3">Connect with Japanese learners in the community to share progress and cheer each other on!</small>
+                <a asp-action="Index" class="btn btn-sm btn-na-outline">Explore Community Peers</a>
+            </div>
+        }
+    </div>
+
+    @* User Posts Section *@
+    <div class="na-profile-posts-section">
+        <h4 class="mb-3"><i class="bi bi-chat-quote"></i> Posts by @Model.DisplayName (@Model.Posts.Count)</h4>
+
+        @if (Model.Posts.Any())
+        {
+            <div class="na-profile-posts-list">
+                @foreach (var post in Model.Posts)
+                {
+                    var likeCount = Model.PostLikeCounts.ContainsKey(post.Id) ? Model.PostLikeCounts[post.Id] : 0;
+                    var commentCount = Model.PostCommentCounts.ContainsKey(post.Id) ? Model.PostCommentCounts[post.Id] : 0;
+
+                    <div class="na-post-card na-card mb-3" data-post-id="@post.Id">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="na-cat-tag na-cat--default">@post.Category</span>
+                            <span class="text-muted small">@TimeAgo(post.CreatedDate)</span>
+                        </div>
+
+                        <h5 class="na-post-title">
+                            <a asp-action="Details" asp-route-id="@post.Id" class="text-dark text-decoration-none">@post.Title</a>
+                        </h5>
+
+                        <p class="na-post-snippet text-muted">
+                            @(post.Content.Length > 180 ? post.Content.Substring(0, 180) + "..." : post.Content)
+                        </p>
+
+                        <div class="na-post-footer d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                            <div class="d-flex gap-3 text-muted small">
+                                <span><i class="bi bi-heart text-danger"></i> @likeCount</span>
+                                <span><i class="bi bi-chat"></i> @commentCount</span>
+                            </div>
+                            <a asp-action="Details" asp-route-id="@post.Id" class="btn-na-outline btn-sm">
+                                Read Post <i class="bi bi-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="na-card text-center py-5">
+                <div class="mb-3 text-muted" style="font-size: 2.5rem;"><i class="bi bi-journal-x"></i></div>
+                <h5 class="text-muted">No posts shared yet</h5>
+                <p class="text-muted small">This learner hasn't published any posts to the community yet.</p>
+                @if (Model.IsCurrentUser)
+                {
+                    <a asp-action="Index" class="btn-na-primary mt-2">Share your first post</a>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@* Hidden AntiForgeryToken for AJAX requests *@
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script src="~/js/avatar-builder.js" asp-append-version="true"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.AvatarBuilder) {
+                document.querySelectorAll('.na-avatar-inline').forEach(function (el) {
+                    try {
+                        var json = el.dataset.avatarJson || '{}';
+                        var config = JSON.parse(json);
+                        var size = parseInt(el.dataset.size, 10) || 96;
+                        AvatarBuilder.renderInto(el, config, size);
+                    } catch (e) {}
+                });
+            }
+
+            // Auto open chat if URL has ?openChat=true
+            var params = new URLSearchParams(window.location.search);
+            if (params.get('openChat') === 'true' && window.GlobalStudyChat) {
+                window.GlobalStudyChat.open('@Model.UserId', '@Model.DisplayName', '@Model.UserName', @(Model.IsMutualStudyBuddy.ToString().ToLower()));
+            }
+        });
+
+        function getAntiForgeryToken() {
+            var tokenInput = document.querySelector('input[name="__RequestVerificationToken"]');
+            return tokenInput ? tokenInput.value : '';
+        }
+
+        // ===== Toggle Study Buddy =====
+        function toggleStudyBuddy(targetUserId) {
+            var btn = document.getElementById('btnStudyBuddy');
+            var txt = document.getElementById('txtStudyBuddy');
+            var icon = document.getElementById('iconStudyBuddy');
+            var countLabel = document.getElementById('lblBuddyCount');
+
+            btn.disabled = true;
+
+            fetch('/Community/ToggleStudyBuddy', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': getAntiForgeryToken()
+                },
+                body: new URLSearchParams({
+                    'targetUserId': targetUserId,
+                    '__RequestVerificationToken': getAntiForgeryToken()
+                })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                btn.disabled = false;
+                if (!data.success) {
+                    alert(data.message || 'Action failed.');
+                    return;
+                }
+
+                if (data.isBuddy) {
+                    btn.classList.remove('btn-na-primary');
+                    btn.classList.add('btn-na-secondary');
+                    if (data.isMutual) {
+                        icon.className = 'bi bi-flower1 text-warning';
+                        txt.textContent = 'Mutual Buddies 🌸';
+                    } else {
+                        icon.className = 'bi bi-check2';
+                        txt.textContent = 'Study Buddy ✓';
+                    }
+                } else {
+                    btn.classList.remove('btn-na-secondary');
+                    btn.classList.add('btn-na-primary');
+                    icon.className = 'bi bi-person-plus-fill';
+                    txt.textContent = 'Add Study Buddy';
+                }
+
+                if (countLabel && typeof data.buddyCount === 'number') {
+                    countLabel.textContent = data.buddyCount;
+                }
+            })
+            .catch(function(err) {
+                btn.disabled = false;
+                console.error(err);
+            });
+        }
+
+        // ===== Send Cheer (応援) =====
+        function sendStudyCheer(targetUserId) {
+            var btn = document.getElementById('btnSendCheer');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '🌸 Cheering...';
+            }
+
+            fetch('/Community/SendCheer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'RequestVerificationToken': getAntiForgeryToken()
+                },
+                body: new URLSearchParams({
+                    'targetUserId': targetUserId,
+                    '__RequestVerificationToken': getAntiForgeryToken()
+                })
+            })
+            .then(function(res) { return res.json(); })
+            .then(function(data) {
+                if (btn) {
+                    if (!data.success) {
+                        btn.disabled = false;
+                        btn.innerHTML = '🌸 Ganbatte!';
+                        alert(data.message || 'Could not send cheer.');
+                        return;
+                    }
+
+                    btn.classList.remove('btn-light');
+                    btn.classList.add('btn-warning');
+                    btn.innerHTML = '🌸 Cheered! (+2 XP)';
+                    setTimeout(function() {
+                        btn.disabled = false;
+                        btn.classList.remove('btn-warning');
+                        btn.classList.add('btn-light');
+                        btn.innerHTML = '🌸 Ganbatte!';
+                    }, 4000);
+                } else {
+                    alert(data.message);
+                }
+            })
+            .catch(function(err) {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '🌸 Ganbatte!';
+                }
+                console.error(err);
+            });
+        }
+
+        // ===== Open Study Chat =====
+        function openStudyChat(targetUserId, displayName, userName, isMutual) {
+            if (window.GlobalStudyChat) {
+                window.GlobalStudyChat.open(targetUserId, displayName, userName, isMutual);
+            } else {
+                window.location.href = '/Identity/Account/Login?returnUrl=' + encodeURIComponent(window.location.pathname + window.location.search);
+            }
+        }
+
+        var btnProfileMsg = document.getElementById('btnProfileMessage');
+        if (btnProfileMsg) {
+            btnProfileMsg.addEventListener('click', function () {
+                var uid = this.getAttribute('data-user-id');
+                var dname = this.getAttribute('data-display-name');
+                var uname = this.getAttribute('data-user-name');
+                var isMut = this.getAttribute('data-is-mutual') === 'true';
+                openStudyChat(uid, dname, uname, isMut);
+            });
+        }
+
+        // Auto open chat if opened via notification (?openChat=true)
+        if (new URLSearchParams(window.location.search).get('openChat') === 'true') {
+            setTimeout(function () {
+                if (btnProfileMsg) {
+                    btnProfileMsg.click();
+                }
+            }, 300);
+        }
+    </script>
+}

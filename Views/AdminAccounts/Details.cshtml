@@ -1,0 +1,250 @@
+@model Microsoft.AspNetCore.Identity.IdentityUser
+@using NihongoAcademy.Models
+@using Microsoft.AspNetCore.Identity
+@{
+    ViewData["Title"] = "Account Details";
+    var target = (IdentityUser)ViewBag.TargetUser;
+    var profile = (UserProfile?)ViewBag.Profile;
+    var roles = (IList<string>)ViewBag.Roles;
+    var recentLogins = (List<LoginLog>)ViewBag.RecentLogins;
+    var successfulLogins = (int)ViewBag.SuccessfulLogins;
+    var isDisabled = target.LockoutEnd.HasValue && target.LockoutEnd > DateTimeOffset.UtcNow;
+    string fmt(DateTime? d) => d.HasValue ? d.Value.ToString("yyyy-MM-dd HH:mm") + " UTC" : "—";
+}
+
+@await Html.PartialAsync("_AdminPageHeader", new NihongoAcademy.Models.AdminPageHeaderModel
+{
+    Trail =
+    {
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Admin", Url = Url.Action("Index", "Admin") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "User Accounts", Url = Url.Action("Index", "AdminAccounts") },
+        new NihongoAcademy.Models.AdminCrumbItem { Text = "Account Details" }
+    },
+    Icon = "bi-person-vcard",
+    Title = "Account Details",
+    TitleJp = "アカウント詳細",
+    Lead = $"Everything on file for {target.Email}. The personal profile below is editable; the email itself is the login ID and cannot be renamed.",
+    Actions =
+    {
+        new NihongoAcademy.Models.AdminPageHeaderAction { Text = "Back to Accounts", Url = Url.Action("Index", "AdminAccounts"), Icon = "bi-arrow-left", Outline = true }
+    }
+})
+
+<div class="row g-4">
+    @* ------------------------------------------------ account (read-only) --- *@
+    <div class="col-lg-5">
+        <div class="na-card-flat h-100">
+            <h5 class="mb-3"><i class="bi bi-shield-lock"></i> Account</h5>
+            <dl class="row mb-0 na-detail-list">
+                <dt class="col-5">Email</dt>
+                <dd class="col-7">
+                    @target.Email
+                    @if (target.EmailConfirmed)
+                    { <i class="bi bi-patch-check-fill text-success small" title="Email confirmed"></i> }
+                    else
+                    { <span class="na-badge bg-light text-muted">unconfirmed</span> }
+                </dd>
+
+                <dt class="col-5">Role</dt>
+                <dd class="col-7">
+                    @foreach (var role in roles)
+                    {
+                        <span class="na-badge @(role == "SuperAdmin" ? "na-badge-role-super" : role == "Admin" ? "na-badge-role-admin" : "na-badge-role-student")">@role</span>
+                    }
+                    @if (!roles.Any())
+                    {
+                        <span class="text-muted">none</span>
+                    }
+                </dd>
+
+                <dt class="col-5">Status</dt>
+                <dd class="col-7">
+                    @if (isDisabled)
+                    {
+                        <span class="na-badge bg-danger text-white"><i class="bi bi-lock-fill"></i> Disabled</span>
+                    }
+                    else
+                    {
+                        <span class="na-badge bg-success text-white">Active</span>
+                    }
+                </dd>
+
+                <dt class="col-5">Locked until</dt>
+                <dd class="col-7">@(target.LockoutEnd.HasValue && target.LockoutEnd > DateTimeOffset.UtcNow ? target.LockoutEnd.Value.ToString("yyyy-MM-dd HH:mm") + " UTC" : "—")</dd>
+
+                <dt class="col-5">Failed sign-ins</dt>
+                <dd class="col-7">@target.AccessFailedCount</dd>
+
+                <dt class="col-5">Two-factor</dt>
+                <dd class="col-7">@(target.TwoFactorEnabled ? "Enabled" : "Off")</dd>
+
+                <dt class="col-5">Successful logins</dt>
+                <dd class="col-7">@successfulLogins</dd>
+
+                <dt class="col-5">Joined</dt>
+                <dd class="col-7">@fmt(profile?.CreatedDate)</dd>
+
+                <dt class="col-5">Total XP</dt>
+                <dd class="col-7">@(profile?.TotalXp ?? 0)</dd>
+
+                <dt class="col-5">Sparks</dt>
+                <dd class="col-7">@(profile?.Sparks ?? 0)</dd>
+
+                <dt class="col-5">Current streak</dt>
+                <dd class="col-7">@((int)(ViewBag.CurrentStreak ?? 0)) days</dd>
+
+                <dt class="col-5">Longest streak</dt>
+                <dd class="col-7">@((int)(ViewBag.LongestStreak ?? 0)) days</dd>
+
+                <dt class="col-5">Avatar</dt>
+                <dd class="col-7">@(profile?.AvatarMode ?? "generated")</dd>
+            </dl>
+        </div>
+    </div>
+
+    @* --------------------------------------------------- profile (edit) --- *@
+    <div class="col-lg-7">
+        <div class="na-card-flat">
+            <h5 class="mb-3"><i class="bi bi-pencil-square"></i> Personal Profile</h5>
+            <form asp-action="EditProfile" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="userId" value="@target.Id" />
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Display name</label>
+                        <input type="text" name="displayName" value="@profile?.DisplayName" maxlength="50" class="form-control na-input" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Native language</label>
+                        <input type="text" name="nativeLanguage" value="@profile?.NativeLanguage" maxlength="30" class="form-control na-input" placeholder="e.g. Chinese" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Country</label>
+                        <input type="text" name="country" value="@profile?.Country" maxlength="50" class="form-control na-input" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Current level</label>
+                        <input type="text" name="currentLevel" value="@profile?.CurrentLevel" maxlength="50" class="form-control na-input" placeholder="e.g. N5 / A1" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Age group</label>
+                        <input type="text" name="ageGroup" value="@profile?.AgeGroup" maxlength="30" class="form-control na-input" placeholder="e.g. 18-24" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Theme preference</label>
+                        <select name="themePreference" class="form-select na-input">
+                            @{
+                                var theme = profile?.ThemePreference ?? "light";
+                            }
+                            <option value="light" selected="@(theme == "light")">Light</option>
+                            <option value="dark" selected="@(theme == "dark")">Dark</option>
+                            <option value="system" selected="@(theme == "system")">System</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Learning goal</label>
+                        <input type="text" name="learningGoal" value="@profile?.LearningGoal" maxlength="200" class="form-control na-input" />
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Bio</label>
+                        <textarea name="bio" maxlength="240" rows="3" class="form-control na-input">@profile?.Bio</textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Phone number</label>
+                        <input type="text" name="phoneNumber" value="@target.PhoneNumber" maxlength="50" class="form-control na-input" />
+                    </div>
+                    <div class="col-md-6 d-flex flex-column justify-content-end gap-2 pb-1">
+                        <div class="form-check">
+                            <input type="checkbox" name="dailyReminder" value="true" id="naDailyReminder" checked="@(profile?.DailyReminder == true)" class="form-check-input" />
+                            <label class="form-check-label" for="naDailyReminder">Daily reminder</label>
+                        </div>
+                        <div class="form-check">
+                            <input type="checkbox" name="emailConfirmed" value="true" id="naEmailConfirmed" checked="@target.EmailConfirmed" class="form-check-input" />
+                            <label class="form-check-label" for="naEmailConfirmed">Email confirmed</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 mt-4">
+                    <button type="submit" class="btn btn-na-primary" onclick="return confirm('Save profile changes for @target.Email?')">
+                        <i class="bi bi-check2"></i> Save changes
+                    </button>
+                    <a asp-action="Index" class="btn btn-na-outline">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @* --------------------------------------------------- xp & sparks --- *@
+    <div class="col-12">
+        <div class="na-card-flat">
+            <h5 class="mb-3"><i class="bi bi-stars"></i> XP &amp; Sparks</h5>
+            <p class="text-muted small mb-3">Adjust a learner's points or sparks. Every change is logged to their XP history and the audit log.</p>
+            <form asp-action="AdjustPoints" method="post">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="userId" value="@target.Id" />
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">XP change (±)</label>
+                        <input type="number" name="xpDelta" value="0" class="form-control na-input" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Sparks change (±)</label>
+                        <input type="number" name="sparksDelta" value="0" class="form-control na-input" />
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-na-primary" onclick="return confirm('Apply XP/Sparks change to @target.Email?')">
+                            <i class="bi bi-check2"></i> Apply change
+                        </button>
+                    </div>
+                </div>
+            </form>
+            <p class="text-muted small mt-3 mb-0">
+                Current totals — XP: <strong>@(profile?.TotalXp ?? 0)</strong> · Sparks: <strong>@(profile?.Sparks ?? 0)</strong>.
+                Streak is computed from activity and cannot be edited directly.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="na-card-flat mt-4">
+    <h5 class="mb-3"><i class="bi bi-clock-history"></i> Recent logins</h5>
+    @if (!recentLogins.Any())
+    {
+        <p class="text-muted mb-0">No login activity recorded for this account yet.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Result</th>
+                        <th>IP</th>
+                        <th>Device</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var log in recentLogins)
+                    {
+                        <tr>
+                            <td class="text-nowrap">@log.LoginTime.ToString("yyyy-MM-dd HH:mm") UTC</td>
+                            <td>
+                                @if (log.Succeeded)
+                                {
+                                    <span class="na-badge bg-success text-white">Success</span>
+                                }
+                                else
+                                {
+                                    <span class="na-badge bg-danger text-white" title="@log.FailureReason">Failed</span>
+                                }
+                            </td>
+                            <td class="text-nowrap">@(log.IpAddress ?? "—")</td>
+                            <td class="small text-muted text-truncate" style="max-width:340px;">@(log.UserAgent ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

@@ -24,6 +24,20 @@ namespace NihongoAcademy.Models
 
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
+        /// <summary>
+        /// Set when a moderator approves a report against this comment. Hidden from the
+        /// thread for regular users until rectified/restored.
+        /// </summary>
+        public bool IsTakenDown { get; set; }
+
+        public DateTime? TakenDownAt { get; set; }
+
+        [StringLength(450)]
+        public string? TakenDownByUserId { get; set; }
+
+        [StringLength(500)]
+        public string? TakenDownReason { get; set; }
+
         // Navigation
         public CommunityPost? Post { get; set; }
         public IdentityUser? User { get; set; }

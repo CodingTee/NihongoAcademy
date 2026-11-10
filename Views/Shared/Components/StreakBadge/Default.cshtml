@@ -1,0 +1,23 @@
+@* Compact streak / goal / next badge for the navbar (all pages) *@
+@model NihongoAcademy.ViewComponents.StreakBadgeViewComponent.StreakBadgeViewModel
+
+@{
+    var streakHref = Model.IsAuthenticated ? Url.Action("Index", "Dashboard") : Url.Page("/Account/Register", new { area = "Identity" });
+    var goalHref = Model.IsAuthenticated ? Url.Action("Index", "Dashboard") : Url.Page("/Account/Register", new { area = "Identity" });
+}
+
+<div class="na-nav-streak" role="group" aria-label="Your learning progress">
+    <a href="@streakHref"
+       class="na-nav-streak-item na-nav-streak-item--streak"
+       title="Your day streak — keep it burning!">
+        <i class="bi bi-fire" aria-hidden="true"></i>
+        <span><strong>@Model.Streak</strong>&nbsp;Day</span>
+    </a>
+    <span class="na-nav-streak-divider" aria-hidden="true"></span>
+    <a href="@goalHref"
+       class="na-nav-streak-item na-nav-streak-item--goal"
+       title="Today's flashcard goal">
+        <i class="bi bi-bullseye" aria-hidden="true"></i>
+        <span><strong>@Model.Progress/@Model.Goal</strong></span>
+    </a>
+</div>

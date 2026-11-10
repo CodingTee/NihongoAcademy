@@ -16,13 +16,38 @@
     };
 }
 
-<div class="mb-4">
-    <h2><i class="bi bi-pencil-square na-page-icon"></i> Practice <span class="na-subtitle-jp">練習</span></h2>
-    <p class="text-muted">Train your Japanese your way.</p>
+@* ===== Page banner ===== *@
+<section class="na-page-hero-v2" aria-label="Practice">
+    <div class="na-hero-v2-deco" aria-hidden="true">
+        <span class="na-hero-v2-glyph na-hero-v2-glyph--a">練</span>
+        <span class="na-hero-v2-glyph na-hero-v2-glyph--b">習</span>
+        <span class="na-hero-v2-glyph na-hero-v2-glyph--c">あ</span>
+        <span class="na-hero-v2-glyph na-hero-v2-glyph--d">語</span>
+        <span class="na-hero-v2-petal"></span>
+        <span class="na-hero-v2-petal"></span>
+        <span class="na-hero-v2-petal"></span>
+        <span class="na-hero-v2-petal"></span>
+    </div>
+    <div class="na-page-hero-v2-inner">
+        <span class="na-page-hero-v2-eyebrow"><i class="bi bi-stars"></i> Train Every Skill</span>
+        <h1 class="na-page-hero-v2-title">Practice <span>練習</span></h1>
+        <p class="na-page-hero-v2-lead">Train your Japanese your way. Listening, speaking, reading, writing, and spaced repetition.</p>
+    </div>
+</section>
+
+
+
+<div class="na-card mb-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <div><span class="na-badge">A1 CAPSTONE</span><h4 class="mt-2 mb-1">A1 Integrated Can-do Completion <span class="na-subtitle-jp">総合修了</span></h4><p class="text-muted mb-0">Bring stable lesson mastery, the final quiz, listening, reading, speaking and writing together.</p></div>
+    <a asp-action="Capstone" asp-route-level="A1" class="btn-na-primary text-nowrap"><i class="bi bi-award"></i> View A1 completion</a>
+</div>
+<div class="na-card mb-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <div><span class="na-badge">A2 CAPSTONE</span><h4 class="mt-2 mb-1">A2 Integrated Can-do Completion <span class="na-subtitle-jp">総合修了</span></h4><p class="text-muted mb-0">Confirm independent listening, reading, speaking and writing after the full A2 pathway.</p></div>
+    <a asp-action="Capstone" asp-route-level="A2" class="btn-na-primary text-nowrap"><i class="bi bi-award-fill"></i> View A2 completion</a>
 </div>
 
 @* ===== TODAY'S PRACTICE ===== *@
-<div class="na-today-stats">
+<div class="na-today-stats" data-tour="tour-practice-today">
     <div class="na-today-stat">
         <div class="na-today-stat__number">@dueCount</div>
         <div class="na-today-stat__label">Cards Due</div>
@@ -69,7 +94,7 @@
                             <strong>@review.Lesson?.Title</strong>
                             <small class="d-block text-muted">@review.Lesson?.JapaneseTitle · @review.Lesson?.Category?.Name</small>
                         </span>
-                        <span class="na-badge text-nowrap" style="background:#FFF0D5;color:#9A6200;">
+                        <span class="na-badge text-nowrap" style="background:#E1E4E7;color:#d96d80;">
                             <i class="bi bi-bell-fill"></i> Due now
                         </span>
                     </a>
@@ -87,35 +112,42 @@
 }
 
 @* ===== PRACTICE BY SKILL ===== *@
-<div class="na-practice-section">
+<div class="na-practice-section" data-tour="tour-practice-skills">
     <div class="na-practice-section__title"><i class="bi bi-stars"></i> Practice by Skill</div>
     <div class="na-skill-grid">
-        <a asp-action="Listening" class="na-skill-tile">
+        <a asp-action="Library" asp-route-skill="listening" class="na-skill-tile">
             <div class="na-skill-tile__icon">🎧</div>
             <div class="na-skill-tile__info">
                 <h6>Listening</h6>
                 <small>リスニング</small>
             </div>
         </a>
-        <a asp-action="Reading" class="na-skill-tile">
+        <a asp-action="Library" asp-route-skill="reading" class="na-skill-tile">
             <div class="na-skill-tile__icon">📖</div>
             <div class="na-skill-tile__info">
                 <h6>Reading</h6>
                 <small>リーディング</small>
             </div>
         </a>
-        <a asp-action="Speaking" class="na-skill-tile">
+        <a asp-action="Library" asp-route-skill="speaking" class="na-skill-tile">
             <div class="na-skill-tile__icon">🎤</div>
             <div class="na-skill-tile__info">
                 <h6>Speaking</h6>
                 <small>スピーキング</small>
             </div>
         </a>
-        <a asp-action="Writing" class="na-skill-tile">
+        <a asp-action="Library" asp-route-skill="writing" class="na-skill-tile">
             <div class="na-skill-tile__icon">✍️</div>
             <div class="na-skill-tile__info">
                 <h6>Writing</h6>
                 <small>ライティング</small>
+            </div>
+        </a>
+        <a asp-action="Grammar" class="na-skill-tile">
+            <div class="na-skill-tile__icon">文</div>
+            <div class="na-skill-tile__info">
+                <h6>Grammar</h6>
+                <small>文法トレーニング</small>
             </div>
         </a>
     </div>
@@ -153,7 +185,7 @@
             <h6>Flashcards</h6>
             <small>Review due cards with spaced repetition</small>
             <div class="mt-2">
-                <a asp-controller="Flashcards" asp-action="Practice" class="btn-na-primary btn-sm">Start Review</a>
+                <a asp-controller="Flashcards" asp-action="Session" asp-route-mode="practice" class="btn-na-primary btn-sm">Start Review</a>
             </div>
             @if (dueCount > 0)
             {
@@ -175,23 +207,24 @@
 <div class="na-practice-section">
     <div class="na-practice-section__title"><i class="bi bi-trophy"></i> Challenge Yourself</div>
     <div class="na-challenge-grid">
-        <a asp-action="SpeedRound" class="na-challenge-card">
+        <a asp-action="Challenge" asp-route-mode="speed" class="na-challenge-card">
             <div class="na-challenge-card__icon">⚡</div>
             <div class="na-challenge-card__label">Speed Round</div>
         </a>
-        <a asp-action="DictationChallenge" class="na-challenge-card">
+        <a asp-action="Challenge" asp-route-mode="dictation" class="na-challenge-card">
             <div class="na-challenge-card__icon">🎧</div>
             <div class="na-challenge-card__label">Dictation</div>
         </a>
         <a asp-action="SentenceBuilder" class="na-challenge-card">
             <div class="na-challenge-card__icon">🧩</div>
             <div class="na-challenge-card__label">Sentence Builder</div>
+            <span class="badge rounded-pill mt-1" style="background:#FFF0F3;color:#ee96a4;font-size:0.72rem;font-weight:700;">+15 XP</span>
         </a>
         <a asp-action="Mode" asp-route-skill="speaking" asp-route-mode="shadowing" class="na-challenge-card">
             <div class="na-challenge-card__icon">🗣</div>
             <div class="na-challenge-card__label">Shadowing</div>
         </a>
-        <a asp-action="MixedChallenge" class="na-challenge-card">
+        <a asp-action="Challenge" asp-route-mode="mixed" class="na-challenge-card">
             <div class="na-challenge-card__icon">🎯</div>
             <div class="na-challenge-card__label">Mixed Challenge</div>
         </a>

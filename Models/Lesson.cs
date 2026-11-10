@@ -58,5 +58,6 @@ namespace NihongoAcademy.Models
         public virtual ICollection<LessonPrerequisite> Prerequisites { get; set; } = new List<LessonPrerequisite>();
         public virtual ICollection<LessonPrerequisite> RequiredByLessons { get; set; } = new List<LessonPrerequisite>();
         public virtual ICollection<LessonActivity> Activities { get; set; } = new List<LessonActivity>();
+        public virtual ICollection<LessonGrammarPoint> LessonGrammarPoints { get; set; } = new List<LessonGrammarPoint>();
     }
 }

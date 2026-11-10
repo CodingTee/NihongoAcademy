@@ -1,0 +1,85 @@
+/* ==========================================================================
+   region-music.css — the background music of the Regions part
+
+   One small pill, parked directly above the "Shortcuts" capsule in the
+   bottom-left corner. It is the only control the visitor has over the BGM,
+   so it has to be visible and obvious: the note glyph breathes while the
+   track is actually audible, and goes flat when it is not.
+
+   The <audio> element itself is invisible — it just hums along on the
+   region pages (all nine of them).
+   ========================================================================== */
+
+.na-music-btn {
+    position: fixed;
+    left: 18px;
+    bottom: 78px;            /* sits on top of the Shortcuts capsule */
+    z-index: 900;
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .5rem .95rem;
+    font-size: .82rem;
+    font-weight: 600;
+    color: #6d2f4d;
+    background: rgba(255, 255, 255, .88);
+    border: 1px solid rgba(214, 175, 186, .55);
+    border-radius: 999px;
+    box-shadow: 0 6px 18px rgba(120, 70, 90, .14);
+    cursor: pointer;
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    transition: transform .18s ease, box-shadow .18s ease, background .18s ease, color .18s ease;
+}
+
+.na-music-btn:hover {
+    transform: translateY(-2px);
+    background: #fff;
+    box-shadow: 0 10px 26px rgba(150, 95, 105, .26);
+}
+
+.na-music-btn:active { transform: translateY(0); }
+
+.na-music-btn i {
+    font-size: .95rem;
+    color: #B4436A;
+}
+
+.na-music-btn.is-on {
+    background: #fff;
+    color: #8b3c63;
+    box-shadow: 0 8px 22px rgba(214, 51, 108, .18);
+}
+
+/* the note only dances while the sound is really playing — a muted track is
+   "on" but silent, and the visitor deserves to see that difference */
+.na-music-btn.is-on i {
+    color: #D6336C;
+    animation: na-music-breathe 1.9s ease-in-out infinite;
+}
+
+@keyframes na-music-breathe {
+    0%, 100% { transform: scale(1); opacity: .8; }
+    50%      { transform: scale(1.2); opacity: 1; }
+}
+
+.na-music-btn:focus-visible {
+    outline: 2px solid #B4436A;
+    outline-offset: 2px;
+}
+
+@media (max-width: 575px) {
+    /* the Shortcuts capsule moves up to 84px here, so climb above it */
+    .na-music-btn { left: 12px; bottom: 136px; padding: .45rem .8rem; }
+    .na-music-btn span { display: none; }
+    .na-music-btn::after {
+        content: "♪";
+        font-size: .95rem;
+        color: #B4436A;
+    }
+    .na-music-btn.is-on::after { color: #D6336C; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .na-music-btn.is-on i { animation: none; }
+}

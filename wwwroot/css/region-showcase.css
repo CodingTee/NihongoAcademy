@@ -1,0 +1,559 @@
+/* ==========================================================================
+   region-showcase.css — "Must-see highlights" interactive photo viewer
+
+   Layout of the frame — every region uses this exact shape:
+     [ the photo ]  [ WHAT YOU'LL SEE  — the numbered contents list ]
+                    [ the caption card of the photo on stage        ]
+   The photo owns the left column and spans both rows, the right column
+   stacks the list on top of the caption. Under 1000px everything stacks.
+   ========================================================================== */
+
+.na-sh-wrap {
+    position: relative;
+    width: 100%;
+}
+
+/* ---------- the frame (a soft "browser window" panel) ---------- */
+.na-sh-stage {
+    position: relative;
+    display: grid;
+    /* left column is sized by the photo itself; the right column caps at the
+       list/caption width. justify-content centers the WHOLE cluster inside
+       the panel, so there is no dead pink strip hugging one side. */
+    grid-template-columns: auto minmax(auto, 420px);
+    justify-content: center;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 1rem 1.15rem 1.15rem;
+    background: radial-gradient(120% 130% at 50% 0%, #FFF8F9 0%, #F1E7EC 100%);
+    border: 1px solid rgba(214, 175, 186, .55);
+    border-radius: 20px 20px 0 0;
+}
+
+/* ---------- the text column (contents list) keeps a sane floor ---------- */
+.na-sh-side { min-width: 0; }
+
+/* ---------- the photo ---------- */
+.na-sh-media {
+    position: relative;
+    flex: 0 0 auto;
+    width: 636px;
+    max-width: 100%;
+    /* the photo owns the LEFT column and spans both rows of the grid, so it
+       stays optically centred against the list + caption stacked on the right */
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: center;
+}
+
+.na-sh-viewport {
+    position: relative;
+    width: 636px;
+    /* every highlight photo is 480x360, so the frame is locked to 4:3 —
+       the picture then drops in WHOLE instead of being sliced by
+       object-fit: cover, which used to throw away ~37% of its height */
+    aspect-ratio: 4 / 3;
+    height: auto;
+    max-width: 100%;
+    border-radius: 14px;
+    overflow: hidden;
+    background: #EFE4E9;
+    box-shadow: 0 10px 26px rgba(90, 50, 70, .18);
+    cursor: zoom-in;
+}
+
+.na-sh-slide {
+    position: absolute;
+    inset: 0;
+    margin: 0;
+    opacity: 0;
+    transition: opacity .45s ease;
+}
+
+.na-sh-slide.is-active { opacity: 1; }
+
+.na-sh-slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* small thumbnail in the top corner: the second frame of a highlight */
+.na-sh-extra {
+    position: absolute;
+    top: .55rem;
+    right: .55rem;
+    z-index: 6;
+    width: 58px;
+    height: 44px;
+    padding: 0;
+    border: 2px solid rgba(255, 255, 255, .92);
+    border-radius: 8px;
+    background: #EFE4E9;
+    overflow: hidden;
+    cursor: zoom-in;
+    box-shadow: 0 6px 14px rgba(90, 50, 70, .3);
+    transition: transform .25s ease, box-shadow .25s ease;
+}
+
+.na-sh-extra:hover {
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 10px 22px rgba(90, 50, 70, .38);
+}
+
+.na-sh-extra > img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.na-sh-extra-cap {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .1rem;
+    padding: .02rem 0;
+    background: rgba(38, 20, 16, .72);
+    color: #fff;
+    font-size: .52rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+}
+
+/* bare chevrons — no circle around them, just the < or > glyph
+   floating over the photo edges. */
+.na-sh-nav {
+    position: absolute;
+    top: 50%;
+    margin-top: -.62rem;
+    z-index: 6;
+    width: 30px;
+    height: 34px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    color: rgba(255, 255, 255, .95);
+    font-size: 1.45rem;
+    line-height: 1;
+    cursor: pointer;
+    text-shadow: 0 2px 8px rgba(40, 20, 15, .45);
+    transition: opacity .2s ease, transform .2s ease;
+}
+
+.na-sh-nav--prev { left: 5px; }
+.na-sh-nav--next { right: 5px; }
+
+.na-sh-nav:hover { opacity: 1; transform: scale(1.22); }
+.na-sh-nav:active { transform: scale(.94); }
+
+/* ---------- the caption card of whichever photo is on stage ----------
+   It lives in the BOTTOM of the right column, under the contents list —
+   the list reads as the table of contents, the caption as the entry for
+   whichever photo is on the stage right now. */
+.na-sh-now {
+    grid-column: 2;
+    grid-row: 2;
+    /* top-aligned so it never floats into the gap under the list */
+    align-self: start;
+    max-width: 420px;
+    padding: .7rem .75rem .8rem;
+    background: #fff;
+    border: 1px solid rgba(214, 175, 186, .5);
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(120, 70, 90, .07);
+    /* fixed reserve so paging through photos never makes the column jump */
+    min-height: 10rem;
+}
+
+.na-sh-now.is-fading .na-sh-now-kind,
+.na-sh-now.is-fading .na-sh-now-title,
+.na-sh-now.is-fading .na-sh-now-title-ja,
+.na-sh-now.is-fading .na-sh-now-note {
+    animation: na-sh-fade .34s ease both;
+}
+
+@keyframes na-sh-fade {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: none; }
+}
+
+.na-sh-now-kind {
+    display: inline-flex;
+    align-items: center;
+    padding: .16rem .55rem;
+    border-radius: 999px;
+    background: rgba(180, 67, 106, .1);
+    color: #B4436A;
+    font-size: .58rem;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.na-sh-now-title {
+    margin: .35rem 0 0;
+    font-size: .95rem;
+    font-weight: 800;
+    line-height: 1.25;
+    color: #3E231A;
+}
+
+.na-sh-now-title-ja {
+    margin-top: .1rem;
+    font-size: .72rem;
+    line-height: 1.3;
+    color: #8A6A5C;
+}
+
+/* the whole description, never truncated — paging only swaps text */
+.na-sh-now-note {
+    margin: .35rem 0 0;
+    font-size: .73rem;
+    line-height: 1.6;
+    color: #6B4A3A;
+}
+
+/* ---------- contents, each row jumps to that photo ---------- */
+.na-sh-side--list {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+    /* the pink frame keeps breathing room on the right instead of stretching
+       the list all the way across */
+    max-width: 420px;
+}
+
+.na-sh-side-head {
+    display: flex;
+    align-items: baseline;
+    gap: .45rem;
+    margin-bottom: .45rem;
+}
+
+.na-sh-side-head-en {
+    font-size: .6rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    color: #B4436A;
+}
+
+.na-sh-side-head-ja {
+    font-size: .7rem;
+    color: #8A6A5C;
+}
+
+.na-sh-side-items {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: .26rem;
+    /* a region can carry a dozen photos — let the list scroll instead of
+       dragging the whole frame taller than the photo itself */
+    max-height: 420px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(180, 67, 106, .3) transparent;
+}
+
+.na-sh-side-items::-webkit-scrollbar { width: 6px; }
+
+.na-sh-side-items::-webkit-scrollbar-track { background: transparent; }
+
+.na-sh-side-items::-webkit-scrollbar-thumb {
+    background: rgba(180, 67, 106, .28);
+    border-radius: 999px;
+}
+
+.na-sh-side-item {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .34rem .45rem;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    transition: background .2s ease, box-shadow .2s ease;
+}
+
+.na-sh-side-item:hover { background: rgba(255, 255, 255, .72); }
+
+.na-sh-side-item.is-active {
+    background: #fff;
+    box-shadow: inset 0 0 0 1px rgba(180, 67, 106, .22);
+}
+
+.na-sh-side-item-no {
+    flex: 0 0 auto;
+    min-width: 1.4em;
+    font-size: .62rem;
+    font-weight: 800;
+    color: #B4436A;
+    opacity: .65;
+}
+
+.na-sh-side-item-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.na-sh-side-item-text b,
+.na-sh-side-item-text i {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.na-sh-side-item-text b {
+    font-size: .76rem;
+    font-weight: 700;
+    color: #3E231A;
+}
+
+.na-sh-side-item-text i {
+    font-style: normal;
+    font-size: .64rem;
+    color: #8A6A5C;
+}
+
+/* ---------- bottom bar: counter + progress + autoplay ---------- */
+.na-sh-bar {
+    display: flex;
+    align-items: center;
+    gap: .85rem;
+    padding: .5rem .95rem .6rem;
+    background: #fff;
+    border: 1px solid rgba(214, 175, 186, .5);
+    border-top: 0;
+    border-radius: 0 0 20px 20px;
+}
+
+.na-sh-bar-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: .3rem;
+    border: 0;
+    background: none;
+    padding: .2rem .3rem;
+    border-radius: 8px;
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: .05em;
+    color: #B4436A;
+    cursor: pointer;
+    transition: opacity .2s ease, background .2s ease;
+}
+
+.na-sh-bar-btn:hover { background: rgba(180, 67, 106, .08); }
+
+.na-sh-bar-btn.is-paused { opacity: .42; }
+
+.na-sh-bar-track {
+    flex: 1 1 auto;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(214, 175, 186, .45);
+    overflow: hidden;
+}
+
+.na-sh-bar-fill {
+    display: block;
+    height: 100%;
+    width: 14%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #E4899F, #B4436A);
+    transition: width .45s ease;
+}
+
+.na-sh-bar-count {
+    flex: 0 0 auto;
+    font-size: .72rem;
+    color: #8A6A5C;
+    font-variant-numeric: tabular-nums;
+}
+
+.na-sh-bar-count b { color: #B4436A; }
+
+/* ---------- full-screen viewer ---------- */
+.na-sh-lb {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem 4.4rem;
+    background: rgba(38, 20, 16, .9);
+    backdrop-filter: blur(4px);
+}
+
+.na-sh-lb.is-open { display: flex; }
+
+/* ---------- the frame: same soft pink panel as the highlights stage ----------
+   The photo sits inset on the panel with rounded corners and a soft drop
+   shadow, instead of the old white "print mat" hugging every edge.
+   The white stroke around the outside is what turns the pink mat into a
+   photo frame — rounded on all four corners.                                */
+.na-sh-lb-figure {
+    position: relative;
+    z-index: 2;
+    padding: 14px;
+    max-width: min(892px, 90vw);
+    background: radial-gradient(120% 130% at 50% 0%, #FDEFF4 0%, #F2DCE4 100%);
+    /* keep the white keyline hairline-thin (3px read as a chunky frame) */
+    border: 1.5px solid #fff;
+    border-radius: 26px;
+    box-shadow:
+        0 0 0 1px rgba(180, 67, 106, .26),
+        0 22px 54px rgba(0, 0, 0, .5);
+}
+
+/* the picture gets its own white keyline so it reads as mounted on the mat */
+.na-sh-lb-figure > img {
+    display: block;
+    max-width: 100%;
+    max-height: 66vh;
+    border-radius: 14px;
+    box-shadow: 0 0 0 1.5px #fff, 0 10px 26px rgba(90, 50, 70, .18);
+}
+
+.na-sh-lb-caption {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 1.7rem;
+    margin: 0;
+    padding: 0 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .18rem;
+    text-align: center;
+    color: rgba(255, 255, 255, .92);
+}
+
+/* the category pill — a rounded, highlighted badge so it reads as a tag
+   rather than another line of white caption text */
+.na-sh-lb-caption .na-sh-lb-kind {
+    display: inline-block;
+    margin-bottom: .1rem;
+    /* wide and flat, like the reference badge */
+    padding: .24rem 1.6rem;
+    font-size: .64rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #fff;
+    /* soft rose rather than a deep fuchsia block */
+    background: linear-gradient(135deg, #F2A6C1 0%, #E07BA6 100%);
+    border: 1px solid rgba(255, 255, 255, .8);
+    border-radius: 999px;
+    box-shadow: 0 3px 10px rgba(150, 60, 100, .32);
+}
+
+.na-sh-lb-caption .na-sh-lb-title {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.na-sh-lb-caption .na-sh-lb-ja {
+    font-size: .78rem;
+    color: rgba(255, 255, 255, .72);
+}
+
+.na-sh-lb-caption .na-sh-lb-note {
+    max-width: 46rem;
+    margin-top: .2rem;
+    font-size: .76rem;
+    line-height: 1.5;
+    color: rgba(255, 255, 255, .62);
+}
+
+.na-sh-lb-btn {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .16);
+    color: #fff;
+    font-size: .9rem;
+    cursor: pointer;
+    transition: background .2s ease, transform .2s ease;
+}
+
+.na-sh-lb-btn:hover { background: rgba(255, 255, 255, .3); transform: scale(1.08); }
+
+.na-sh-lb-btn--close { top: 1rem; right: 1rem; }
+.na-sh-lb-btn--prev { left: 1.2rem; top: 50%; margin-top: -20px; }
+.na-sh-lb-btn--next { right: 1.2rem; top: 50%; margin-top: -20px; }
+
+/* ---------- responsive ---------- */
+@media (max-width: 1180px) {
+    .na-sh-media { width: 500px; }
+    /* 4:3 comes from the base rule, so only the width is stepped down */
+    .na-sh-viewport { width: 500px; height: auto; }
+    .na-sh-stage { gap: 1.1rem; padding: .9rem 1rem; }
+}
+
+@media (max-width: 1000px) {
+    .na-sh-wrap {
+        max-width: 660px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .na-sh-stage {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: .9rem;
+        border-radius: 20px;
+    }
+    .na-sh-media {
+        order: 1;
+        width: 100%;
+        max-width: 560px;
+        margin: 0 auto;
+        grid-column: auto;      /* stacked layout → ordinary flow again */
+        grid-row: auto;
+    }
+    /* stacked: still 4:3, but capped so a tablet never gets a 700px photo */
+    .na-sh-viewport { width: 100%; height: auto; }
+    .na-sh-now { order: 2; width: 100%; max-width: none; min-height: 0; grid-column: auto; grid-row: auto; margin-top: 0; }
+    .na-sh-side--list { order: 3; width: 100%; max-width: none; grid-column: auto; grid-row: auto; }
+    .na-sh-side-items { max-height: none; overflow: visible; }
+    .na-sh-bar { border-radius: 0 0 20px 20px; }
+}
+
+@media (max-width: 640px) {
+    /* no height override here on purpose — the 4:3 aspect ratio keeps the
+       picture whole, and a max-height would break the ratio again */
+    .na-sh-nav { width: 26px; height: 30px; font-size: 1.3rem; }
+    .na-sh-bar { gap: .55rem; padding: .45rem .7rem .5rem; }
+    .na-sh-bar-count { font-size: .66rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .na-sh-slide,
+    .na-sh-slide img,
+    .na-sh-bar-fill,
+    .na-sh-nav,
+    .na-sh-extra,
+    .na-sh-extra > img { transition: none; animation: none; }
+    .na-sh-slide.is-active img { animation: none; }
+}

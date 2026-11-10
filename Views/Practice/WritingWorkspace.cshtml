@@ -1,0 +1,40 @@
+@model NihongoAcademy.Models.WritingWorkspaceViewModel
+@using System.Text.Json
+@{ ViewData["Title"] = Model.Task.Title; var latest = Model.History.FirstOrDefault(); }
+
+<nav aria-label="breadcrumb" class="mb-3"><ol class="breadcrumb"><li class="breadcrumb-item"><a asp-action="WritingLibrary">Writing Studio</a></li><li class="breadcrumb-item active">@Model.Task.Title</li></ol></nav>
+<div class="d-flex justify-content-between gap-3 mb-4"><div><span class="na-badge">@Model.Task.Level · @Model.Task.TaskType</span><h2 class="mt-2 mb-0">@Model.Task.Title</h2><div class="text-na-primary" lang="ja">@Model.Task.JapaneseTitle</div></div><strong id="writing-mastery" class="@(Model.IsMastered ? "text-success" : "text-muted")">@(Model.IsMastered ? "Stable mastery" : "Revision in progress")</strong></div>
+
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="na-card"><h4>Your Task</h4><p>@Model.Task.Prompt</p><ol>@foreach (var step in Model.Steps) { <li>@step</li> }</ol>
+            @Html.AntiForgeryToken()<input type="hidden" id="writing-task-id" value="@Model.Task.Id" />
+            <label class="form-label fw-semibold" for="writing-content">Write in Japanese</label>
+            <textarea id="writing-content" class="form-control" rows="10" lang="ja" maxlength="4000" placeholder="Write your first version here…">@latest?.Content</textarea>
+            <div class="d-flex justify-content-between small text-muted mt-1"><span><span id="jp-character-count">0</span>/@Model.Task.MinimumJapaneseCharacters Japanese characters</span><span><span id="sentence-count">0</span>/@Model.Task.MinimumSentences sentences</span></div>
+            <button type="button" id="save-writing" class="btn-na-primary mt-3">Check and save this version</button><div id="writing-feedback" class="mt-3" aria-live="polite"></div>
+        </div>
+
+        @if (Model.History.Any())
+        {
+            <details class="na-card-flat mt-4"><summary class="fw-semibold">Model answer and comparison</summary><div class="row g-3 mt-2"><div class="col-md-6"><h6>Your latest version</h6><div lang="ja" style="white-space:pre-line">@latest!.Content</div></div><div class="col-md-6"><h6>One possible model</h6><div lang="ja" style="white-space:pre-line">@Model.Task.ModelAnswer</div><details class="reading-support mt-2"><summary class="small text-na-primary">Reading help · よみかた</summary><div class="small" lang="ja" style="white-space:pre-line">@Model.Task.ModelAnswerReading</div></details><button type="button" class="btn-na-outline btn-sm mt-2" data-speak="@Model.Task.ModelAnswer"><i class="bi bi-volume-up"></i> Hear model</button></div></div><p class="small text-muted mt-3 mb-0">The model is an example, not the only correct answer. Compare organisation and required patterns instead of copying it.</p></details>
+        }
+
+        <section class="mt-4"><h4>Version History</h4>
+        @if (!Model.History.Any()) { <p class="text-muted">Your saved revisions will appear here.</p> }
+        @for (var index = 0; index < Model.History.Count; index++)
+        {
+            var version = Model.History[index]; var previous = index + 1 < Model.History.Count ? Model.History[index + 1] : null;
+            var feedback = JsonSerializer.Deserialize<List<string>>(version.FeedbackJson ?? "[]") ?? new();
+            <details class="na-card-flat mt-2"><summary><strong>@version.Score%</strong> · @version.SubmittedAt.ToString("g") @(version.IsPassing ? "· Passed structure check" : "· Needs revision")</summary><div class="row g-3 mt-2"><div class="col-md-6"><h6>This version</h6><div lang="ja" style="white-space:pre-line">@version.Content</div></div>@if (previous != null) { <div class="col-md-6"><h6>Previous version</h6><div lang="ja" class="text-muted" style="white-space:pre-line">@previous.Content</div></div> }</div><ul class="small mt-3 mb-0">@foreach (var note in feedback) { <li>@note</li> }</ul></details>
+        }
+        </section>
+    </div>
+    <aside class="col-lg-4">
+        <div class="na-card-flat mb-3"><h5>Required Language</h5><ul class="mb-0">@foreach (var requirement in Model.Requirements) { var parts = requirement.Split('|', 2); <li>@parts[0]@if (parts.Length > 1) { <small class="d-block text-muted" lang="ja">Try: @parts[1].Replace('/', '・')</small> }</li> }</ul></div>
+        @if (Model.Task.GrammarPoint != null) { <div class="na-card-flat mb-3"><h5>Grammar Support</h5><strong class="text-na-primary">@Model.Task.GrammarPoint.Pattern</strong><p class="small mt-2 mb-0">@Model.Task.GrammarPoint.Meaning</p></div> }
+        <div class="na-card-flat"><h5>Self-check Before Saving</h5>@foreach (var item in Model.Checklist) { <div class="form-check mb-2"><input class="form-check-input self-check" type="checkbox" /><label class="form-check-label small">@item</label></div> }<small class="text-muted">These checks require your judgment and do not add automatic points.</small></div>
+    </aside>
+</div>
+
+@section Scripts { <script src="~/js/writing-workspace.js" asp-append-version="true"></script> }

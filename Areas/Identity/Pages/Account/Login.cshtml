@@ -1,0 +1,97 @@
+@page
+@model LoginModel
+@{
+    ViewData["Title"] = "Welcome back";
+}
+
+<div class="na-login-page">
+    <span class="na-login-tree" aria-hidden="true"></span>
+
+    <div class="na-login-card">
+        <div class="na-login-brand">
+            <img src="~/sakura logo.png" alt="NihongoAcademy" class="na-login-brand-mark" />
+            <div class="na-login-brand-text">
+                <span class="na-login-brand-name">NihongoAcademy</span>
+                <span class="na-login-brand-jp">日本語学院</span>
+            </div>
+        </div>
+
+        <div class="na-login-header">
+            <h1>Welcome back</h1>
+            <p><span class="na-login-wa">おかえりなさい</span> &mdash; continue where you left off.</p>
+        </div>
+
+        <form id="account" method="post" asp-route-returnUrl="@Model.ReturnUrl" class="na-login-form">
+            @if (Model.ResetSucceeded)
+            {
+                <div class="na-login-validation text-success" role="status">
+                    Your password has been reset. Please sign in with your new password.
+                </div>
+            }
+            <div asp-validation-summary="ModelOnly" class="na-login-validation text-danger" role="alert"></div>
+
+            <div class="na-login-field">
+                <label asp-for="Input.Email">Email address</label>
+                <div class="na-login-input-wrap">
+                    <i class="bi bi-envelope"></i>
+                    <input asp-for="Input.Email" autocomplete="username" aria-required="true" placeholder="name@example.com" />
+                </div>
+                <span asp-validation-for="Input.Email" class="text-danger"></span>
+            </div>
+
+            <div class="na-login-field">
+                <label asp-for="Input.Password">Password</label>
+                <div class="na-login-input-wrap">
+                    <i class="bi bi-lock"></i>
+                    <input asp-for="Input.Password" autocomplete="current-password" aria-required="true" placeholder="Enter your password" />
+                    <button type="button" class="na-password-toggle" aria-label="Show password" aria-pressed="false">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </div>
+                <span asp-validation-for="Input.Password" class="text-danger"></span>
+            </div>
+
+            <div class="na-login-options">
+                <label class="na-login-remember">
+                    <input asp-for="Input.RememberMe" />
+                    <span class="na-login-check"></span>
+                    <span>Keep me signed in</span>
+                </label>
+                <a asp-page="./ForgotPassword" class="na-login-text-link">Forgot password?</a>
+            </div>
+
+            <button id="login-submit" type="submit" class="na-login-submit">
+                Sign in <i class="bi bi-arrow-right"></i>
+            </button>
+        </form>
+
+        <div class="na-login-divider"><span>or</span></div>
+
+        <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl" class="na-login-create">
+            Create a free account
+        </a>
+
+        <p class="na-login-help">
+            Need a new confirmation email? <a asp-page="./ResendEmailConfirmation">Resend it</a>
+        </p>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (function () {
+            var button = document.querySelector('.na-password-toggle');
+            var input = document.getElementById('Input_Password');
+            if (!button || !input) return;
+            button.addEventListener('click', function () {
+                var show = input.type === 'password';
+                input.type = show ? 'text' : 'password';
+                button.setAttribute('aria-pressed', show ? 'true' : 'false');
+                button.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+                button.innerHTML = '<i class="bi ' + (show ? 'bi-eye-slash' : 'bi-eye') + '"></i>';
+                input.focus();
+            });
+        })();
+    </script>
+}

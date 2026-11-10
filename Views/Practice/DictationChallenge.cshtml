@@ -54,12 +54,7 @@
         let idx = 0;
 
         function play() {
-            if ('speechSynthesis' in window) {
-                const u = new SpeechSynthesisUtterance(words[idx].j);
-                u.lang = 'ja-JP';
-                u.rate = 0.9;
-                speechSynthesis.speak(u);
-            }
+            if (typeof window.speakJapanese === 'function') window.speakJapanese(words[idx].j, { rate: 0.9 });
         }
 
         document.getElementById('dict-play-btn').onclick = play;
@@ -72,9 +67,9 @@
             const romaji = words[idx].r;
 
             if (input === correct) {
-                fb.innerHTML = '<div class="p-2 rounded" style="background:#E5F8E5;color:#2C5F2D;"><i class="bi bi-check-circle-fill"></i> Correct!</div>';
+                fb.innerHTML = '<div class="p-2 rounded" style="background:#EDE8F8;color:#9A7BC4;"><i class="bi bi-check-circle-fill"></i> Correct!</div>';
             } else {
-                fb.innerHTML = `<div class="p-2 rounded" style="background:#FFE5E5;color:#D44;">
+                fb.innerHTML = `<div class="p-2 rounded" style="background:#E1E4E7;color:#ee96a4;">
                     <i class="bi bi-x-circle-fill"></i> Not quite.<br>
                     <strong>You wrote:</strong> ${input || '(empty)'}<br>
                     <strong>Correct:</strong> ${correct} <small class="text-muted">(${romaji})</small>
